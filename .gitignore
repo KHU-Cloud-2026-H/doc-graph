@@ -1,0 +1,14 @@
+# 환경변수
+.env
+
+# Python
+.venv/
+__pycache__/
+
+# AI 툴 설정
+.claude/
+.codex/
+.agents/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
