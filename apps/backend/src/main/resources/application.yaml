@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: docgraph
+  datasource:
+    url: jdbc:postgresql://localhost:5432/docgraph
+    username: docgraph
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

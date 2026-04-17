@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: docgraph
+      POSTGRES_USER: docgraph
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: docgraph_test
+      POSTGRES_USER: docgraph
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - type: tmpfs
+        target: /var/lib/postgresql/data
+    profiles:
+      - full
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http host.docker.internal:8080
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  backend:
+    build:
+      context: ./apps/backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/docgraph
+      SPRING_DATASOURCE_USERNAME: docgraph
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
