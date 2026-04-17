@@ -1,0 +1,19 @@
+# 로컬 개발 기본값을 하드코딩한다. 환경별 변형은 docker-compose에서 env var로 override.
+spring:
+  application:
+    name: docgraph
+  datasource:
+    url: jdbc:postgresql://localhost:5432/docgraph
+    username: docgraph
+    password: simplepwd
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -9,9 +9,10 @@ com.docgraph/
 └── {domain}/
     ├── command/
     │   ├── interfaces/
-    │   │   └── api/          # REST Controller, Web Request DTO
+    │   │   ├── api/          # REST Controller, Web Request DTO
+    │   │   └── event/        # Spring ApplicationEvent 리스너 (타 도메인 이벤트 수신)
     │   ├── application/      # Application Service, Command 객체
-    │   ├── domain/           # Entity, Domain Service, Repository 인터페이스
+    │   ├── domain/           # Entity, Domain Service, Repository 인터페이스, 도메인 이벤트
     │   └── infra/            # JPA Repository 구현체
     └── query/
         ├── interfaces/
@@ -20,7 +21,16 @@ com.docgraph/
         └── infra/            # QueryDSL Repository (Response DTO를 프로젝션으로 반환)
 ```
 
-`interfaces/`는 REST(`api/`) 외에도 Batch, Scheduler 등 인바운드 진입점이 추가될 경우를 고려한 네이밍이다.
+`interfaces/`는 인바운드 진입점을 나타낸다. REST(`api/`)와 Spring Application Event(`event/`) 외에도 Batch, Scheduler 등이 추가될 수 있다.
+
+도메인 이벤트는 **발행하는 도메인의 `command/domain/`** 에 정의한다. 수신하는 도메인은 `interfaces/event/` 리스너에서 해당 이벤트 클래스를 참조한다 (단방향 의존).
+
+```
+# 예시: graph → validation 이벤트
+graph/command/domain/ValidationRequiredEvent.kt      # 이벤트 정의
+graph/command/application/GraphService.kt            # publishEvent() 호출
+validation/command/interfaces/event/ValidationEventListener.kt  # @EventListener
+```
 
 ## Command / Query 분리 원칙
 
