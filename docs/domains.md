@@ -11,11 +11,8 @@
 변경 감지
   Webhook 수신
   → document    문서 동기화, 타입 분류, 결정사항 추출
-  → graph       의존 관계 엣지 생성/업데이트, 검증 필요 이벤트 발행
 
 정합성 검사
-  graph         검증 필요 이벤트 발행
-  → validation  graph 구독, AI 검증, 충돌 상태 관리, 충돌 해소
   → notification Notion 코멘트 삽입, Webhook 알림 발송
 ```
 
@@ -41,7 +38,6 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 **핵심 개념**
 - 워크스페이스 (Notion 워크스페이스 연결 단위)
 - 멤버 (Project Admin / Team Member)
-- 워크스페이스 설정 (정합성 관리 활성화 여부, 알림 발신 Webhook URL)
 
 **경계**
 - Notion API 호출은 `document` 도메인 책임
@@ -57,7 +53,6 @@ Notion 문서의 동기화, 분류, 결정사항 추출을 담당한다. 변경 
 - Decision (결정사항, 출처 문서 + 추출 시각)
 
 **주요 흐름**
-1. Notion Webhook 수신 (Notion → 우리 서버)
 2. Notion API로 변경된 페이지 전체 내용 조회
 3. 폴더명·제목 키워드로 타입 분류 → 실패 시 AI API 호출
 4. `meeting_notes`인 경우 AI API로 결정사항 추출
@@ -79,7 +74,6 @@ Notion 문서의 동기화, 분류, 결정사항 추출을 담당한다. 변경 
 **주요 흐름**
 - 문서 타입 결정 시 룰 테이블 기준으로 엣지 자동 생성
 - 사용자 커스텀 엣지 추가/삭제
-- 엣지 생성/업데이트 시 검증 필요 이벤트 발행 → `validation`이 구독
 
 **기본 제공 룰**
 
@@ -103,15 +97,12 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다.
 - ConflictStatus (`detected` / `resolved`)
 
 **주요 흐름**
-1. `graph`의 검증 필요 이벤트 구독, 검증 대상 문서 쌍 조회
 2. AI API non-blocking 호출 (타임아웃 30초)
 3. 결과 저장, `graph`의 엣지 상태 업데이트
 4. 충돌 감지 시 `notification`으로 이벤트 발행
 5. 사용자의 수동 해소 마킹 처리
-6. AI 수정 제안 승인 시 `document`에 업데이트 요청 → `document`가 Notion API 호출
 
 **경계**
-- Notion 문서 수정은 `document` 도메인을 통해서만
 - 동일 이벤트 재처리 시 중복 검증 방지 (idempotency)
 - 한 문서 쌍의 검증 실패가 다른 쌍에 영향을 주지 않아야 함 (실패 격리)
 
@@ -122,7 +113,6 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다.
 외부 알림 발송을 담당한다. `validation`으로부터 충돌 감지 이벤트를 수신한다.
 
 **핵심 개념**
-- NotificationChannel (워크스페이스별 알림 발신 Webhook URL)
 - NotionComment (Notion 페이지 경고 코멘트)
 
 **주요 흐름**
