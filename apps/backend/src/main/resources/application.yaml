@@ -1,6 +1,7 @@
 spring:
   application:
     name: docgraph
+
   datasource:
     url: jdbc:postgresql://localhost:5432/docgraph
     username: docgraph

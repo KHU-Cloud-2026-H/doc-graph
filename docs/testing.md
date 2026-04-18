@@ -33,7 +33,7 @@
 
 ### 통합 테스트
 
-- docker-compose에 정의된 인프라(DB 등)를 Testcontainers로 실제 구동
+- Testcontainers가 PostgreSQL 컨테이너를 자동으로 띄워 실제 DB와 연동
 - 특정 레이어(Repository, Service 등)가 인프라와 올바르게 연동되는지 검증
 
 ### 컴포넌트 테스트
