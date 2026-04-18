@@ -1,0 +1,14 @@
+{
+  "name": "doc-graph",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "generate:types": "openapi-typescript http://localhost:8080/v3/api-docs -o packages/api-types/src/schema.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.4"
+  }
+}

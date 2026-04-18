@@ -1,0 +1,24 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: docgraph_test
+      POSTGRES_USER: docgraph
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - type: tmpfs
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docgraph -d docgraph_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-test:5432/docgraph_test
+    depends_on:
+      postgres-test:
+        condition: service_healthy

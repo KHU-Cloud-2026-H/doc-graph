@@ -1,6 +1,10 @@
 # 환경변수
 .env
 
+# Node.js
+node_modules/
+package-lock.json
+
 # Python
 .venv/
 __pycache__/
