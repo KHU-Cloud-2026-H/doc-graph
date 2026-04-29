@@ -1,71 +1,38 @@
 # DocGraph 아키텍처 설계
 
-## 컴퓨팅 모델
-
-Spring Boot on ECS/Fargate가 모든 서버 로직을 담당한다. Webhook 수신, API 서버, AI API 호출(WebClient non-blocking)을 단일 애플리케이션에서 처리한다.
-
-| 영역 | 성격 | 처리 방식 |
-| --- | --- | --- |
-| API 서버 (그래프 조회, OAuth, 충돌 해소) | 상시 실행, 복잡한 비즈니스 로직 | Spring Boot on ECS/Fargate |
-| 변경 감지 (Webhook 수신) | 이벤트 기반, 빠른 응답 필요 | Spring Boot — Webhook 수신 → 의존 쌍 조회 → 즉시 200 반환 |
-| 정합성 검증 (AI 호출) | 느린 비동기 처리 | Spring Boot — WebClient non-blocking으로 AI API 호출, 스레드 점유 없음 |
-
 ## 전체 아키텍처
 
-```text
-[사용자]
-    ↓
-CloudFront + S3           ← 프론트 호스팅
-    ↓
-ALB (Application Load Balancer)
-    ↓
-Spring Boot on ECS/Fargate  ← 모든 서버 로직
-  - Notion OAuth 연동
-  - 의존 관계 그래프 CRUD API
-  - 충돌 해소 API
-  - 결정사항 조회 API
-  - Notion Webhook 수신 엔드포인트
-    → 의존 관계 쌍 조회 (RDS)
-    → WebClient로 AI API non-blocking 호출
-    → 즉시 200 반환
-  - AI 검증 결과 처리
-    → 결과 RDS 저장
-    → Notion 코멘트 자동 삽입
-    → Webhook 알림 발송 (Slack/Discord 등)
-    ↓
-RDS PostgreSQL            ← 그래프 구조, 충돌 이력, 문서 메타데이터 통합
+```mermaid
+graph TD
+    User[사용자]
+    CF["CloudFront + S3<br/>(프론트 호스팅)"]
+    ALB[ALB]
+    SB["Spring Boot on ECS/Fargate<br/>(API 서버 · Webhook 수신 · AI 호출)"]
+    RDS[(RDS PostgreSQL)]
+    Notion[Notion API]
+    AI[외부 AI API]
+
+    User --> CF
+    CF --> ALB
+    ALB --> SB
+    SB --> RDS
+    SB --> Notion
+    SB --> AI
 ```
+
+DB 비밀번호·AI API 키·Notion OAuth 앱 자격증명은 Secrets Manager에서 관리하고, 사용자별 Notion OAuth 토큰은 RDS에 암호화 저장한다.
 
 ## 기술 스택
 
 | 레이어 | 기술 | 비고 |
 | --- | --- | --- |
 | 프론트엔드 | React (TypeScript) | S3 + CloudFront 배포 |
-| API 서버 + Webhook + AI 호출 | Kotlin, Spring Boot 4, Java 21 | Docker 컨테이너화, ECS/Fargate 배포. AI API는 WebClient non-blocking 호출 |
-| DB | RDS PostgreSQL 17 | 그래프 구조, 충돌 이력, 문서 메타데이터 통합 |
-| API 명세 | springdoc-openapi (OpenAPI 3.1) | `/swagger-ui.html`, `/v3/api-docs`. TS 타입은 `npm run generate:types`로 생성 |
-| 문서 소스 | Notion API (OAuth) + Webhook | 변경 시 실시간 이벤트 수신 |
-| AI 호출 | 외부 AI API | WebClient로 Spring Boot 내에서 non-blocking 호출 |
+| API 서버 + Webhook + AI 호출 | Kotlin, Spring Boot 4, Java 21 | Docker 컨테이너화, ECS/Fargate 배포 |
+| DB | RDS PostgreSQL 17 + pgvector | 유사도 검색: 하이브리드 (임베딩 + 키워드) |
+| API 명세 | springdoc-openapi (OpenAPI 3.1) | TS 타입 자동 생성 |
+| 문서 소스 | Notion API (OAuth) + Webhook | 페이지 변경 이벤트 수신 |
 | 알림 | 인앱 표시 + Webhook (Slack/Discord 등) | Webhook URL 프로젝트별 설정 |
-| 프론트 호스팅 | S3 + CloudFront | |
-| 컨테이너 오케스트레이션 | ECS/Fargate | EC2 관리 불필요 |
-| 자격증명 관리 | Secrets Manager | DB 비밀번호, AI API 키, OAuth 토큰 |
-| 컨테이너 레지스트리 | ECR | Spring Boot Docker 이미지 저장 |
-
-## 개발 환경
-
-인프라가 Terraform으로 AWS 환경을 구성하고, 백엔드가 로컬에서 E2E 통과한 코드를 인프라가 Learner Lab에 배포하는 방식으로 역할을 분리한다.
-
-```text
-백엔드
-  Spring Boot (Webhook 수신 + API + AI 호출) 로직 작성
-  시스템 테스트 통과
-      ↓
-인프라 담당
-  Learner Lab에 배포 (Terraform apply + 수동 배포)
-```
-
-로컬 개발 환경 구성은 [development.md](development.md)를 참고한다.
+| 자격증명 관리 | Secrets Manager | DB 비밀번호, AI API 키, Notion OAuth 앱 자격증명 |
 
 ## 미확정 사항
 
