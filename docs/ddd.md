@@ -5,7 +5,7 @@
 도메인 단위로 패키지를 나누고, 각 도메인 내부에서 Command/Query를 분리한다.
 
 ```
-com.docgraph/
+com.docgraph.backend/
 └── {domain}/
     ├── command/
     │   ├── interfaces/
