@@ -27,6 +27,7 @@
 
 | scope | 대상 |
 | --- | --- |
+| `frontend` | `apps/frontend/` |
 | `backend` | `apps/backend/` |
 | `api-types` | `packages/api-types/` |
 | `tests` | `tests/` |
