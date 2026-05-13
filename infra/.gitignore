@@ -1,0 +1,15 @@
+# 로컬 state 파일 (계정·리소스 정보 포함)
+terraform.tfstate
+terraform.tfstate.backup
+
+# 변수값 파일 (비밀번호 포함)
+*.tfvars
+
+# Terraform 로컬 캐시
+.terraform/
+
+# AWS CLI 설치 디렉터리 (infra 폴더 내에 위치한 경우)
+aws/
+
+# 단, lock 파일은 커밋 대상 (버전 고정)
+!.terraform.lock.hcl
