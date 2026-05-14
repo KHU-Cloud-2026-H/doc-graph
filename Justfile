@@ -7,6 +7,9 @@ set windows-shell := ["sh", "-cu"]
 # env 파일 경로는 justfile_directory() 절대경로 → recipe가 cwd를 자유롭게 옮겨도 안전.
 dotenv-run := 'dotenvx run --strict --overload -f "' + (justfile_directory() / ".env") + '" -f "' + (justfile_directory() / ".env.local") + '" --'
 
+# 인수·시스템 테스트 stack의 compose 파일 묶음 (cross-platform 위해 -f 명시).
+test-compose-files := '-f "' + (justfile_directory() / "docker-compose.yml") + '" -f "' + (justfile_directory() / "docker-compose.test.yml") + '"'
+
 # 기본 — 사용 가능한 recipe 목록
 default:
     @just --list
@@ -40,13 +43,36 @@ compose-up:
 compose-down:
     {{dotenv-run}} docker compose down
 
-# Pytest 시스템 테스트 — backend 컨테이너 + wiremock에 외부 client로 접근
-systest:
+# 시스템 테스트 — application alive·부팅·env wiring. 로컬 compose 자동 띄움.
+test-system:
     #!/usr/bin/env sh
     set -e
-    trap '{{dotenv-run}} docker compose -p doc-graph-test -f docker-compose.yml -f docker-compose.test.yml --profile full down -v' EXIT
-    {{dotenv-run}} docker compose -p doc-graph-test -f docker-compose.yml -f docker-compose.test.yml --profile full up -d --build --wait
-    cd tests && {{dotenv-run}} uv run pytest
+    export COMPOSE_PROJECT_NAME=doc-graph-test
+    export COMPOSE_PROFILES=full
+    trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
+    {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
+    cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run pytest system
+
+# 인수 테스트 — env=local-mock(default) / local-live / remote-live.
+test-acceptance env="local-mock":
+    #!/usr/bin/env sh
+    set -e
+    export COMPOSE_PROJECT_NAME=doc-graph-test
+    case "{{env}}" in
+      local-mock)
+        export COMPOSE_PROFILES=full,mock
+        trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
+        {{dotenv-run}} sh -c 'AI_OPENAI_BASE_URL=$MOCK_AI_OPENAI_BASE_URL NOTION_AUTHORIZATION_URI=$MOCK_NOTION_AUTHORIZATION_URI NOTION_TOKEN_URI=$MOCK_NOTION_TOKEN_URI docker compose {{test-compose-files}} up -d --build --wait'
+        ;;
+      local-live)
+        export COMPOSE_PROFILES=full
+        trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
+        {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
+        ;;
+      remote-live) ;;
+      *) echo "unknown env: {{env}}" >&2; exit 1 ;;
+    esac
+    cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run pytest acceptance --env={{env}}
 
 # OpenAPI JSON dump — backend가 forked로 부팅하여 spec dump 후 packages/api-types로 canonical 위치 복사
 openapi-dump:

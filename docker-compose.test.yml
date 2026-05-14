@@ -12,15 +12,11 @@ services:
 
   backend:
     environment:
-      AI_OPENAI_BASE_URL: http://wiremock:8080
-      AI_OPENAI_API_KEY: test
-      AI_OPENAI_MODEL: test-model
-      NOTION_CLIENT_ID: test
-      NOTION_CLIENT_SECRET: test
-      NOTION_AUTHORIZATION_URI: http://wiremock:8080/notion/oauth/authorize
-      NOTION_TOKEN_URI: http://wiremock:8080/notion/oauth/token
+      SPRING_PROFILES_ACTIVE: acceptance
 
   wiremock:
+    profiles:
+      - mock
     image: wiremock/wiremock:3.10.0
     ports:
       - "8081:8080"
