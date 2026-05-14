@@ -65,6 +65,7 @@ export const WorkspaceSelection = () => {
           
           {isFavoritesOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* TODO: 실제 workspaceId로 교체 필요 (API 연동 시) */}
               <Link to="/w/sample-workspace/graph" className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block ring-2 ring-blue-500/20">
                 <button className="absolute top-4 right-4 text-blue-500 hover:text-blue-700 transition-colors z-10">
                   <Star className="w-5 h-5 fill-current" />
@@ -102,6 +103,7 @@ export const WorkspaceSelection = () => {
           
           {isConnectedOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* TODO: 실제 workspaceId로 교체 필요 (API 연동 시) */}
               <Link to="/w/sample-workspace/graph" className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block">
                 <button className="absolute top-4 right-4 text-slate-300 hover:text-blue-500 transition-colors z-10">
                   <Star className="w-5 h-5" />

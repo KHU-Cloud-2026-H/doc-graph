@@ -22,6 +22,8 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
           isActive ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-slate-100 text-slate-700 font-medium"
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
+        // TODO: workspaceId를 useParams()로 읽어오도록 수정 필요
+        // 현재는 'sample-workspace'로 하드코딩되어 있음
         onClick={() => navigate(`/w/sample-workspace/docs/${node.id}`)}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0 relative">
@@ -139,6 +141,8 @@ export const Sidebar = () => {
 
   const handleNotificationClick = (notif: any) => {
     if (notif.type === 'issue' && notif.docId) {
+      // TODO: workspaceId를 useParams()로 읽어오도록 수정 필요
+      // 현재는 'sample-workspace'로 하드코딩되어 있음
       navigate(`/w/sample-workspace/docs/${notif.docId}?openIssues=true`);
       setIsInboxOpen(false);
     }

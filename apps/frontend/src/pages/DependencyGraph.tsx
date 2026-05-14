@@ -121,6 +121,9 @@ const edgeTypes = {
   conflict: ConflictEdge,
 };
 
+// TODO: 현재 노드의 data.id는 목업 데이터입니다.
+// 실제 API 연동 시 node-document mapping 구조 재정비 필요
+
 const initialNodes: DocumentFlowNode[] = [
   { id: '1', type: 'document', position: { x: 150, y: 250 }, data: { label: 'Product Planning', icon: <span className="text-xl">🚀</span> } },
   { id: '2', type: 'document', position: { x: 300, y: 150 }, data: { label: '[PRD] v1.0 MVP 요구사항', icon: <FileText className="text-slate-500 w-6 h-6" /> } },
@@ -159,6 +162,9 @@ const initialEdges: AppEdge[] = [
 export const DependencyGraph = () => {
   const workspace = useAppStore((state) => state.workspace);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
+
+  // TODO: workspaceId를 URL params에서 읽어오도록 수정 필요
+  // 현재는 'sample-workspace'로 하드코딩되어 있음
 
   // Bind the onClick handler directly to the edge data
   const edgesWithData: AppEdge[] = initialEdges.map((edge) => ({

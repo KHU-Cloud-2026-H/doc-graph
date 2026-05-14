@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 
+// TODO: 이 파일의 mock 데이터는 API 연동 시 전부 교체됩니다.
+// workspace, documents, notifications 모두 실제 API 응답으로 대체 예정
+
 export interface IntegrityIssue {
   id: string;
   type: string;

@@ -97,6 +97,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
 
       {/* Section 4: Buttons */}
       <div className="border-t border-slate-200 p-4 bg-white mt-auto shrink-0 flex flex-col gap-2.5">
+        {/* TODO: API 연동 시 실제 수정 제안 적용 로직 구현 필요 */}
         <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-sm transition-colors flex items-center justify-center gap-2">
           제안 적용하기
         </button>
