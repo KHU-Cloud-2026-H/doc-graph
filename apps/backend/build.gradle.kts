@@ -74,6 +74,7 @@ openApi {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	systemProperty("spring.datasource.hikari.maximum-pool-size", "2")
 }
 
 tasks.register<Test>("unitTest") {
