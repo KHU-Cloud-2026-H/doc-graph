@@ -51,4 +51,9 @@ class ValidationTask(
         status = OutboxStatus.FAILED
         failureReason = reason
     }
+
+    fun markSuccess() {
+        status = OutboxStatus.SUCCESS
+        failureReason = null
+    }
 }
