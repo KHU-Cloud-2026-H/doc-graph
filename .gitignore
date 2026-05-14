@@ -56,5 +56,8 @@ nbdist/
 # VS Code
 .vscode/
 
+# Cursor
+.cursor/
+
 # Kotlin
 .kotlin
