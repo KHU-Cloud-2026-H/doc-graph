@@ -2,15 +2,21 @@ package com.docgraph.backend.validation.query.interfaces.api
 
 import com.docgraph.backend.web.PageResponse
 import com.docgraph.backend.validation.query.application.ConflictResponse
+import com.docgraph.backend.validation.query.application.SearchConflictsByProjectQuery
+import com.docgraph.backend.validation.query.application.SearchValidationTasksByProjectQuery
 import com.docgraph.backend.validation.query.application.ValidationTaskResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @Tag(name = "Validation")
-class ValidationQueryController {
+class ValidationQueryController(
+    private val searchConflictsByProject: SearchConflictsByProjectQuery,
+    private val searchValidationTasksByProject: SearchValidationTasksByProjectQuery,
+) {
 
     @GetMapping("/projects/{id}/conflicts")
     @Operation(summary = "프로젝트 충돌 목록")
@@ -19,7 +25,8 @@ class ValidationQueryController {
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): ResponseEntity<PageResponse<ConflictResponse>> {
-        TODO()
+        val result = searchConflictsByProject.search(id, PageRequest.of(page, size))
+        return ResponseEntity.ok(result)
     }
 
     @GetMapping("/me/conflicts")
@@ -41,6 +48,7 @@ class ValidationQueryController {
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): ResponseEntity<PageResponse<ValidationTaskResponse>> {
-        TODO()
+        val result = searchValidationTasksByProject.search(id, PageRequest.of(page, size))
+        return ResponseEntity.ok(result)
     }
 }
