@@ -10,6 +10,8 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.OffsetDateTime
 
 @Entity
@@ -68,6 +70,7 @@ class DocumentChangeNotice(
     @Column(name = "received_at", nullable = false)
     val receivedAt: OffsetDateTime = OffsetDateTime.now(),
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_payload", columnDefinition = "jsonb")
     val rawPayload: String? = null,
 ) : OutboxEntry {

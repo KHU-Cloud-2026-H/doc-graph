@@ -2135,8 +2135,11 @@
             "example": "2024-01 스프린트 회의록"
           },
           "type": {
-            "type": "string",
-            "description": "문서 타입",
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "문서 타입 (project type-mapping 미분류 시 null)",
             "enum": [
               "meeting_notes",
               "planning",
@@ -2293,7 +2296,10 @@
             "type": "string"
           },
           "text": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "order": {
             "type": "integer",
@@ -2321,8 +2327,11 @@
             "example": "2024-01 스프린트 회의록"
           },
           "type": {
-            "type": "string",
-            "description": "문서 타입",
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "문서 타입 (project type-mapping 미분류 시 null)",
             "enum": [
               "meeting_notes",
               "planning",

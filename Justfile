@@ -65,7 +65,7 @@ test-acceptance env="local-mock":
         {{dotenv-run}} sh -c 'AI_OPENAI_BASE_URL=$MOCK_AI_OPENAI_BASE_URL NOTION_AUTHORIZATION_URI=$MOCK_NOTION_AUTHORIZATION_URI NOTION_TOKEN_URI=$MOCK_NOTION_TOKEN_URI docker compose {{test-compose-files}} up -d --build --wait'
         ;;
       local-live)
-        export COMPOSE_PROFILES=full
+        export COMPOSE_PROFILES=full,live
         trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
         {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
         ;;

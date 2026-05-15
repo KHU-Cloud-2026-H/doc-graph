@@ -4,6 +4,6 @@ data class Block(
     val blockId: String,
     val parentBlockId: String?,
     val type: String,
-    val text: String,
+    val text: String?,
     val order: Int,
 )
