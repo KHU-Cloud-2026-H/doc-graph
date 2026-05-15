@@ -2185,6 +2185,41 @@
           }
         }
       },
+      "ConflictFindingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "충돌 finding ID",
+            "example": 1
+          },
+          "sourceBlockIds": {
+            "type": "array",
+            "description": "source 측 충돌 블록 ID 목록 (Notion block id)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetBlockIds": {
+            "type": "array",
+            "description": "target 측 충돌 블록 ID 목록 (Notion block id)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "description": "충돌 근거 (AI 판정)",
+            "example": "planning 3.2절 결정사항이 requirements에 반영되지 않음"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "감지 시각"
+          }
+        }
+      },
       "ConflictResponse": {
         "type": "object",
         "properties": {
@@ -2212,20 +2247,12 @@
             "description": "도착 문서 ID",
             "example": 2
           },
-          "conflictSection": {
-            "type": "string",
-            "description": "충돌 구간 (AI가 식별한 원문 발췌)",
-            "example": "3.2절 범위 정의 항목"
-          },
-          "cause": {
-            "type": "string",
-            "description": "충돌 원인",
-            "example": "planning의 범위가 requirements에 반영되지 않음"
-          },
-          "suggestion": {
-            "type": "string",
-            "description": "수정 제안",
-            "example": "requirements 3.2절에 해당 기능 범위 추가 필요"
+          "findings": {
+            "type": "array",
+            "description": "충돌 finding 목록",
+            "items": {
+              "$ref": "#/components/schemas/ConflictFindingResponse"
+            }
           },
           "ignoredAt": {
             "type": [
