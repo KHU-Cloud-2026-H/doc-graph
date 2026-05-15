@@ -14,9 +14,9 @@ test-compose-files := '-f "' + (justfile_directory() / "docker-compose.yml") + '
 default:
     @just --list
 
-# 백엔드 로컬 개발 (postgres + ngrok 헬스체크 통과 후 백엔드 실행)
-bootRun:
-    {{dotenv-run}} docker compose up -d --wait
+# 백엔드 로컬 개발. extra_profile 인자로 추가 profile 활성 (예: just bootRun live → ngrok 같이).
+bootRun extra_profile="":
+    COMPOSE_PROFILES="{{extra_profile}}" {{dotenv-run}} docker compose up -d --wait
     cd apps/backend && {{dotenv-run}} sh ./gradlew bootRun
 
 # 백엔드 테스트 — bootRun과 동일하게 dotenvx로 .env + .env.local 주입.
@@ -36,9 +36,9 @@ test-all:
 test-class class:
     cd apps/backend && {{dotenv-run}} sh ./gradlew test --tests {{class}}
 
-# 풀 스택 — postgres + ngrok + backend 컨테이너
+# 풀 스택 — postgres + backend 컨테이너 + ngrok (프론트/인프라가 실제 흐름 시연 목적)
 compose-up:
-    {{dotenv-run}} docker compose --profile full up
+    {{dotenv-run}} docker compose --profile backend --profile live up
 
 compose-down:
     {{dotenv-run}} docker compose down
@@ -48,7 +48,7 @@ test-system:
     #!/usr/bin/env sh
     set -e
     export COMPOSE_PROJECT_NAME=doc-graph-test
-    export COMPOSE_PROFILES=full
+    export COMPOSE_PROFILES=backend
     trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
     {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
     cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run pytest system
@@ -60,12 +60,12 @@ test-acceptance env="local-mock":
     export COMPOSE_PROJECT_NAME=doc-graph-test
     case "{{env}}" in
       local-mock)
-        export COMPOSE_PROFILES=full,mock
+        export COMPOSE_PROFILES=backend,mock
         trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
         {{dotenv-run}} sh -c 'AI_OPENAI_BASE_URL=$MOCK_AI_OPENAI_BASE_URL NOTION_AUTHORIZATION_URI=$MOCK_NOTION_AUTHORIZATION_URI NOTION_TOKEN_URI=$MOCK_NOTION_TOKEN_URI docker compose {{test-compose-files}} up -d --build --wait'
         ;;
       local-live)
-        export COMPOSE_PROFILES=full,live
+        export COMPOSE_PROFILES=backend,live
         trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
         {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
         ;;

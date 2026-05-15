@@ -1,11 +1,7 @@
 services:
-  ngrok:
-    profiles:
-      - disabled
-
   postgres:
     ports: !override
-      - "5434:5432"
+      - "${POSTGRES_TEST_HOST_PORT:?}:5432"
     volumes: !override []
     tmpfs:
       - /var/lib/postgresql/data
@@ -19,7 +15,7 @@ services:
       - mock
     image: wiremock/wiremock:3.10.0
     ports:
-      - "8081:8080"
+      - "${WIREMOCK_HOST_PORT:?}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health || exit 1"]
       interval: 5s
