@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${DB_USERNAME:?}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_HOST_PORT:?}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,11 +18,11 @@ services:
 
   ngrok:
     image: ngrok/ngrok:latest
-    command: http host.docker.internal:8080
+    command: http --domain=${NGROK_STATIC_DOMAIN} host.docker.internal:8080
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?}
     ports:
-      - "4040:4040"
+      - "${NGROK_HOST_PORT:?}:4040"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     profiles:
@@ -43,7 +43,7 @@ services:
       NOTION_CLIENT_ID: ${NOTION_CLIENT_ID:?}
       NOTION_CLIENT_SECRET: ${NOTION_CLIENT_SECRET:?}
     ports:
-      - "8080:8080"
+      - "${BACKEND_HOST_PORT:?}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,7 +54,7 @@ services:
       retries: 30
       start_period: 60s
     profiles:
-      - full
+      - backend
 
 volumes:
   postgres_data:

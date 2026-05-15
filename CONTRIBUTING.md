@@ -32,7 +32,7 @@
 | `api-types` | `packages/api-types/` |
 | `tests` | `tests/` |
 | `docs` | `docs/` |
-| `infra` | `infra/`, 루트 `docker-compose.yml`·`.env.example` 등 |
+| `infra` | `infra/` |
 
 ### 예시
 
