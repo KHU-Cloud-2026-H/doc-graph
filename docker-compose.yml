@@ -25,6 +25,8 @@ services:
       - "4040:4040"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    profiles:
+      - live
 
   backend:
     build:

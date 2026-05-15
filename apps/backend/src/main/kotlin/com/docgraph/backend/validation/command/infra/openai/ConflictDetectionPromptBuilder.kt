@@ -35,7 +35,7 @@ object ConflictDetectionPromptBuilder {
 
     private fun serialize(blocks: List<Block>): String =
         if (blocks.isEmpty()) "(없음)"
-        else blocks.joinToString("\n") { "[block_id: ${it.blockId}] ${flatten(it.text)}" }
+        else blocks.joinToString("\n") { "[block_id: ${it.blockId}] ${flatten(it.text ?: "")}" }
 
     private fun flatten(text: String): String =
         text.replace(Regex("\\s+"), " ").trim()
