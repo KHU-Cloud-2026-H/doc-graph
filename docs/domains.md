@@ -162,7 +162,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 - Document (Notion 페이지 스냅샷, 타입: `meeting_notes` / `planning` / `requirements` / `design` / `research`)
   - JSONB 본문(블록 트리 원본) + flat text 컬럼(평탄화 평문, `pg_trgm` 검색·LLM 입력에 사용)
 - Block (Notion `block_id` PK, 소속 Document, 부모 블록, 타입, 텍스트, 순서) — 충돌이 가리킬 최소 주소 단위
-- DocumentChangeNotice (외부 source가 통보한 문서 변경 통지, 상태: `pending` / `processing` / `done` / `failed`) — 동기 트랜잭션과 비동기 변경 감지 사이의 outbox
+- DocumentChangeNotice (외부 source가 통보한 문서 변경 통지, 상태: `pending` / `success` / `failed`) — 동기 트랜잭션과 비동기 변경 감지 사이의 outbox
 
 **주요 흐름 — Webhook 수신 (동기)**
 1. HMAC 서명 검증
