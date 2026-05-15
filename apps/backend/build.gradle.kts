@@ -4,6 +4,7 @@ plugins {
 	id("org.springframework.boot") version "4.0.5"
 	id("io.spring.dependency-management") version "1.1.7"
 	kotlin("plugin.jpa") version "2.2.21"
+	kotlin("kapt") version "2.2.21"
 	id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
@@ -40,6 +41,11 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
 	implementation("org.springframework.retry:spring-retry:2.0.12")
 	implementation("org.springframework:spring-aspects")
+	implementation("io.github.openfeign.querydsl:querydsl-kotlin:7.1")
+	implementation("io.github.openfeign.querydsl:querydsl-jpa:7.1")
+	kapt("io.github.openfeign.querydsl:querydsl-apt:7.1:jpa")
+	kapt("jakarta.annotation:jakarta.annotation-api")
+	kapt("jakarta.persistence:jakarta.persistence-api")
 	testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -56,6 +62,9 @@ dependencies {
 kotlin {
 	compilerOptions {
 		freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+	}
+	sourceSets.main {
+		kotlin.srcDir(layout.buildDirectory.dir("generated/source/kapt/main"))
 	}
 }
 
