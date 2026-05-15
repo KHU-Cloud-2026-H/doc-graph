@@ -32,21 +32,22 @@ resource "aws_ecs_task_definition" "app" {
     }]
 
     environment = [
-      { name = "SPRING_DATASOURCE_URL",         value = "jdbc:postgresql://${var.rds_endpoint}/docgraph" },
-      { name = "SPRING_DATASOURCE_USERNAME",     value = "docgraph" },
-      { name = "SPRING_DOCKER_COMPOSE_ENABLED",  value = "false" },
-      { name = "MANAGEMENT_SERVER_PORT",         value = "8080" },
-      { name = "JAVA_TOOL_OPTIONS",              value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" },
-      { name = "AI_OPENAI_BASE_URL",             value = var.ai_openai_base_url },
-      { name = "AI_OPENAI_MODEL",                value = var.ai_openai_model },
+      { name = "DB_URL",                  value = "jdbc:postgresql://${var.rds_endpoint}/docgraph" },
+      { name = "DB_USERNAME",             value = "docgraph" },
+      { name = "NOTION_AUTHORIZATION_URI", value = "https://api.notion.com/v1/oauth/authorize" },
+      { name = "NOTION_TOKEN_URI",         value = "https://api.notion.com/v1/oauth/token" },
+      { name = "MANAGEMENT_SERVER_PORT",  value = "8080" },
+      { name = "JAVA_TOOL_OPTIONS",       value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" },
+      { name = "AI_OPENAI_BASE_URL",      value = var.ai_openai_base_url },
+      { name = "AI_OPENAI_MODEL",         value = var.ai_openai_model },
     ]
 
     # 민감 값은 Secrets Manager ARN 참조 — 태스크 실행 시 ECS가 직접 주입
     secrets = [
-      { name = "SPRING_DATASOURCE_PASSWORD",                                          valueFrom = var.rds_password_secret_arn },
-      { name = "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_NOTION_CLIENT_ID",         valueFrom = var.notion_client_id_secret_arn },
-      { name = "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_NOTION_CLIENT_SECRET",     valueFrom = var.notion_client_secret_arn },
-      { name = "AI_OPENAI_API_KEY",                                                   valueFrom = var.openai_api_key_secret_arn },
+      { name = "DB_PASSWORD",              valueFrom = var.rds_password_secret_arn },
+      { name = "NOTION_CLIENT_ID",         valueFrom = var.notion_client_id_secret_arn },
+      { name = "NOTION_CLIENT_SECRET",     valueFrom = var.notion_client_secret_arn },
+      { name = "AI_OPENAI_API_KEY",        valueFrom = var.openai_api_key_secret_arn },
     ]
 
     healthCheck = {
