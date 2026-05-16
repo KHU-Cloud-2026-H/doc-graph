@@ -13,7 +13,7 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
   const isActive = location.pathname === `/w/sample-workspace/docs/${node.id}`;
   const hasChildren = node.children && node.children.length > 0;
   // 폴더이거나 하위 요소가 있으면 기본적으로 열림 상태로 시작
-  const [isOpen, setIsOpen] = useState(node.isFolder || hasChildren);
+  const [isOpen, setIsOpen] = useState(hasChildren);
 
   return (
     <li>
