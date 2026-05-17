@@ -33,6 +33,9 @@ class ConflictFinding(
     @Column(name = "rationale", nullable = false, columnDefinition = "text")
     val rationale: String,
 
+    @Column(name = "suggestion", nullable = false, columnDefinition = "text")
+    val suggestion: String,
+
     @Column(name = "detected_at", nullable = false, updatable = false)
     val detectedAt: OffsetDateTime,
 )

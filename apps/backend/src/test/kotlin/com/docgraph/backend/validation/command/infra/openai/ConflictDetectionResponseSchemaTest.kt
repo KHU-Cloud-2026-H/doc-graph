@@ -51,11 +51,11 @@ class ConflictDetectionResponseSchemaTest {
     }
 
     @Test
-    fun `conflict item — source_block_ids·target_block_ids·rationale 모두 required`() {
+    fun `conflict item — source_block_ids·target_block_ids·rationale·suggestion 모두 required`() {
         val item = conflictItemOf(ConflictDetectionResponseSchema.responseFormat())
         @Suppress("UNCHECKED_CAST")
         val required = (item["required"] as List<String>).toSet()
-        assertEquals(setOf("source_block_ids", "target_block_ids", "rationale"), required)
+        assertEquals(setOf("source_block_ids", "target_block_ids", "rationale", "suggestion"), required)
     }
 
     @Test
@@ -86,6 +86,14 @@ class ConflictDetectionResponseSchemaTest {
         @Suppress("UNCHECKED_CAST")
         val rat = props["rationale"] as Map<String, Any>
         assertEquals("string", rat["type"])
+    }
+
+    @Test
+    fun `suggestion — string`() {
+        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
+        @Suppress("UNCHECKED_CAST")
+        val sug = props["suggestion"] as Map<String, Any>
+        assertEquals("string", sug["type"])
     }
 
     @Suppress("UNCHECKED_CAST")

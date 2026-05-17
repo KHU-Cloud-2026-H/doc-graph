@@ -40,6 +40,7 @@ class ConflictFindingRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("block-1", "block-2"),
                 targetBlockIds = listOf("target-1"),
                 rationale = "회의록의 결정사항이 요구사항에 반영되지 않음",
+                suggestion = "requirements 3.2절을 'A 옵션'으로 변경",
                 detectedAt = now,
             ),
         )
@@ -49,6 +50,7 @@ class ConflictFindingRepositoryTest @Autowired constructor(
         assertEquals(listOf("block-1", "block-2"), loaded.sourceBlockIds)
         assertEquals(listOf("target-1"), loaded.targetBlockIds)
         assertEquals("회의록의 결정사항이 요구사항에 반영되지 않음", loaded.rationale)
+        assertEquals("requirements 3.2절을 'A 옵션'으로 변경", loaded.suggestion)
     }
 
     @Test
@@ -80,6 +82,7 @@ class ConflictFindingRepositoryTest @Autowired constructor(
             sourceBlockIds = listOf("s"),
             targetBlockIds = listOf("t"),
             rationale = "r",
+            suggestion = "sug",
             detectedAt = detectedAt,
         )
 }
