@@ -36,9 +36,11 @@ test-all:
 test-class class:
     cd apps/backend && {{dotenv-run}} sh ./gradlew test --tests {{class}}
 
-# 풀 스택 — postgres + backend 컨테이너 + ngrok (프론트/인프라가 실제 흐름 시연 목적)
-compose-up:
-    {{dotenv-run}} docker compose --profile backend --profile live up
+# 인수 stack — postgres + backend(acceptance profile) + 외부 시스템 stub.
+# mode: mock (default, wiremock) | live (실제 Notion·OpenAI + ngrok).
+# 회원가입 UI 실제 흐름 시연은 live + OAuth2 backend 통합 완료가 전제.
+compose-up mode="mock":
+    COMPOSE_PROFILES=backend,{{mode}} {{dotenv-run}} docker compose up
 
 compose-down:
     {{dotenv-run}} docker compose down
