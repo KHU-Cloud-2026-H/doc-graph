@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.context.ApplicationEventPublisher
 import java.time.OffsetDateTime
-import java.util.Optional
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -49,10 +48,10 @@ class ApproveProposalCommandHandlerTest {
     fun `정상 — finding approve + ProposalApproved 발행`() {
         val finding = stubFinding(id = 50L, conflictId = 60L)
         wireConflictChain(conflictId = 60L, edgeId = 70L, targetDocumentId = 80L, targetEdited = targetEdited)
-        every { findingRepository.findById(50L) } returns Optional.of(finding)
+        every { findingRepository.findById(50L) } returns finding
 
         val captured = slot<ProposalApproved>()
-        every { publisher.publishEvent(capture<Any>(captured)) } returns Unit
+        every { publisher.publishEvent(capture(captured)) } returns Unit
 
         handler.handle(
             ApproveProposalCommand(
@@ -71,7 +70,7 @@ class ApproveProposalCommandHandlerTest {
 
     @Test
     fun `finding 없음 — ConflictFindingNotFoundException`() {
-        every { findingRepository.findById(404L) } returns Optional.empty()
+        every { findingRepository.findById(404L) } returns null
 
         assertThrows<ConflictFindingNotFoundException> {
             handler.handle(
@@ -86,7 +85,8 @@ class ApproveProposalCommandHandlerTest {
         val finding = stubFinding(id = 51L, conflictId = 60L).apply {
             approve(by = 1L, at = OffsetDateTime.now())
         }
-        every { findingRepository.findById(51L) } returns Optional.of(finding)
+        wireConflictChain(conflictId = 60L, edgeId = 70L, targetDocumentId = 80L, targetEdited = targetEdited)
+        every { findingRepository.findById(51L) } returns finding
 
         assertThrows<IllegalConflictFindingStateException> {
             handler.handle(
@@ -105,7 +105,7 @@ class ApproveProposalCommandHandlerTest {
             targetDocumentId = 80L,
             targetEdited = OffsetDateTime.parse("2026-05-17T11:30:00Z"),
         )
-        every { findingRepository.findById(52L) } returns Optional.of(finding)
+        every { findingRepository.findById(52L) } returns finding
 
         assertThrows<StaleProposalException> {
             handler.handle(
@@ -119,7 +119,7 @@ class ApproveProposalCommandHandlerTest {
     fun `expected null + target도 null — 통과 (둘 다 미세팅)`() {
         val finding = stubFinding(id = 53L, conflictId = 60L)
         wireConflictChain(conflictId = 60L, edgeId = 70L, targetDocumentId = 80L, targetEdited = null)
-        every { findingRepository.findById(53L) } returns Optional.of(finding)
+        every { findingRepository.findById(53L) } returns finding
         every { publisher.publishEvent(any<ProposalApproved>()) } returns Unit
 
         handler.handle(
@@ -147,7 +147,7 @@ class ApproveProposalCommandHandlerTest {
             firstDetectedAt = OffsetDateTime.now(),
             lastDetectedAt = OffsetDateTime.now(),
         )
-        every { conflictRepository.findById(conflictId) } returns Optional.of(conflict)
+        every { conflictRepository.findById(conflictId) } returns conflict
         every { findEdgeById.find(edgeId) } returns EdgeDetail(
             id = edgeId,
             sourceDocumentId = 100L,

@@ -6,7 +6,9 @@ import com.docgraph.backend.validation.command.application.ProcessValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskQueuedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import com.ninjasquad.springmockk.MockkBean
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -64,11 +66,17 @@ class ValidationPairCreatedEventListenerRollbackTest {
 
     @Autowired lateinit var repository: ValidationTaskRepository
 
+    @Autowired lateinit var em: EntityManager
+
+    @Autowired lateinit var txTemplate: TransactionTemplate
+
     @MockkBean lateinit var processHandler: ProcessValidationTaskCommandHandler
 
     @BeforeEach
     fun resetState() {
-        repository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
     }
 
     @Test
@@ -84,9 +92,10 @@ class ValidationPairCreatedEventListenerRollbackTest {
         // tx interceptor가 listener method 종료 후 rollback을 처리하므로 buffer
         Thread.sleep(500)
 
+        val count = em.createQuery("SELECT COUNT(t) FROM ValidationTask t", Long::class.javaObjectType).singleResult
         assertEquals(
             0L,
-            repository.count(),
+            count,
             "ValidationTask가 영속화됐음 — listener의 @Transactional(REQUIRES_NEW)가 rollback하지 못함",
         )
     }

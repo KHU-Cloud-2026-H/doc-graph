@@ -15,6 +15,7 @@ import com.docgraph.backend.validation.command.domain.DetectedConflict
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -89,6 +91,8 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
     private val taskRepository: ValidationTaskRepository,
     private val conflictRepository: ConflictRepository,
     private val findingRepository: ConflictFindingRepository,
+    private val em: EntityManager,
+    private val txTemplate: TransactionTemplate,
     private val findEdge: ListenerFakeFindEdgeByIdQuery,
     private val findDocument: ListenerFakeFindDocumentByIdQuery,
     private val detector: FakeConflictDetector,
@@ -96,9 +100,11 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
 
     @BeforeEach
     fun reset() {
-        findingRepository.deleteAll()
-        conflictRepository.deleteAll()
-        taskRepository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ConflictFinding").executeUpdate()
+            em.createQuery("DELETE FROM Conflict").executeUpdate()
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
         detector.invocations.set(0)
         detector.behavior = { _, _, _ -> emptyList() }
     }
@@ -117,10 +123,10 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
 
         testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
 
-        waitFor { taskRepository.findById(task.id).get().status == OutboxStatus.SUCCESS }
+        waitFor { taskRepository.findById(task.id)?.status == OutboxStatus.SUCCESS }
         assertEquals(1, detector.invocations.get())
-        assertEquals(1, conflictRepository.count())
-        assertEquals(1, findingRepository.count())
+        assertEquals(1L, conflictCount())
+        assertEquals(1L, findingCount())
     }
 
     @Test
@@ -135,15 +141,21 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
 
         testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
 
-        waitFor { taskRepository.findById(task.id).get().status == OutboxStatus.FAILED }
-        val reloaded = taskRepository.findById(task.id).get()
+        waitFor { taskRepository.findById(task.id)?.status == OutboxStatus.FAILED }
+        val reloaded = taskRepository.findById(task.id)!!
         assertEquals("AI failure", reloaded.failureReason)
         assertEquals(2, detector.invocations.get(), "max-attempts=2 만큼 호출")
-        assertEquals(0, conflictRepository.count())
+        assertEquals(0L, conflictCount())
     }
 
     private fun newPendingTask(edgeId: Long): ValidationTask =
-        taskRepository.saveAndFlush(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
+        taskRepository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
+
+    private fun conflictCount(): Long =
+        em.createQuery("SELECT COUNT(c) FROM Conflict c", Long::class.javaObjectType).singleResult
+
+    private fun findingCount(): Long =
+        em.createQuery("SELECT COUNT(f) FROM ConflictFinding f", Long::class.javaObjectType).singleResult
 
     private fun wireFakes(edgeId: Long, sourceBlocks: List<Block>, targetBlocks: List<Block>) {
         val sourceDocId = 1000L + edgeId

@@ -1,11 +1,12 @@
 package com.docgraph.backend.validation.query.infra
 
-import com.docgraph.backend.validation.command.domain.Conflict
-import com.docgraph.backend.validation.command.domain.ConflictFinding
 import com.docgraph.backend.validation.command.domain.QConflict
 import com.docgraph.backend.validation.command.domain.QConflictFinding
 import com.docgraph.backend.validation.command.domain.QValidationTask
-import com.docgraph.backend.validation.command.domain.ValidationTask
+import com.docgraph.backend.validation.query.application.ConflictFindingRow
+import com.docgraph.backend.validation.query.application.ConflictRow
+import com.docgraph.backend.validation.query.application.ValidationTaskRow
+import com.querydsl.core.types.Projections
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -23,7 +24,7 @@ class ValidationQueryRepository {
     private val queryFactory: JPAQueryFactory
         get() = JPAQueryFactory(entityManager)
 
-    fun findConflictsByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<Conflict> {
+    fun findConflictsByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ConflictRow> {
         val c = QConflict.conflict
 
         val count = queryFactory
@@ -36,7 +37,16 @@ class ValidationQueryRepository {
             .fetchOne() ?: 0L
 
         val content = queryFactory
-            .selectFrom(c)
+            .select(
+                Projections.constructor(
+                    ConflictRow::class.java,
+                    c.id,
+                    c.edgeId,
+                    c.ignoredAt,
+                    c.ignoreReason,
+                ),
+            )
+            .from(c)
             .where(
                 c.edgeId.`in`(edgeIds),
                 c.resolvedAt.isNull,
@@ -48,19 +58,30 @@ class ValidationQueryRepository {
         return PageImpl(content, pageable, count)
     }
 
-    fun findFindingsByConflictIds(conflictIds: List<Long>): Map<Long, List<ConflictFinding>> {
-        if (conflictIds.isEmpty()) return emptyMap()
+    fun findFindingsByConflictIds(conflictIds: List<Long>): List<ConflictFindingRow> {
+        if (conflictIds.isEmpty()) return emptyList()
 
         val f = QConflictFinding.conflictFinding
 
         return queryFactory
-            .selectFrom(f)
+            .select(
+                Projections.constructor(
+                    ConflictFindingRow::class.java,
+                    f.id,
+                    f.conflictId,
+                    f.sourceBlockIds,
+                    f.targetBlockIds,
+                    f.rationale,
+                    f.suggestion,
+                    f.detectedAt,
+                ),
+            )
+            .from(f)
             .where(f.conflictId.`in`(conflictIds))
             .fetch()
-            .groupBy { it.conflictId }
     }
 
-    fun findValidationTasksByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ValidationTask> {
+    fun findValidationTasksByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ValidationTaskRow> {
         val t = QValidationTask.validationTask
 
         val count = queryFactory
@@ -70,7 +91,16 @@ class ValidationQueryRepository {
             .fetchOne() ?: 0L
 
         val content = queryFactory
-            .selectFrom(t)
+            .select(
+                Projections.constructor(
+                    ValidationTaskRow::class.java,
+                    t.id,
+                    t.edgeId,
+                    t.status,
+                    t.createdAt,
+                ),
+            )
+            .from(t)
             .where(t.edgeId.`in`(edgeIds))
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())

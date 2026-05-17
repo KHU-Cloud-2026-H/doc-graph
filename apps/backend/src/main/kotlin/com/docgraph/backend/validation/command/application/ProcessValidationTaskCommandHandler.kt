@@ -35,7 +35,8 @@ class ProcessValidationTaskCommandHandler(
     fun handle(command: ProcessValidationTaskCommand) {
         transition.recordAttempt(command.taskId)
 
-        val task = repository.findById(command.taskId).orElseThrow()
+        val task = repository.findById(command.taskId)
+            ?: error("validation task not found: ${command.taskId}")
         if (task.status != OutboxStatus.PENDING) return
 
         val edge = findEdgeById.find(task.edgeId) ?: run {

@@ -14,7 +14,7 @@ class IgnoreConflictCommandHandler(
     @Transactional
     fun handle(command: IgnoreConflictCommand) {
         val conflict = conflictRepository.findById(command.conflictId)
-            .orElseThrow { ConflictNotFoundException(command.conflictId) }
+            ?: throw ConflictNotFoundException(command.conflictId)
         if (!conflict.isActive) {
             throw IllegalConflictStateException(command.conflictId, "이미 해소된 충돌은 무시 불가")
         }

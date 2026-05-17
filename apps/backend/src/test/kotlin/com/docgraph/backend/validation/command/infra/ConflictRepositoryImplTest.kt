@@ -1,6 +1,10 @@
-package com.docgraph.backend.validation.command.domain
+package com.docgraph.backend.validation.command.infra
 
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.validation.command.domain.Conflict
+import com.docgraph.backend.validation.command.domain.ConflictRepository
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -17,14 +21,18 @@ import kotlin.test.assertNull
 @Tag("slice")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(SharedPostgresContainer::class)
-class ConflictRepositoryTest @Autowired constructor(
+@Import(SharedPostgresContainer::class, ConflictRepositoryImpl::class)
+class ConflictRepositoryImplTest @Autowired constructor(
     private val repository: ConflictRepository,
 ) {
 
+    @PersistenceContext
+    private lateinit var em: EntityManager
+
     @Test
     fun `findFirstByEdgeIdAndResolvedAtIsNull — 활성 conflict 반환`() {
-        val saved = repository.saveAndFlush(newConflict(edgeId = 10L))
+        val saved = repository.save(newConflict(edgeId = 10L))
+        em.flush()
 
         val found = repository.findFirstByEdgeIdAndResolvedAtIsNull(10L)
 
@@ -34,29 +42,36 @@ class ConflictRepositoryTest @Autowired constructor(
 
     @Test
     fun `findFirstByEdgeIdAndResolvedAtIsNull — resolved 상태면 null`() {
-        val conflict = repository.saveAndFlush(newConflict(edgeId = 11L))
+        val conflict = repository.save(newConflict(edgeId = 11L))
+        em.flush()
         conflict.markResolved(OffsetDateTime.now())
-        repository.saveAndFlush(conflict)
+        repository.save(conflict)
+        em.flush()
 
         assertNull(repository.findFirstByEdgeIdAndResolvedAtIsNull(11L))
     }
 
     @Test
     fun `같은 edge_id로 활성 conflict 두 건 — partial UNIQUE 제약 위반`() {
-        repository.saveAndFlush(newConflict(edgeId = 12L))
+        repository.save(newConflict(edgeId = 12L))
+        em.flush()
 
         assertThrows<DataIntegrityViolationException> {
-            repository.saveAndFlush(newConflict(edgeId = 12L))
+            repository.save(newConflict(edgeId = 12L))
+            em.flush()
         }
     }
 
     @Test
     fun `resolved 후 같은 edge_id로 새 conflict — 허용`() {
-        val first = repository.saveAndFlush(newConflict(edgeId = 13L))
+        val first = repository.save(newConflict(edgeId = 13L))
+        em.flush()
         first.markResolved(OffsetDateTime.now())
-        repository.saveAndFlush(first)
+        repository.save(first)
+        em.flush()
 
-        val second = repository.saveAndFlush(newConflict(edgeId = 13L))
+        val second = repository.save(newConflict(edgeId = 13L))
+        em.flush()
 
         assertNotNull(second.id)
         assertEquals(13L, second.edgeId)

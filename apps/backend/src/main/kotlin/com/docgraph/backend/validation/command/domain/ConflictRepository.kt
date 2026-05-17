@@ -1,7 +1,7 @@
 package com.docgraph.backend.validation.command.domain
 
-import org.springframework.data.jpa.repository.JpaRepository
-
-interface ConflictRepository : JpaRepository<Conflict, Long> {
+interface ConflictRepository {
+    fun save(conflict: Conflict): Conflict
+    fun findById(id: Long): Conflict?
     fun findFirstByEdgeIdAndResolvedAtIsNull(edgeId: Long): Conflict?
 }

@@ -4,7 +4,6 @@ import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.SearchEdgeDetailsByProjectQuery
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import com.docgraph.backend.web.PageResponse
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 
@@ -32,17 +31,18 @@ class SearchConflictsByProjectQueryHandler(
         val conflictPage = validationQueryRepository.findConflictsByEdgeIds(edgeIds, pageable)
         val conflictIds = conflictPage.content.map { it.id }
         val findingsByConflictId = validationQueryRepository.findFindingsByConflictIds(conflictIds)
+            .groupBy { it.conflictId }
 
         val responses = conflictPage.content.map { conflict ->
             val edge = edgeDetailById.getValue(conflict.edgeId)
-            val findings = findingsByConflictId[conflict.id].orEmpty().map { finding ->
+            val findings = findingsByConflictId[conflict.id].orEmpty().map { row ->
                 ConflictFindingResponse(
-                    id = finding.id,
-                    sourceBlockIds = finding.sourceBlockIds,
-                    targetBlockIds = finding.targetBlockIds,
-                    rationale = finding.rationale,
-                    suggestion = finding.suggestion,
-                    detectedAt = finding.detectedAt,
+                    id = row.id,
+                    sourceBlockIds = row.sourceBlockIds,
+                    targetBlockIds = row.targetBlockIds,
+                    rationale = row.rationale,
+                    suggestion = row.suggestion,
+                    detectedAt = row.detectedAt,
                 )
             }
             ConflictResponse(

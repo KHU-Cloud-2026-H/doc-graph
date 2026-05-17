@@ -1,7 +1,11 @@
-package com.docgraph.backend.validation.command.domain
+package com.docgraph.backend.validation.command.infra
 
 import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.validation.command.domain.ValidationTask
+import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -18,20 +22,24 @@ import kotlin.test.assertNull
 @Tag("slice")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(SharedPostgresContainer::class)
-class ValidationTaskRepositoryTest @Autowired constructor(
+@Import(SharedPostgresContainer::class, ValidationTaskRepositoryImpl::class)
+class ValidationTaskRepositoryImplTest @Autowired constructor(
     private val repository: ValidationTaskRepository,
 ) {
+
+    @PersistenceContext
+    private lateinit var em: EntityManager
 
     @Test
     fun `findByValidationPairId — 존재하면 task 반환`() {
         val pairId = UUID.randomUUID()
         val saved = repository.save(ValidationTask(validationPairId = pairId, edgeId = 100L))
+        em.flush()
 
         val found = repository.findByValidationPairId(pairId)
 
         assertNotNull(found)
-        assertEquals(saved.id, found!!.id)
+        assertEquals(saved.id, found.id)
     }
 
     @Test
@@ -62,6 +70,7 @@ class ValidationTaskRepositoryTest @Autowired constructor(
                 status = OutboxStatus.SUCCESS,
             ),
         )
+        em.flush()
 
         val stale = repository.findStale(cutoff)
 
@@ -72,6 +81,7 @@ class ValidationTaskRepositoryTest @Autowired constructor(
     @Test
     fun `findStale — lastAttemptAt이 null인 PENDING도 포함 (한 번도 시도 안 한 row)`() {
         val nullAttemptTask = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 100L))
+        em.flush()
 
         val stale = repository.findStale(OffsetDateTime.now())
 

@@ -23,10 +23,10 @@ class ApproveProposalCommandHandler(
     @Transactional
     fun handle(command: ApproveProposalCommand) {
         val finding = findingRepository.findById(command.findingId)
-            .orElseThrow { ConflictFindingNotFoundException(command.findingId) }
+            ?: throw ConflictFindingNotFoundException(command.findingId)
 
         val conflict = conflictRepository.findById(finding.conflictId)
-            .orElseThrow { ConflictFindingNotFoundException(command.findingId) }
+            ?: throw ConflictFindingNotFoundException(command.findingId)
         val edge = findEdgeById.find(conflict.edgeId)
             ?: error("edge not found for conflict ${conflict.id}: edgeId=${conflict.edgeId}")
         val target = findDocumentById.find(edge.targetDocumentId)

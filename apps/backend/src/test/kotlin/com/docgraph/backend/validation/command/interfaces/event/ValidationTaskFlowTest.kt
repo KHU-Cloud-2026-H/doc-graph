@@ -8,9 +8,11 @@ import com.docgraph.backend.graph.command.domain.ValidationPairCreatedEvent
 import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
-import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -83,7 +85,9 @@ class ValidationTaskFlowTest {
 
     @Autowired lateinit var probe: FlowPreparedProbe
 
-    @Autowired lateinit var repository: ValidationTaskRepository
+    @Autowired lateinit var em: EntityManager
+
+    @Autowired lateinit var txTemplate: TransactionTemplate
 
     @Autowired lateinit var findEdge: FlowFakeFindEdgeByIdQuery
 
@@ -91,7 +95,9 @@ class ValidationTaskFlowTest {
 
     @BeforeEach
     fun reset() {
-        repository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
     }
 
     @Test
@@ -113,7 +119,7 @@ class ValidationTaskFlowTest {
         val fired = probe.latch.await(10, TimeUnit.SECONDS)
         assertTrue(fired, "ValidationTaskPreparedEvent did not fire within 10s — 흐름 어딘가에서 중단")
 
-        val tasks = repository.findAll()
+        val tasks = em.createQuery("SELECT t FROM ValidationTask t", ValidationTask::class.java).resultList
         assertEquals(1, tasks.size)
         val task = tasks.single()
 

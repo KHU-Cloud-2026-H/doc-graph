@@ -14,6 +14,7 @@ import com.docgraph.backend.validation.command.domain.ConflictRepository
 import com.docgraph.backend.validation.command.domain.ProposalApproved
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
 import tools.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -28,6 +29,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.context.event.EventListener
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.post
 import java.time.OffsetDateTime
@@ -75,6 +77,8 @@ class ValidationCommandControllerTest @Autowired constructor(
     private val conflictRepository: ConflictRepository,
     private val findingRepository: ConflictFindingRepository,
     private val taskRepository: ValidationTaskRepository,
+    private val em: EntityManager,
+    private val txTemplate: TransactionTemplate,
     private val getCurrentUserId: FakeGetCurrentUserIdQuery,
     private val findEdge: FakeFindEdgeByIdQuery,
     private val findDocument: FakeFindDocumentByIdQuery,
@@ -83,9 +87,11 @@ class ValidationCommandControllerTest @Autowired constructor(
 
     @BeforeEach
     fun reset() {
-        findingRepository.deleteAll()
-        conflictRepository.deleteAll()
-        taskRepository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ConflictFinding").executeUpdate()
+            em.createQuery("DELETE FROM Conflict").executeUpdate()
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
         getCurrentUserId.userId = 7L
         findEdge.behavior = { null }
         findDocument.behavior = { null }
@@ -103,7 +109,7 @@ class ValidationCommandControllerTest @Autowired constructor(
             status { isNoContent() }
         }
 
-        val reloaded = conflictRepository.findById(conflict.id).orElseThrow()
+        val reloaded = conflictRepository.findById(conflict.id)!!
         assert(reloaded.ignoredAt != null)
         assert(reloaded.ignoredBy == 7L)
         assert(reloaded.ignoreReason == "의도된 차이")
@@ -163,7 +169,7 @@ class ValidationCommandControllerTest @Autowired constructor(
             status { isNoContent() }
         }
 
-        val reloaded = conflictRepository.findById(conflict.id).orElseThrow()
+        val reloaded = conflictRepository.findById(conflict.id)!!
         assert(reloaded.ignoredAt == null)
         assert(reloaded.ignoredBy == null)
         assert(reloaded.ignoreReason == null)
@@ -197,7 +203,7 @@ class ValidationCommandControllerTest @Autowired constructor(
             status { isNoContent() }
         }
 
-        val reloaded = findingRepository.findById(fixture.finding.id).orElseThrow()
+        val reloaded = findingRepository.findById(fixture.finding.id)!!
         assert(reloaded.isApproved)
         assert(reloaded.approvedBy == 7L)
         assert(proposalApprovedProbe.received.size == 1)
@@ -219,7 +225,7 @@ class ValidationCommandControllerTest @Autowired constructor(
         val edited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
         val fixture = approveFixture(edgeId = 62L, targetDocumentId = 162L, targetEdited = edited).also {
             it.finding.approve(by = 1L, at = OffsetDateTime.now())
-            findingRepository.saveAndFlush(it.finding)
+            findingRepository.save(it.finding)
         }
 
         mockMvc.post("/conflicts/${fixture.conflict.id}/findings/${fixture.finding.id}/approve") {
@@ -248,8 +254,7 @@ class ValidationCommandControllerTest @Autowired constructor(
         return Conflict(edgeId = edgeId, firstDetectedAt = now, lastDetectedAt = now)
     }
 
-    private fun save(conflict: Conflict): Conflict = conflictRepository.saveAndFlush(conflict)
-
+    private fun save(conflict: Conflict): Conflict = conflictRepository.save(conflict)
     private data class ApproveFixture(val conflict: Conflict, val finding: ConflictFinding)
 
     private fun approveFixture(
@@ -257,11 +262,11 @@ class ValidationCommandControllerTest @Autowired constructor(
         targetDocumentId: Long,
         targetEdited: OffsetDateTime?,
     ): ApproveFixture {
-        val task = taskRepository.saveAndFlush(
+        val task = taskRepository.save(
             ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId),
         )
         val conflict = save(newActive(edgeId))
-        val finding = findingRepository.saveAndFlush(
+        val finding = findingRepository.save(
             ConflictFinding(
                 conflictId = conflict.id,
                 validationTaskId = task.id,
