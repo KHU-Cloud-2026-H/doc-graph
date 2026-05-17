@@ -61,24 +61,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workspaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 내 워크스페이스 목록 */
-        get: operations["list"];
-        put?: never;
-        /** 워크스페이스 생성 */
-        post: operations["create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/workspaces/{workspaceId}/projects": {
         parameters: {
             query?: never;
@@ -87,13 +69,13 @@ export interface paths {
             cookie?: never;
         };
         /** 프로젝트 목록 */
-        get: operations["list_1"];
+        get: operations["list"];
         put?: never;
         /**
          * 프로젝트 생성
          * @description Notion 루트 페이지를 기준으로 프로젝트를 생성한다. 생성 직후 동기화는 실행되지 않는다. 타입 매핑·담당자 기본값·멤버 배정을 완료한 후 POST /projects/{id}/sync로 초기 동기화를 수동 트리거해야 한다.
          */
-        post: operations["create_1"];
+        post: operations["create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -111,7 +93,7 @@ export interface paths {
         put?: never;
         /**
          * 멤버 초대
-         * @description 워크스페이스 멤버로 초대한다. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.
+         * @description 워크스페이스 멤버로 초대한다. 가입 사용자만 이메일로 검색해 추가. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.
          */
         post: operations["inviteMember"];
         delete?: never;
@@ -251,6 +233,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conflicts/{conflictId}/findings/{findingId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 충돌 finding 수정 제안 승인
+         * @description AI가 생성한 수정 제안을 사용자가 승인한다. target 문서가 조회 시점 이후 변경되었으면 stale 409. 승인 시 ProposalApproved 이벤트를 발행하여 document 도메인이 Notion 쓰기를 처리한다.
+         */
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/members/{memberId}": {
         parameters: {
             query?: never;
@@ -267,6 +269,23 @@ export interface paths {
         head?: never;
         /** 프로젝트 멤버 역할 변경 */
         patch: operations["updateMemberRole"];
+        trace?: never;
+    };
+    "/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 내 워크스페이스 목록 — 소유 + 멤버 참여 모두 */
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/workspaces/{id}": {
@@ -418,7 +437,7 @@ export interface paths {
         };
         /**
          * 내 인박스
-         * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP).
+         * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)
          */
         get: operations["myInbox"];
         put?: never;
@@ -463,7 +482,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workspaces/{id}/members/{memberId}": {
+    "/workspaces/{id}/members/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -592,21 +611,6 @@ export interface components {
             /** @description 타입별 담당자 기본값 목록 */
             assignees?: components["schemas"]["TypeAssigneeItem"][];
         };
-        CreateWorkspaceRequest: {
-            /**
-             * @description 워크스페이스 이름
-             * @example My Team
-             */
-            name?: string;
-        };
-        IdResponse: {
-            /**
-             * Format: int64
-             * @description 생성된 리소스 ID
-             * @example 1
-             */
-            id?: number;
-        };
         CreateProjectRequest: {
             /**
              * @description 프로젝트 이름
@@ -619,10 +623,18 @@ export interface components {
              */
             notionRootPageId?: string;
         };
+        IdResponse: {
+            /**
+             * Format: int64
+             * @description 생성된 리소스 ID
+             * @example 1
+             */
+            id?: number;
+        };
         InviteMemberRequest: {
             /**
-             * @description 초대할 멤버 이메일
-             * @example member@example.com
+             * @description 초대할 가입 사용자 이메일
+             * @example user@example.com
              */
             email?: string;
         };
@@ -734,6 +746,13 @@ export interface components {
              */
             reason?: string | null;
         };
+        ApproveProposalRequest: {
+            /**
+             * Format: date-time
+             * @description 조회 시점에 본 target 문서의 notionLastEditedAt — server-side stale 비교에 사용 (target 측이 한 번도 동기화되지 않았다면 null)
+             */
+            expectedTargetNotionLastEditedAt?: string | null;
+        };
         UpdateProjectMemberRoleRequest: {
             /**
              * @description 변경할 역할
@@ -767,24 +786,6 @@ export interface components {
              */
             name?: string;
         };
-        MemberSummary: {
-            /**
-             * Format: int64
-             * @description 멤버 ID
-             * @example 1
-             */
-            id?: number;
-            /**
-             * @description 이름
-             * @example 홍길동
-             */
-            name?: string;
-            /**
-             * @description 이메일
-             * @example user@example.com
-             */
-            email?: string;
-        };
         WorkspaceDetail: {
             /**
              * Format: int64
@@ -797,7 +798,30 @@ export interface components {
              * @example My Team
              */
             name?: string;
-            members?: components["schemas"]["MemberSummary"][];
+            members?: components["schemas"]["WorkspaceMemberSummary"][];
+        };
+        WorkspaceMemberSummary: {
+            /**
+             * Format: int64
+             * @description 사용자 ID
+             * @example 1
+             */
+            userId?: number;
+            /**
+             * @description 이름
+             * @example 홍길동
+             */
+            name?: string;
+            /**
+             * @description 이메일
+             * @example user@example.com
+             */
+            email?: string;
+            /**
+             * Format: date-time
+             * @description 워크스페이스 가입 시점
+             */
+            joinedAt?: string;
         };
         ProjectDetail: {
             /**
@@ -1051,10 +1075,10 @@ export interface components {
              */
             title?: string;
             /**
-             * @description 문서 타입
-             * @enum {string}
+             * @description 문서 타입 (project type-mapping 미분류 시 null)
+             * @enum {string|null}
              */
-            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
         };
         PageResponseDocumentSummary: {
             content?: components["schemas"]["DocumentSummary"][];
@@ -1083,6 +1107,33 @@ export interface components {
              */
             size?: number;
         };
+        ConflictFindingResponse: {
+            /**
+             * Format: int64
+             * @description 충돌 finding ID
+             * @example 1
+             */
+            id?: number;
+            /** @description source 측 충돌 블록 ID 목록 (Notion block id) */
+            sourceBlockIds?: string[];
+            /** @description target 측 충돌 블록 ID 목록 (Notion block id) */
+            targetBlockIds?: string[];
+            /**
+             * @description 충돌 근거 (AI 판정)
+             * @example planning 3.2절 결정사항이 requirements에 반영되지 않음
+             */
+            rationale?: string;
+            /**
+             * @description AI 수정 제안 — target 측에 적용 가능한 자연어 수정안
+             * @example requirements 3.2절을 'A 옵션 선택'으로 변경
+             */
+            suggestion?: string;
+            /**
+             * Format: date-time
+             * @description 감지 시각
+             */
+            detectedAt?: string;
+        };
         ConflictResponse: {
             /**
              * Format: int64
@@ -1108,21 +1159,8 @@ export interface components {
              * @example 2
              */
             targetDocumentId?: number;
-            /**
-             * @description 충돌 구간 (AI가 식별한 원문 발췌)
-             * @example 3.2절 범위 정의 항목
-             */
-            conflictSection?: string;
-            /**
-             * @description 충돌 원인
-             * @example planning의 범위가 requirements에 반영되지 않음
-             */
-            cause?: string;
-            /**
-             * @description 수정 제안
-             * @example requirements 3.2절에 해당 기능 범위 추가 필요
-             */
-            suggestion?: string;
+            /** @description 충돌 finding 목록 */
+            findings?: components["schemas"]["ConflictFindingResponse"][];
             /**
              * Format: date-time
              * @description 무시 처리 시각 (미무시 시 null)
@@ -1165,7 +1203,7 @@ export interface components {
             blockId?: string;
             parentBlockId?: string | null;
             type?: string;
-            text?: string;
+            text?: string | null;
             /** Format: int32 */
             order?: number;
         };
@@ -1187,16 +1225,21 @@ export interface components {
              */
             title?: string;
             /**
-             * @description 문서 타입
-             * @enum {string}
+             * @description 문서 타입 (project type-mapping 미분류 시 null)
+             * @enum {string|null}
              */
-            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
             /**
              * Format: int64
              * @description 담당자 워크스페이스 멤버 ID (없으면 null)
              * @example 1
              */
             assigneeMemberId?: number | null;
+            /**
+             * Format: date-time
+             * @description Notion 원본의 마지막 수정 시각 (미동기화 시 null)
+             */
+            notionLastEditedAt?: string | null;
             /** @description 블록 row 목록 */
             blocks?: components["schemas"]["Block"][];
         };
@@ -1369,50 +1412,6 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["WorkspaceSummary"][];
-                };
-            };
-        };
-    };
-    create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateWorkspaceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["IdResponse"];
-                };
-            };
-        };
-    };
-    list_1: {
-        parameters: {
-            query?: never;
-            header?: never;
             path: {
                 workspaceId: number;
             };
@@ -1431,7 +1430,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1472,8 +1471,35 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 초대 완료 — workspace_member row id 반환 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IdResponse"];
+                };
+            };
+            /** @description 호출자가 워크스페이스 생성자 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IdResponse"];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 invitee 이메일이 가입 사용자에 매칭 안 됨 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IdResponse"];
+                };
+            };
+            /** @description 자기 자신 초대 또는 이미 멤버 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1685,8 +1711,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 무시 마킹 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 충돌 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 이미 무시 상태 또는 이미 해소된 충돌 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1705,8 +1745,61 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 무시 해제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 충돌 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 무시 상태가 아닌 충돌 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conflictId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description 승인 완료 + ProposalApproved 이벤트 발행 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 충돌 또는 finding 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 이미 승인된 finding 또는 target 문서가 조회 시점 이후 변경 (stale) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1760,6 +1853,26 @@ export interface operations {
             };
         };
     };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 워크스페이스 목록 (접근 가능한 것 없으면 빈 배열) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceSummary"][];
+                };
+            };
+        };
+    };
     get: {
         parameters: {
             query?: never;
@@ -1771,8 +1884,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 워크스페이스 상세 (멤버 목록 포함) */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceDetail"];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한 없음 (구분 X — security 측면에서 동일 응답) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1838,7 +1960,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 검증 작업 이력 page */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1907,7 +2029,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 프로젝트 문서 목록 page */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1932,7 +2054,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 충돌 목록 (없으면 빈 page) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1995,8 +2117,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 문서 상세 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentDetail"];
+                };
+            };
+            /** @description 문서 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2032,14 +2163,35 @@ export interface operations {
             header?: never;
             path: {
                 id: number;
-                memberId: number;
+                userId: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 제거 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 생성자 본인 제거 시도 — 생성자는 워크스페이스 멤버 row 자체가 아니라 제거 대상 X */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 워크스페이스 생성자 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 워크스페이스 없음 또는 해당 사용자가 워크스페이스 멤버 아님 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
