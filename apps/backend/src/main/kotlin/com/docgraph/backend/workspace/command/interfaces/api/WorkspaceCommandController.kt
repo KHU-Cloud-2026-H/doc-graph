@@ -15,6 +15,8 @@ import com.docgraph.backend.workspace.command.domain.WorkspacePermissionDeniedEx
 import com.docgraph.backend.workspace.command.domain.WorkspaceSelfInviteException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -40,6 +42,12 @@ class WorkspaceCommandController(
         summary = "멤버 초대",
         description = "워크스페이스 멤버로 초대한다. 가입 사용자만 이메일로 검색해 추가. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.",
     )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "초대 완료 — workspace_member row id 반환"),
+        ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 invitee 이메일이 가입 사용자에 매칭 안 됨"),
+        ApiResponse(responseCode = "409", description = "자기 자신 초대 또는 이미 멤버"),
+    ])
     fun inviteMember(
         @PathVariable id: Long,
         @RequestBody request: InviteMemberRequest,
@@ -56,6 +64,12 @@ class WorkspaceCommandController(
 
     @DeleteMapping("/{id}/members/{userId}")
     @Operation(summary = "멤버 제거")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "제거 완료"),
+        ApiResponse(responseCode = "400", description = "생성자 본인 제거 시도 — 생성자는 워크스페이스 멤버 row 자체가 아니라 제거 대상 X"),
+        ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 해당 사용자가 워크스페이스 멤버 아님"),
+    ])
     fun removeMember(
         @PathVariable id: Long,
         @PathVariable userId: Long,
