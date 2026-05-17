@@ -1,6 +1,6 @@
 package com.docgraph.backend.validation.command.interfaces.api
 
-import com.docgraph.backend.auth.query.application.GetCurrentMemberQuery
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.document.query.application.DocumentDetail
 import com.docgraph.backend.document.query.application.DocumentType
 import com.docgraph.backend.document.query.application.FindDocumentByIdQuery
@@ -33,9 +33,9 @@ import org.springframework.test.web.servlet.post
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class FakeGetCurrentMemberQuery : GetCurrentMemberQuery {
-    @Volatile var memberId: Long = 7L
-    override fun get(): Long = memberId
+class FakeGetCurrentUserIdQuery : GetCurrentUserIdQuery {
+    @Volatile var userId: Long = 7L
+    override fun get(): Long = userId
 }
 
 class FakeFindEdgeByIdQuery : FindEdgeByIdQuery {
@@ -59,7 +59,7 @@ class ProposalApprovedProbe {
 
 @TestConfiguration
 class ValidationCommandControllerTestConfig {
-    @Bean @Primary fun fakeGetCurrentMember() = FakeGetCurrentMemberQuery()
+    @Bean @Primary fun fakeGetCurrentUserId() = FakeGetCurrentUserIdQuery()
     @Bean @Primary fun fakeFindEdgeById() = FakeFindEdgeByIdQuery()
     @Bean @Primary fun fakeFindDocumentById() = FakeFindDocumentByIdQuery()
     @Bean fun proposalApprovedProbe() = ProposalApprovedProbe()
@@ -75,7 +75,7 @@ class ValidationCommandControllerTest @Autowired constructor(
     private val conflictRepository: ConflictRepository,
     private val findingRepository: ConflictFindingRepository,
     private val taskRepository: ValidationTaskRepository,
-    private val getCurrentMember: FakeGetCurrentMemberQuery,
+    private val getCurrentUserId: FakeGetCurrentUserIdQuery,
     private val findEdge: FakeFindEdgeByIdQuery,
     private val findDocument: FakeFindDocumentByIdQuery,
     private val proposalApprovedProbe: ProposalApprovedProbe,
@@ -86,7 +86,7 @@ class ValidationCommandControllerTest @Autowired constructor(
         findingRepository.deleteAll()
         conflictRepository.deleteAll()
         taskRepository.deleteAll()
-        getCurrentMember.memberId = 7L
+        getCurrentUserId.userId = 7L
         findEdge.behavior = { null }
         findDocument.behavior = { null }
         proposalApprovedProbe.received.clear()

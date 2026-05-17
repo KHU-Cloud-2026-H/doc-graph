@@ -76,14 +76,33 @@ test-acceptance env="local-mock":
     esac
     cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run pytest acceptance --env={{env}}
 
-# OpenAPI JSON dump — backend가 forked로 부팅하여 spec dump 후 packages/api-types로 canonical 위치 복사
+# OpenAPI JSON dump — bootRun으로 backend 띄운 후 /v3/api-docs endpoint curl로 spec 캡쳐.
+# springdoc-openapi-gradle-plugin 1.9.0이 spec fetch 시 4xx response 누락하는 bug 회피
+# (starter는 정상 응답이라 runtime mode 직접 활용).
 openapi-dump:
     #!/usr/bin/env sh
     set -e
-    trap '{{dotenv-run}} docker compose down' EXIT
+    BOOT_PID=""
+    cleanup() {
+        set +e
+        [ -n "$BOOT_PID" ] && kill $BOOT_PID 2>/dev/null
+        wait $BOOT_PID 2>/dev/null
+        {{dotenv-run}} docker compose down 2>/dev/null
+        return 0
+    }
+    trap cleanup EXIT
     {{dotenv-run}} docker compose up -d --wait
-    (cd apps/backend && {{dotenv-run}} sh ./gradlew --rerun-tasks generateOpenApiDocs)
-    cp apps/backend/build/openapi.json packages/api-types/openapi.json
+    (cd apps/backend && {{dotenv-run}} sh ./gradlew bootRun --no-daemon > /tmp/openapi-boot.log 2>&1) &
+    BOOT_PID=$!
+    for i in $(seq 1 90); do
+        if curl -s -f http://localhost:8080/api/v3/api-docs -o packages/api-types/openapi.json 2>/dev/null; then
+            echo "spec captured ($(wc -c < packages/api-types/openapi.json) bytes)"
+            exit 0
+        fi
+        sleep 1
+    done
+    echo "boot timeout — see /tmp/openapi-boot.log" >&2
+    exit 1
 
 # OpenAPI → TypeScript 타입 생성 (packages/api-types/openapi.json 입력)
 gen-types: openapi-dump

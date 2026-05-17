@@ -6,6 +6,8 @@ import com.docgraph.backend.validation.query.application.SearchConflictsByProjec
 import com.docgraph.backend.validation.query.application.SearchValidationTasksByProjectQuery
 import com.docgraph.backend.validation.query.application.ValidationTaskResponse
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
@@ -20,6 +22,9 @@ class ValidationQueryController(
 
     @GetMapping("/projects/{id}/conflicts")
     @Operation(summary = "프로젝트 충돌 목록")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "충돌 목록 (없으면 빈 page)"),
+    ])
     fun listByProject(
         @PathVariable id: Long,
         @RequestParam(defaultValue = "0") page: Int,
@@ -32,7 +37,7 @@ class ValidationQueryController(
     @GetMapping("/me/conflicts")
     @Operation(
         summary = "내 인박스",
-        description = "내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP).",
+        description = "내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)",
     )
     fun myInbox(
         @RequestParam(defaultValue = "0") page: Int,
@@ -43,6 +48,9 @@ class ValidationQueryController(
 
     @GetMapping("/projects/{id}/validation-tasks")
     @Operation(summary = "검증 작업 이력")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "검증 작업 이력 page"),
+    ])
     fun listValidationTasks(
         @PathVariable id: Long,
         @RequestParam(defaultValue = "0") page: Int,

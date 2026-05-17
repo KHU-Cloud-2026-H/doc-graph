@@ -7,5 +7,5 @@ data class WorkspaceDetail(
     val id: Long,
     @Schema(description = "워크스페이스 이름", example = "My Team")
     val name: String,
-    val members: List<MemberSummary>,
+    val members: List<WorkspaceMemberSummary>,
 )

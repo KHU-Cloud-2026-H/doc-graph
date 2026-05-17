@@ -5,7 +5,6 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.7"
 	kotlin("plugin.jpa") version "2.2.21"
 	kotlin("kapt") version "2.2.21"
-	id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
 group = "com.docgraph"
@@ -72,13 +71,6 @@ allOpen {
 	annotation("jakarta.persistence.Entity")
 	annotation("jakarta.persistence.MappedSuperclass")
 	annotation("jakarta.persistence.Embeddable")
-}
-
-openApi {
-	apiDocsUrl.set("http://localhost:8080/api/v3/api-docs")
-	outputDir.set(layout.buildDirectory.asFile.get())
-	outputFileName.set("openapi.json")
-	waitTimeInSeconds.set(60)
 }
 
 tasks.withType<Test> {
