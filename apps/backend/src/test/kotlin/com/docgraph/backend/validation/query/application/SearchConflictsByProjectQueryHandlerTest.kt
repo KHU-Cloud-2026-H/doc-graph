@@ -83,6 +83,8 @@ class SearchConflictsByProjectQueryHandlerTest {
         assertEquals(2, result.content[0].findings.size)
         assertEquals("rationale1", result.content[0].findings[0].rationale)
         assertEquals("rationale2", result.content[0].findings[1].rationale)
+        assertEquals("suggestion1", result.content[0].findings[0].suggestion)
+        assertEquals("suggestion2", result.content[0].findings[1].suggestion)
     }
 
     @Test

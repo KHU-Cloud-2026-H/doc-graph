@@ -41,6 +41,7 @@ class SearchConflictsByProjectQueryHandler(
                     sourceBlockIds = finding.sourceBlockIds,
                     targetBlockIds = finding.targetBlockIds,
                     rationale = finding.rationale,
+                    suggestion = finding.suggestion,
                     detectedAt = finding.detectedAt,
                 )
             }

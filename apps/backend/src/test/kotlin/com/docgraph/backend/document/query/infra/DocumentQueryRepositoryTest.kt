@@ -13,6 +13,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
 import org.springframework.data.domain.PageRequest
+import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -107,6 +108,31 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         val rootBlock = detail.blocks.first { it.blockId == "root-block" }
         assertEquals("parent-block", childBlock.parentBlockId)
         assertNull(rootBlock.parentBlockId)
+    }
+
+    @Test
+    fun `findDetail — notionLastEditedAt이 그대로 매핑 (non-null)`() {
+        val edited = OffsetDateTime.parse("2026-05-15T10:30:00Z")
+        val document = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "page-edited", title = "Edited", notionLastEditedAt = edited),
+        )
+
+        val detail = queryRepository.findDetail(document.id)
+
+        assertNotNull(detail)
+        assertEquals(edited, detail!!.notionLastEditedAt)
+    }
+
+    @Test
+    fun `findDetail — notionLastEditedAt 미세팅이면 null`() {
+        val document = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "page-unset", title = "Unset"),
+        )
+
+        val detail = queryRepository.findDetail(document.id)
+
+        assertNotNull(detail)
+        assertNull(detail!!.notionLastEditedAt)
     }
 
     @Test
