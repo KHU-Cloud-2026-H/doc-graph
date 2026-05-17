@@ -64,12 +64,12 @@ class SearchConflictsByProjectQueryHandlerTest {
         val finding1 = ConflictFinding(
             id = 11L, conflictId = 1L, validationTaskId = 99L,
             sourceBlockIds = listOf("a"), targetBlockIds = listOf("b"),
-            rationale = "rationale1", detectedAt = now,
+            rationale = "rationale1", suggestion = "suggestion1", detectedAt = now,
         )
         val finding2 = ConflictFinding(
             id = 12L, conflictId = 1L, validationTaskId = 99L,
             sourceBlockIds = listOf("c"), targetBlockIds = listOf("d"),
-            rationale = "rationale2", detectedAt = now,
+            rationale = "rationale2", suggestion = "suggestion2", detectedAt = now,
         )
 
         every { searchEdgeDetailsByProject.search(1L) } returns listOf(edgeDetail)

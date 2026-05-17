@@ -99,5 +99,6 @@ class ConflictReconcilerTest {
         sourceBlockIds = listOf("s1"),
         targetBlockIds = listOf("t1"),
         rationale = "rationale",
+        suggestion = "suggestion",
     )
 }

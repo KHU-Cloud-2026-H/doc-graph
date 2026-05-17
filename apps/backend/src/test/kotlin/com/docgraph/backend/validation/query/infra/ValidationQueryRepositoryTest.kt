@@ -82,6 +82,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b1"),
                 targetBlockIds = listOf("b2"),
                 rationale = "first",
+                suggestion = "sug1",
                 detectedAt = now,
             ),
         )
@@ -92,6 +93,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b3"),
                 targetBlockIds = listOf("b4"),
                 rationale = "second",
+                suggestion = "sug2",
                 detectedAt = now,
             ),
         )
@@ -102,6 +104,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b5"),
                 targetBlockIds = listOf("b6"),
                 rationale = "third",
+                suggestion = "sug3",
                 detectedAt = now,
             ),
         )

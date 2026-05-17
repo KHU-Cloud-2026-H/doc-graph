@@ -9,6 +9,7 @@ object ConflictDetectionPromptBuilder {
 입력으로 (1) source 측 변경 블록, (2) target 측 문서 전체 블록, (3) 검증 기준이 주어진다.
 각 블록은 "[block_id: <id>] <text>" 형식으로 라벨링되어 있다. 결과는 반드시 제공된 JSON 스키마에 strict하게 맞춰 응답한다.
 충돌이 없으면 conflicts는 빈 배열로 응답한다.
+충돌이 있으면 각 항목마다 source 측 변경에 맞춰 target 측 문서를 어떻게 수정하면 정합성이 회복될지 구체적인 수정안을 suggestion 필드에 작성한다. 수정안은 target 측 자연어로, 사용자가 그대로 적용할 수 있는 수준으로 작성한다.
 """
 
     fun build(

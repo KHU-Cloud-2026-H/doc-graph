@@ -89,8 +89,8 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     fun `Detected — 기존 활성 없음 + findings 있음, 새 Conflict + Finding, ConflictDetectedEvent 발행`() {
         val task = newPendingTask(edgeId = 32L)
         val findings = listOf(
-            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockIds = listOf("t1"), rationale = "r1"),
-            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockIds = listOf("t2"), rationale = "r2"),
+            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockIds = listOf("t1"), rationale = "r1", suggestion = "sug1"),
+            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockIds = listOf("t2"), rationale = "r2", suggestion = "sug2"),
         )
 
         handler.handle(CompleteValidationTaskCommand(task.id, findings))
@@ -104,6 +104,7 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
         val savedFindings = findingRepository.findByConflictIdOrderByDetectedAtDesc(conflict.id)
         assertEquals(2, savedFindings.size)
         assertTrue(savedFindings.all { it.validationTaskId == task.id })
+        assertEquals(setOf("sug1", "sug2"), savedFindings.map { it.suggestion }.toSet())
         assertEquals(1, detectedProbe.received.size)
         assertEquals(conflict.id, detectedProbe.received.single().conflictId)
         assertEquals(32L, detectedProbe.received.single().edgeId)
@@ -123,7 +124,7 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
         handler.handle(
             CompleteValidationTaskCommand(
                 task.id,
-                findings = listOf(DetectedConflict(listOf("s"), listOf("t"), "r")),
+                findings = listOf(DetectedConflict(listOf("s"), listOf("t"), "r", "sug")),
             ),
         )
 
