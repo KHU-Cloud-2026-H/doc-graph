@@ -41,13 +41,13 @@ class WorkspaceCommandController(
     @Operation(
         summary = "멤버 초대",
         description = "워크스페이스 멤버로 초대한다. 가입 사용자만 이메일로 검색해 추가. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "초대 완료 — workspace_member row id 반환"),
+            ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님"),
+            ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 invitee 이메일이 가입 사용자에 매칭 안 됨"),
+            ApiResponse(responseCode = "409", description = "자기 자신 초대 또는 이미 멤버"),
+        ],
     )
-    @ApiResponses(value = [
-        ApiResponse(responseCode = "200", description = "초대 완료 — workspace_member row id 반환"),
-        ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님"),
-        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 invitee 이메일이 가입 사용자에 매칭 안 됨"),
-        ApiResponse(responseCode = "409", description = "자기 자신 초대 또는 이미 멤버"),
-    ])
     fun inviteMember(
         @PathVariable id: Long,
         @RequestBody request: InviteMemberRequest,
