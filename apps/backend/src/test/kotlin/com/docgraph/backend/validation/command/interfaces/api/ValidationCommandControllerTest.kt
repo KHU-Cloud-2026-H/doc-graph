@@ -1,9 +1,19 @@
 package com.docgraph.backend.validation.command.interfaces.api
 
 import com.docgraph.backend.auth.query.application.GetCurrentMemberQuery
+import com.docgraph.backend.document.query.application.DocumentDetail
+import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.FindDocumentByIdQuery
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.graph.query.application.EdgeDetail
+import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.validation.command.domain.Conflict
+import com.docgraph.backend.validation.command.domain.ConflictFinding
+import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
+import com.docgraph.backend.validation.command.domain.ProposalApproved
+import com.docgraph.backend.validation.command.domain.ValidationTask
+import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import tools.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -15,20 +25,44 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
+import org.springframework.context.event.EventListener
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.post
 import java.time.OffsetDateTime
+import java.util.UUID
 
 class FakeGetCurrentMemberQuery : GetCurrentMemberQuery {
     @Volatile var memberId: Long = 7L
     override fun get(): Long = memberId
 }
 
+class FakeFindEdgeByIdQuery : FindEdgeByIdQuery {
+    @Volatile var behavior: (Long) -> EdgeDetail? = { null }
+    override fun find(edgeId: Long): EdgeDetail? = behavior(edgeId)
+}
+
+class FakeFindDocumentByIdQuery : FindDocumentByIdQuery {
+    @Volatile var behavior: (Long) -> DocumentDetail? = { null }
+    override fun find(documentId: Long): DocumentDetail? = behavior(documentId)
+}
+
+class ProposalApprovedProbe {
+    val received: MutableList<ProposalApproved> = mutableListOf()
+
+    @EventListener
+    fun on(event: ProposalApproved) {
+        received += event
+    }
+}
+
 @TestConfiguration
 class ValidationCommandControllerTestConfig {
     @Bean @Primary fun fakeGetCurrentMember() = FakeGetCurrentMemberQuery()
+    @Bean @Primary fun fakeFindEdgeById() = FakeFindEdgeByIdQuery()
+    @Bean @Primary fun fakeFindDocumentById() = FakeFindDocumentByIdQuery()
+    @Bean fun proposalApprovedProbe() = ProposalApprovedProbe()
 }
 
 @Tag("component")
@@ -39,13 +73,23 @@ class ValidationCommandControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
     private val conflictRepository: ConflictRepository,
+    private val findingRepository: ConflictFindingRepository,
+    private val taskRepository: ValidationTaskRepository,
     private val getCurrentMember: FakeGetCurrentMemberQuery,
+    private val findEdge: FakeFindEdgeByIdQuery,
+    private val findDocument: FakeFindDocumentByIdQuery,
+    private val proposalApprovedProbe: ProposalApprovedProbe,
 ) {
 
     @BeforeEach
     fun reset() {
+        findingRepository.deleteAll()
         conflictRepository.deleteAll()
+        taskRepository.deleteAll()
         getCurrentMember.memberId = 7L
+        findEdge.behavior = { null }
+        findDocument.behavior = { null }
+        proposalApprovedProbe.received.clear()
     }
 
     @Test
@@ -141,10 +185,101 @@ class ValidationCommandControllerTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun `POST approve — happy, finding approved + ProposalApproved 발행 + 204`() {
+        val edited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
+        val fixture = approveFixture(edgeId = 61L, targetDocumentId = 161L, targetEdited = edited)
+
+        mockMvc.post("/conflicts/${fixture.conflict.id}/findings/${fixture.finding.id}/approve") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(ApproveProposalRequest(edited))
+        }.andExpect {
+            status { isNoContent() }
+        }
+
+        val reloaded = findingRepository.findById(fixture.finding.id).orElseThrow()
+        assert(reloaded.isApproved)
+        assert(reloaded.approvedBy == 7L)
+        assert(proposalApprovedProbe.received.size == 1)
+        assert(proposalApprovedProbe.received.single().conflictFindingId == fixture.finding.id)
+    }
+
+    @Test
+    fun `POST approve — finding 없음 → 404`() {
+        mockMvc.post("/conflicts/9999/findings/9999/approve") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(ApproveProposalRequest(null))
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `POST approve — 이미 승인됨 → 409`() {
+        val edited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
+        val fixture = approveFixture(edgeId = 62L, targetDocumentId = 162L, targetEdited = edited).also {
+            it.finding.approve(by = 1L, at = OffsetDateTime.now())
+            findingRepository.saveAndFlush(it.finding)
+        }
+
+        mockMvc.post("/conflicts/${fixture.conflict.id}/findings/${fixture.finding.id}/approve") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(ApproveProposalRequest(edited))
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST approve — target 사이에 변경 (stale) → 409`() {
+        val edited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
+        val fixture = approveFixture(edgeId = 63L, targetDocumentId = 163L, targetEdited = OffsetDateTime.parse("2026-05-17T11:00:00Z"))
+
+        mockMvc.post("/conflicts/${fixture.conflict.id}/findings/${fixture.finding.id}/approve") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(ApproveProposalRequest(edited))
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
     private fun newActive(edgeId: Long): Conflict {
         val now = OffsetDateTime.now()
         return Conflict(edgeId = edgeId, firstDetectedAt = now, lastDetectedAt = now)
     }
 
     private fun save(conflict: Conflict): Conflict = conflictRepository.saveAndFlush(conflict)
+
+    private data class ApproveFixture(val conflict: Conflict, val finding: ConflictFinding)
+
+    private fun approveFixture(
+        edgeId: Long,
+        targetDocumentId: Long,
+        targetEdited: OffsetDateTime?,
+    ): ApproveFixture {
+        val task = taskRepository.saveAndFlush(
+            ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId),
+        )
+        val conflict = save(newActive(edgeId))
+        val finding = findingRepository.saveAndFlush(
+            ConflictFinding(
+                conflictId = conflict.id,
+                validationTaskId = task.id,
+                sourceBlockIds = listOf("s"),
+                targetBlockIds = listOf("t"),
+                rationale = "r",
+                suggestion = "sug",
+                detectedAt = OffsetDateTime.now(),
+            ),
+        )
+        findEdge.behavior = { id ->
+            if (id == edgeId) EdgeDetail(edgeId, 100L, targetDocumentId, "c") else null
+        }
+        findDocument.behavior = { id ->
+            if (id == targetDocumentId) {
+                DocumentDetail(id, "page-$id", "t-$id", DocumentType.REQUIREMENTS, null, targetEdited, emptyList())
+            } else null
+        }
+        return ApproveFixture(conflict, finding)
+    }
 }

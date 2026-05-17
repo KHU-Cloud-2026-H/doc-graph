@@ -44,7 +44,7 @@ class ProcessValidationTaskCommandHandlerTest {
     )
 
     private fun document(id: Long): DocumentDetail =
-        DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, emptyList())
+        DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, emptyList())
 
     @Test
     fun `정상 흐름 — recordAttempt + 두 문서 조회 + InputsResolved 발행`() {

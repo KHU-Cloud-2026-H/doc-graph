@@ -54,6 +54,7 @@ class DocumentQueryRepository {
             title = document.title,
             type = document.type,
             assigneeMemberId = document.assigneeMemberId,
+            notionLastEditedAt = document.notionLastEditedAt,
             blocks = blocks,
         )
     }

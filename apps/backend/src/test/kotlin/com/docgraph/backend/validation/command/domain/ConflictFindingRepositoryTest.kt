@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 @Tag("slice")
 @DataJpaTest
@@ -51,6 +52,33 @@ class ConflictFindingRepositoryTest @Autowired constructor(
         assertEquals(listOf("target-1"), loaded.targetBlockIds)
         assertEquals("회의록의 결정사항이 요구사항에 반영되지 않음", loaded.rationale)
         assertEquals("requirements 3.2절을 'A 옵션'으로 변경", loaded.suggestion)
+    }
+
+    @Test
+    fun `approvedAt·approvedBy 라운드트립 — 초기 null, approve 후 영속`() {
+        val task = taskRepository.saveAndFlush(
+            ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 23L),
+        )
+        val now = OffsetDateTime.now()
+        val conflict = conflictRepository.saveAndFlush(
+            Conflict(edgeId = 23L, firstDetectedAt = now, lastDetectedAt = now),
+        )
+
+        val initial = findingRepository.saveAndFlush(newFinding(conflict.id, task.id, now))
+        em.clear()
+
+        val loadedInitial = findingRepository.findById(initial.id).orElseThrow()
+        assertNull(loadedInitial.approvedAt)
+        assertNull(loadedInitial.approvedBy)
+
+        val approveAt = OffsetDateTime.parse("2026-05-17T10:00:00Z")
+        loadedInitial.approve(by = 77L, at = approveAt)
+        findingRepository.saveAndFlush(loadedInitial)
+        em.clear()
+
+        val loadedApproved = findingRepository.findById(initial.id).orElseThrow()
+        assertEquals(approveAt, loadedApproved.approvedAt)
+        assertEquals(77L, loadedApproved.approvedBy)
     }
 
     @Test

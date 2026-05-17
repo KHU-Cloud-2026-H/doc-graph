@@ -12,6 +12,8 @@ data class ConflictFindingResponse(
     val targetBlockIds: List<String>,
     @Schema(description = "충돌 근거 (AI 판정)", example = "planning 3.2절 결정사항이 requirements에 반영되지 않음")
     val rationale: String,
+    @Schema(description = "AI 수정 제안 — target 측에 적용 가능한 자연어 수정안", example = "requirements 3.2절을 'A 옵션 선택'으로 변경")
+    val suggestion: String,
     @Schema(description = "감지 시각")
     val detectedAt: OffsetDateTime,
 )
