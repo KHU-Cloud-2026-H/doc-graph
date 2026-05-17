@@ -1,12 +1,23 @@
 import { ExternalLink, CheckCircle, Check } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { RightSidebar } from "../components/RightSidebar";
 import { useAppStore } from '../store';
 import type { IntegrityIssue } from '../store';
 
+const findParentPage = (docs: any[], targetId: string): any | null => {
+  for (const doc of docs) {
+    if (doc.children?.some((c: any) => c.id === targetId)) return doc;
+    if (doc.children) {
+      const found = findParentPage(doc.children, targetId);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
 export const DocumentView = () => {
-  const { docId: id } = useParams();
+  const { docId: id, workspaceId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const workspace = useAppStore((state) => state.workspace);
@@ -15,8 +26,8 @@ export const DocumentView = () => {
   // Flatten documents tree to find the active one
   const flattenDocs = (docs: any[]): any[] => {
     return docs.reduce((acc, doc) => {
-      if (doc.isFolder) {
-        return [...acc, doc, ...flattenDocs(doc.children || [])];
+      if (doc.children?.length) {
+        return [...acc, doc, ...flattenDocs(doc.children)];
       }
       return [...acc, doc];
     }, []);
@@ -24,6 +35,7 @@ export const DocumentView = () => {
   
   const allDocs = flattenDocs(documents);
   const activeDoc = allDocs.find((d) => d.id === id) || allDocs[0];
+  const parentPage = id ? findParentPage(documents, id) : null;
   
   const [showRightSidebar, setShowRightSidebar] = useState(false);
 
@@ -97,11 +109,29 @@ export const DocumentView = () => {
       <div className="flex-1 flex flex-col h-full relative min-w-0">
         <header className="h-14 flex items-center justify-between px-6 border-b border-slate-200 bg-white shrink-0">
           <div className="flex items-center text-sm text-slate-500 flex-1">
-            <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">{workspace}</span>
+            <Link
+              to={`/w/${workspaceId}`}
+              className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900"
+            >
+              {workspace}
+            </Link>
+            {parentPage && (
+              <>
+                <span className="mx-1 text-[14px] opacity-40">/</span>
+                <Link
+                  to={`/w/${workspaceId}/docs/${parentPage.id}`}
+                  className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
+                >
+                  {parentPage.emoji && <span>{parentPage.emoji}</span>}
+                  <span>{parentPage.title}</span>
+                </Link>
+              </>
+            )}
             <span className="mx-1 text-[14px] opacity-40">/</span>
-            <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">팀스페이스</span>
-            <span className="mx-1 text-[14px] opacity-40">/</span>
-            <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px]">{activeDoc?.title}</span>
+            <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px] flex items-center gap-1">
+              {activeDoc?.emoji && <span>{activeDoc.emoji}</span>}
+              <span>{activeDoc?.title}</span>
+            </span>
             <div className="ml-3 flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-500">
               <CheckCircle className="w-3.5 h-3.5" />
               Saved
@@ -115,7 +145,7 @@ export const DocumentView = () => {
 
         <div className="flex-1 overflow-y-auto px-8 py-12 flex justify-center">
           <div className="w-full max-w-[800px]">
-            {!activeDoc?.isFolder && (
+            {!activeDoc?.children?.length && (
               <>
                 <h1 className="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">
                   {activeDoc?.title}
