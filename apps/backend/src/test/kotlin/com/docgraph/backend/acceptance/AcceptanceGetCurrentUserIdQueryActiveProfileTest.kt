@@ -1,6 +1,6 @@
 package com.docgraph.backend.acceptance
 
-import com.docgraph.backend.auth.query.application.GetCurrentMemberQuery
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import jakarta.servlet.ServletException
 import org.junit.jupiter.api.Tag
@@ -25,28 +25,28 @@ import kotlin.test.assertTrue
 @ActiveProfiles("acceptance")
 @Import(
     SharedPostgresContainer::class,
-    AcceptanceGetCurrentMemberQueryActiveProfileTest.TestEndpointConfig::class,
+    AcceptanceGetCurrentUserIdQueryActiveProfileTest.TestEndpointConfig::class,
 )
-class AcceptanceGetCurrentMemberQueryActiveProfileTest @Autowired constructor(
+class AcceptanceGetCurrentUserIdQueryActiveProfileTest @Autowired constructor(
     private val mockMvc: MockMvc,
-    private val query: GetCurrentMemberQuery,
+    private val query: GetCurrentUserIdQuery,
 ) {
 
     @TestConfiguration
     class TestEndpointConfig {
         @Bean
-        fun currentMemberProbeController(query: GetCurrentMemberQuery) = CurrentMemberProbeController(query)
+        fun currentMemberProbeController(query: GetCurrentUserIdQuery) = CurrentMemberProbeController(query)
     }
 
     @RestController
-    class CurrentMemberProbeController(private val query: GetCurrentMemberQuery) {
+    class CurrentMemberProbeController(private val query: GetCurrentUserIdQuery) {
         @GetMapping("/test/internal/current-member")
         fun current(): Map<String, Long> = mapOf("memberId" to query.get())
     }
 
     @Test
-    fun `acceptance profile에서 GetCurrentMemberQuery 빈은 AcceptanceGetCurrentMemberQueryHandler`() {
-        assertTrue(query is AcceptanceGetCurrentMemberQueryHandler)
+    fun `acceptance profile에서 GetCurrentUserIdQuery 빈은 AcceptanceGetCurrentUserIdQueryHandler`() {
+        assertTrue(query is AcceptanceGetCurrentUserIdQueryHandler)
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.docgraph.backend.validation.command.interfaces.api
 
-import com.docgraph.backend.auth.query.application.GetCurrentMemberQuery
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.validation.command.application.ApproveProposalCommand
 import com.docgraph.backend.validation.command.application.ApproveProposalCommandHandler
 import com.docgraph.backend.validation.command.application.IgnoreConflictCommand
@@ -33,7 +33,7 @@ class ValidationCommandController(
     private val ignoreHandler: IgnoreConflictCommandHandler,
     private val unignoreHandler: UnignoreConflictCommandHandler,
     private val approveHandler: ApproveProposalCommandHandler,
-    private val getCurrentMember: GetCurrentMemberQuery,
+    private val getCurrentUserId: GetCurrentUserIdQuery,
 ) {
 
     @PostMapping("/{id}/ignore")
@@ -48,7 +48,7 @@ class ValidationCommandController(
         ignoreHandler.handle(
             IgnoreConflictCommand(
                 conflictId = id,
-                ignoredBy = getCurrentMember.get(),
+                ignoredBy = getCurrentUserId.get(),
                 reason = request.reason,
             ),
         )
@@ -75,7 +75,7 @@ class ValidationCommandController(
         approveHandler.handle(
             ApproveProposalCommand(
                 findingId = findingId,
-                approvedBy = getCurrentMember.get(),
+                approvedBy = getCurrentUserId.get(),
                 expectedTargetNotionLastEditedAt = request.expectedTargetNotionLastEditedAt,
             ),
         )

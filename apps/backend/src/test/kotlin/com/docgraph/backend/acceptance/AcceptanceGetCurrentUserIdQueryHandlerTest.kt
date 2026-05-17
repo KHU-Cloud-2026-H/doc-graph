@@ -10,10 +10,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @Tag("unit")
-class AcceptanceGetCurrentMemberQueryHandlerTest {
+class AcceptanceGetCurrentUserIdQueryHandlerTest {
 
     private val request = mockk<HttpServletRequest>()
-    private val handler = AcceptanceGetCurrentMemberQueryHandler(request)
+    private val handler = AcceptanceGetCurrentUserIdQueryHandler(request)
 
     @Test
     fun `헤더 값이 Long이면 그 값을 반환`() {

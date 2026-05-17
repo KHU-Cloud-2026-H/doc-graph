@@ -1,12 +1,12 @@
 package com.docgraph.backend.acceptance
 
-import com.docgraph.backend.auth.query.application.GetCurrentMemberQuery
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 /**
- * acceptance profile 한정 [GetCurrentMemberQuery] override — OAuth2/auth 영속 미구현 동안의 우회.
+ * acceptance profile 한정 [GetCurrentUserIdQuery] override — OAuth2/auth 영속 미구현 동안의 우회.
  *
  * `X-Test-User-Id` 헤더의 Long 값을 그대로 반환. 헤더 누락·parse 실패는 fixture 작성 오류로 간주하여 throw.
  *
@@ -16,9 +16,9 @@ import org.springframework.stereotype.Component
  */
 @Component
 @Profile("acceptance")
-class AcceptanceGetCurrentMemberQueryHandler(
+class AcceptanceGetCurrentUserIdQueryHandler(
     private val request: HttpServletRequest,
-) : GetCurrentMemberQuery {
+) : GetCurrentUserIdQuery {
 
     override fun get(): Long {
         val header = request.getHeader(HEADER_NAME)

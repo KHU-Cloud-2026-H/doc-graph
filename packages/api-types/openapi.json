@@ -216,66 +216,13 @@
         }
       }
     },
-    "/workspaces": {
-      "get": {
-        "tags": [
-          "Workspace"
-        ],
-        "summary": "내 워크스페이스 목록",
-        "operationId": "list",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkspaceSummary"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Workspace"
-        ],
-        "summary": "워크스페이스 생성",
-        "operationId": "create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWorkspaceRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/IdResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/workspaces/{workspaceId}/projects": {
       "get": {
         "tags": [
           "Project"
         ],
         "summary": "프로젝트 목록",
-        "operationId": "list_1",
+        "operationId": "list",
         "parameters": [
           {
             "name": "workspaceId",
@@ -309,7 +256,7 @@
         ],
         "summary": "프로젝트 생성",
         "description": "Notion 루트 페이지를 기준으로 프로젝트를 생성한다. 생성 직후 동기화는 실행되지 않는다. 타입 매핑·담당자 기본값·멤버 배정을 완료한 후 POST /projects/{id}/sync로 초기 동기화를 수동 트리거해야 한다.",
-        "operationId": "create_1",
+        "operationId": "create",
         "parameters": [
           {
             "name": "workspaceId",
@@ -351,7 +298,7 @@
           "Workspace"
         ],
         "summary": "멤버 초대",
-        "description": "워크스페이스 멤버로 초대한다. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.",
+        "description": "워크스페이스 멤버로 초대한다. 가입 사용자만 이메일로 검색해 추가. 초대된 멤버는 프로젝트 배정 후보군이 되며, 개별 프로젝트에 배정되기 전까지는 어떤 프로젝트에도 접근할 수 없다.",
         "operationId": "inviteMember",
         "parameters": [
           {
@@ -813,12 +760,36 @@
         }
       }
     },
+    "/workspaces": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "내 워크스페이스 목록 — 소유 + 멤버 참여 모두",
+        "operationId": "list_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{id}": {
       "get": {
         "tags": [
           "Workspace"
         ],
-        "summary": "워크스페이스 상세",
+        "summary": "워크스페이스 상세 (접근 권한 없으면 404)",
         "operationId": "get",
         "parameters": [
           {
@@ -1237,7 +1208,7 @@
         }
       }
     },
-    "/workspaces/{id}/members/{memberId}": {
+    "/workspaces/{id}/members/{userId}": {
       "delete": {
         "tags": [
           "Workspace"
@@ -1255,7 +1226,7 @@
             }
           },
           {
-            "name": "memberId",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
@@ -1475,27 +1446,6 @@
           }
         }
       },
-      "CreateWorkspaceRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "워크스페이스 이름",
-            "example": "My Team"
-          }
-        }
-      },
-      "IdResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64",
-            "description": "생성된 리소스 ID",
-            "example": 1
-          }
-        }
-      },
       "CreateProjectRequest": {
         "type": "object",
         "properties": {
@@ -1511,13 +1461,24 @@
           }
         }
       },
+      "IdResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "생성된 리소스 ID",
+            "example": 1
+          }
+        }
+      },
       "InviteMemberRequest": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string",
-            "description": "초대할 멤버 이메일",
-            "example": "member@example.com"
+            "description": "초대할 가입 사용자 이메일",
+            "example": "user@example.com"
           }
         }
       },
@@ -1726,27 +1687,6 @@
           }
         }
       },
-      "MemberSummary": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64",
-            "description": "멤버 ID",
-            "example": 1
-          },
-          "name": {
-            "type": "string",
-            "description": "이름",
-            "example": "홍길동"
-          },
-          "email": {
-            "type": "string",
-            "description": "이메일",
-            "example": "user@example.com"
-          }
-        }
-      },
       "WorkspaceDetail": {
         "type": "object",
         "properties": {
@@ -1764,8 +1704,34 @@
           "members": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MemberSummary"
+              "$ref": "#/components/schemas/WorkspaceMemberSummary"
             }
+          }
+        }
+      },
+      "WorkspaceMemberSummary": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "사용자 ID",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "이름",
+            "example": "홍길동"
+          },
+          "email": {
+            "type": "string",
+            "description": "이메일",
+            "example": "user@example.com"
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "워크스페이스 가입 시점"
           }
         }
       },
