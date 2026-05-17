@@ -82,18 +82,13 @@ test-acceptance env="local-mock":
 openapi-dump:
     #!/usr/bin/env sh
     set -e
-    BOOT_PID=""
-    cleanup() {
-        set +e
-        [ -n "$BOOT_PID" ] && kill $BOOT_PID 2>/dev/null
-        wait $BOOT_PID 2>/dev/null
-        {{dotenv-run}} docker compose down 2>/dev/null
-        return 0
-    }
-    trap cleanup EXIT
+    if curl -s -f http://localhost:8080/api/v3/api-docs >/dev/null 2>&1; then
+        echo "port 8080 already serving — kill the stale backend first" >&2
+        exit 1
+    fi
     {{dotenv-run}} docker compose up -d --wait
+    trap 'curl -s -X POST http://localhost:9090/actuator/shutdown >/dev/null 2>&1 || true; {{dotenv-run}} docker compose down 2>/dev/null' EXIT
     (cd apps/backend && {{dotenv-run}} sh ./gradlew bootRun --no-daemon > /tmp/openapi-boot.log 2>&1) &
-    BOOT_PID=$!
     for i in $(seq 1 90); do
         if curl -s -f http://localhost:8080/api/v3/api-docs -o packages/api-types/openapi.json 2>/dev/null; then
             echo "spec captured ($(wc -c < packages/api-types/openapi.json) bytes)"

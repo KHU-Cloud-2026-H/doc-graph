@@ -1485,27 +1485,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["IdResponse"];
-                };
+                content?: never;
             };
             /** @description 워크스페이스 없음 또는 invitee 이메일이 가입 사용자에 매칭 안 됨 */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["IdResponse"];
-                };
+                content?: never;
             };
             /** @description 자기 자신 초대 또는 이미 멤버 */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["IdResponse"];
-                };
+                content?: never;
             };
         };
     };
