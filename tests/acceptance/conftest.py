@@ -58,7 +58,7 @@ def _isolate(client, wiremock):
 
 @pytest.fixture
 def auth_headers():
-    return {"X-Test-User-Id": "test-user-1"}
+    return {"X-Test-User-Id": "1"}
 
 
 class Seeder:
@@ -77,12 +77,17 @@ class Seeder:
         assert response.status_code in (200, 201)
         return response.json()["id"]
 
-    def project(self, workspace_id: int, *, name: str) -> int:
-        response = self.client.post(
-            "/test/projects",
-            headers=self.headers,
-            json={"workspaceId": workspace_id, "name": name},
-        )
+    def project(
+        self,
+        workspace_id: int,
+        *,
+        name: str,
+        notion_root_page_id: str | None = None,
+    ) -> int:
+        body: dict = {"workspaceId": workspace_id, "name": name}
+        if notion_root_page_id is not None:
+            body["notionRootPageId"] = notion_root_page_id
+        response = self.client.post("/test/projects", headers=self.headers, json=body)
         assert response.status_code in (200, 201)
         return response.json()["id"]
 
@@ -155,12 +160,16 @@ class Seeder:
         return response.json()["memberId"]
 
     def project_member(
-        self, *, project_id: int, member_id: int, role: str = "MEMBER"
+        self, *, project_id: int, workspace_member_id: int, role: str = "MEMBER"
     ) -> None:
         response = self.client.post(
             "/test/project-members",
             headers=self.headers,
-            json={"projectId": project_id, "memberId": member_id, "role": role},
+            json={
+                "projectId": project_id,
+                "workspaceMemberId": workspace_member_id,
+                "role": role,
+            },
         )
         assert response.status_code in (200, 201)
 
