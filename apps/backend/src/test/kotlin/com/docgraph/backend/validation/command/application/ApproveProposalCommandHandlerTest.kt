@@ -11,7 +11,7 @@ import com.docgraph.backend.validation.command.domain.ConflictFindingNotFoundExc
 import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
 import com.docgraph.backend.validation.command.domain.IllegalConflictFindingStateException
-import com.docgraph.backend.validation.command.domain.ProposalApproved
+import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
 import com.docgraph.backend.validation.command.domain.StaleProposalException
 import io.mockk.every
 import io.mockk.mockk
@@ -45,12 +45,12 @@ class ApproveProposalCommandHandlerTest {
     private val targetEdited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
 
     @Test
-    fun `정상 — finding approve + ProposalApproved 발행`() {
+    fun `정상 — finding approve + ProposalApprovedEvent 발행`() {
         val finding = stubFinding(id = 50L, conflictId = 60L)
         wireConflictChain(conflictId = 60L, edgeId = 70L, targetDocumentId = 80L, targetEdited = targetEdited)
         every { findingRepository.findById(50L) } returns finding
 
-        val captured = slot<ProposalApproved>()
+        val captured = slot<ProposalApprovedEvent>()
         every { publisher.publishEvent(capture(captured)) } returns Unit
 
         handler.handle(
@@ -63,7 +63,7 @@ class ApproveProposalCommandHandlerTest {
 
         assertTrue(finding.isApproved)
         assertEquals(99L, finding.approvedBy)
-        verify { publisher.publishEvent(any<ProposalApproved>()) }
+        verify { publisher.publishEvent(any<ProposalApprovedEvent>()) }
         assertEquals(50L, captured.captured.conflictFindingId)
         assertEquals(99L, captured.captured.approvedBy)
     }
@@ -77,7 +77,7 @@ class ApproveProposalCommandHandlerTest {
                 ApproveProposalCommand(findingId = 404L, approvedBy = 1L, expectedTargetNotionLastEditedAt = targetEdited),
             )
         }
-        verify(exactly = 0) { publisher.publishEvent(any<ProposalApproved>()) }
+        verify(exactly = 0) { publisher.publishEvent(any<ProposalApprovedEvent>()) }
     }
 
     @Test
@@ -93,7 +93,7 @@ class ApproveProposalCommandHandlerTest {
                 ApproveProposalCommand(findingId = 51L, approvedBy = 2L, expectedTargetNotionLastEditedAt = targetEdited),
             )
         }
-        verify(exactly = 0) { publisher.publishEvent(any<ProposalApproved>()) }
+        verify(exactly = 0) { publisher.publishEvent(any<ProposalApprovedEvent>()) }
     }
 
     @Test
@@ -112,7 +112,7 @@ class ApproveProposalCommandHandlerTest {
                 ApproveProposalCommand(findingId = 52L, approvedBy = 1L, expectedTargetNotionLastEditedAt = targetEdited),
             )
         }
-        verify(exactly = 0) { publisher.publishEvent(any<ProposalApproved>()) }
+        verify(exactly = 0) { publisher.publishEvent(any<ProposalApprovedEvent>()) }
     }
 
     @Test
@@ -120,7 +120,7 @@ class ApproveProposalCommandHandlerTest {
         val finding = stubFinding(id = 53L, conflictId = 60L)
         wireConflictChain(conflictId = 60L, edgeId = 70L, targetDocumentId = 80L, targetEdited = null)
         every { findingRepository.findById(53L) } returns finding
-        every { publisher.publishEvent(any<ProposalApproved>()) } returns Unit
+        every { publisher.publishEvent(any<ProposalApprovedEvent>()) } returns Unit
 
         handler.handle(
             ApproveProposalCommand(findingId = 53L, approvedBy = 1L, expectedTargetNotionLastEditedAt = null),

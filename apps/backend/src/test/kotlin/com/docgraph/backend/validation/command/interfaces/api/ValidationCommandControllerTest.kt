@@ -11,7 +11,7 @@ import com.docgraph.backend.validation.command.domain.Conflict
 import com.docgraph.backend.validation.command.domain.ConflictFinding
 import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
-import com.docgraph.backend.validation.command.domain.ProposalApproved
+import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import jakarta.persistence.EntityManager
@@ -51,10 +51,10 @@ class FakeFindDocumentByIdQuery : FindDocumentByIdQuery {
 }
 
 class ProposalApprovedProbe {
-    val received: MutableList<ProposalApproved> = mutableListOf()
+    val received: MutableList<ProposalApprovedEvent> = mutableListOf()
 
     @EventListener
-    fun on(event: ProposalApproved) {
+    fun on(event: ProposalApprovedEvent) {
         received += event
     }
 }
@@ -192,7 +192,7 @@ class ValidationCommandControllerTest @Autowired constructor(
     }
 
     @Test
-    fun `POST approve — happy, finding approved + ProposalApproved 발행 + 204`() {
+    fun `POST approve — happy, finding approved + ProposalApprovedEvent 발행 + 204`() {
         val edited = OffsetDateTime.parse("2026-05-17T10:00:00Z")
         val fixture = approveFixture(edgeId = 61L, targetDocumentId = 161L, targetEdited = edited)
 
