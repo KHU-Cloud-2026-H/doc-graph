@@ -2,19 +2,11 @@
 
 워크스페이스가 등록된 상태에서 프로젝트를 생성하고 Notion 루트 페이지
 하위 트리를 동기화한다. 동기화 후 그래프에 문서 노드가 보여야 한다.
+
+워크스페이스 등록은 acceptance scope 외라 `seeder.workspace` fixture로 우회.
 """
 
 import time
-
-
-def _create_workspace(client, headers, notion_id: str = "test-ws-uc2"):
-    response = client.post(
-        "/workspaces",
-        headers=headers,
-        json={"notionWorkspaceId": notion_id, "name": "UC2 Workspace"},
-    )
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 def _stub_notion_page(wiremock, page_id: str, title: str, children: list[dict]):
@@ -57,9 +49,9 @@ def _wait_for(check, timeout: int = 60, interval: int = 2):
     raise TimeoutError("condition not met within timeout")
 
 
-def test_uc2_create_project_and_sync(client, wiremock, auth_headers):
-    """프로젝트 생성 → 타입 매핑 → 동기화 → 그래프에 노드 표시."""
-    workspace_id = _create_workspace(client, auth_headers)
+def test_uc2_create_project_and_sync(client, wiremock, auth_headers, seeder):
+    """프로젝트 생성 → 카테고리 등록 → 동기화 → 그래프에 노드 표시."""
+    workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc2", name="UC2 Workspace")
 
     # Notion API stub: 루트 페이지 + 자식 2개 (planning, requirements)
     _stub_notion_page(
@@ -91,31 +83,30 @@ def test_uc2_create_project_and_sync(client, wiremock, auth_headers):
         headers=auth_headers,
         json={
             "name": "UC2 Project",
-            "rootPageId": "root_page_uc2",
+            "notionRootPageId": "root_page_uc2",
         },
     )
-    assert create_project.status_code == 201
+    assert create_project.status_code == 200
     project_id = create_project.json()["id"]
 
-    # 2. 타입 매핑 설정
-    mapping = client.post(
-        f"/projects/{project_id}/type-mappings",
-        headers=auth_headers,
-        json={
-            "mappings": [
-                {"parentPageId": "planning_page", "type": "planning"},
-                {"parentPageId": "requirements_page", "type": "requirements"},
-            ],
-        },
-    )
-    assert mapping.status_code in (200, 204)
+    # 2. 카테고리 등록 (개별 POST N번)
+    for notion_page_id, document_type in [
+        ("planning_page", "planning"),
+        ("requirements_page", "requirements"),
+    ]:
+        response = client.post(
+            f"/projects/{project_id}/categories",
+            headers=auth_headers,
+            json={"notionPageId": notion_page_id, "documentType": document_type},
+        )
+        assert response.status_code == 200
 
     # 3. 동기화 트리거
     sync = client.post(
         f"/projects/{project_id}/sync",
         headers=auth_headers,
     )
-    assert sync.status_code in (200, 202)
+    assert sync.status_code in (200, 202, 204)
 
     # 4. 동기화 완료 → 그래프에 문서 노드 표시
     def _graph_has_nodes():

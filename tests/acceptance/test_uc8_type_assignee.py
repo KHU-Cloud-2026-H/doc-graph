@@ -23,7 +23,7 @@ def test_uc8_type_assignee_routes_conflict_to_inbox(
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc8", name="UC8 Workspace")
     project_id = seeder.project(workspace_id, name="UC8 Project")
     assignee_member_id = seeder.workspace_member(workspace_id=workspace_id)
-    seeder.project_member(project_id=project_id, member_id=assignee_member_id)
+    seeder.project_member(project_id=project_id, workspace_member_id=assignee_member_id)
 
     # 검증 axis: 타입별 담당자 매핑 설정
     response = client.put(
