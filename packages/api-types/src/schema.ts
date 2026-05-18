@@ -250,7 +250,7 @@ export interface paths {
         put?: never;
         /**
          * 충돌 finding 수정 제안 승인
-         * @description AI가 생성한 수정 제안을 사용자가 승인한다. target 문서가 조회 시점 이후 변경되었으면 stale 409. 승인 시 ProposalApproved 이벤트를 발행하여 document 도메인이 Notion 쓰기를 처리한다.
+         * @description AI가 생성한 수정 제안을 사용자가 승인한다. target 문서가 조회 시점 이후 변경되었으면 stale 409. 승인 시 ProposalApprovedEvent를 발행하여 document 도메인이 Notion 쓰기를 처리한다.
          */
         post: operations["approve"];
         delete?: never;
@@ -1906,7 +1906,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 승인 완료 + ProposalApproved 이벤트 발행 */
+            /** @description 승인 완료 + ProposalApprovedEvent 발행 */
             204: {
                 headers: {
                     [name: string]: unknown;
