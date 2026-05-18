@@ -179,7 +179,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 - 프로젝트 (Notion 루트 페이지 하위 트리 → DocGraph 프로젝트)
 - 프로젝트 멤버십 (Admin / Member 역할)
 - 카테고리 (프로젝트 루트의 직계 자식 페이지 → 문서 타입 매핑)
-- 타입별 담당자 기본값 (P2, 멤버, 개별 문서에서 오버라이드 가능)
+- 타입별 담당자 기본값 (멤버, 개별 문서에서 오버라이드 가능)
 
 **주요 흐름**
 - 프로젝트 등록 (워크스페이스 + Notion 루트 페이지 → 프로젝트 영속, 워크스페이스 생성자에게 Project Admin 자동 부여)
@@ -287,11 +287,11 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 **주요 흐름**
 - 타입·링크 정보 수신 시 룰 테이블 조회 → Notion 링크·멘션 있으면 엣지 자동 생성
-- (P1) Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 `pg_trgm` 키워드 매칭으로 상위 N개를 EdgeProposal로 생성
+- Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 `pg_trgm` 키워드 매칭으로 상위 N개를 EdgeProposal로 생성
 - 타입 변경 수신 시 기존 엣지·제안 중 룰과 불일치하는 항목 삭제, 새 룰에 따라 재평가
-- (P1) Admin이 EdgeProposal 수락 시 DependencyEdge로 전환 → 정합성 검증 대기열에 추가
-- (P2) Admin이 커스텀 엣지 추가 시 → 정합성 검증 대기열에 추가
-- (P2) Admin의 커스텀 룰 추가/삭제
+- Admin이 EdgeProposal 수락 시 DependencyEdge로 전환 → 정합성 검증 대기열에 추가
+- Admin이 커스텀 엣지 추가 시 → 정합성 검증 대기열에 추가
+- Admin의 커스텀 룰 추가/삭제
 - `validation`의 `ConflictDetectedEvent` 수신 시 엣지 충돌 상태 표시 (UI 빨간색)
 - `validation`의 `ConflictResolvedEvent` 수신 시 엣지 충돌 상태 복원
 
@@ -374,7 +374,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 
 ---
 
-## notification (P2)
+## notification
 
 외부 알림 발송을 담당한다. `validation`으로부터 충돌 감지 이벤트를 수신한다.
 
