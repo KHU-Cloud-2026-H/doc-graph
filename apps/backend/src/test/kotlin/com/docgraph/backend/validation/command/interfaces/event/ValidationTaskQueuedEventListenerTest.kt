@@ -160,8 +160,8 @@ class ValidationTaskQueuedEventListenerTest {
         assertTrue(fired, "ValidationTaskPreparedEvent did not fire within 5s")
 
         assertEquals(task.id, probe.received?.validationTaskId)
-        assertEquals(1, findEdge.callCount.get(), "FindEdge 1회 호출 기대")
-        assertEquals(2, findDocument.callCount.get(), "FindDocument 2회 호출 기대 (source + target)")
+        assertEquals(2, findEdge.callCount.get(), "FindEdge 2회 호출 기대 (Process handler + Prepared listener)")
+        assertEquals(4, findDocument.callCount.get(), "FindDocument 4회 호출 기대 (Process + Prepared 각각 source+target)")
 
         val updated = repository.findById(task.id)!!
         assertEquals(OutboxStatus.PENDING, updated.status, "처리 직전 단계 — status PENDING 유지")

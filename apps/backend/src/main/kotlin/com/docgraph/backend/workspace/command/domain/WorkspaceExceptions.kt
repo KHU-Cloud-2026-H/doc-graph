@@ -9,8 +9,8 @@ class WorkspacePermissionDeniedException(val workspaceId: Long, val userId: Long
 class WorkspaceMemberDuplicateException(val workspaceId: Long, val userId: Long) :
     RuntimeException("member $userId already in workspace $workspaceId")
 
-class WorkspaceMemberNotFoundException(val workspaceId: Long, val userId: Long) :
-    RuntimeException("member $userId not in workspace $workspaceId")
+class WorkspaceMemberNotFoundException(val workspaceId: Long, val memberId: Long) :
+    RuntimeException("member $memberId not in workspace $workspaceId")
 
 class WorkspaceInviteeNotFoundException(val email: String) :
     RuntimeException("invitee email not registered: $email")

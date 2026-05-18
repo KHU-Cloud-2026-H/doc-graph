@@ -63,23 +63,23 @@ class WorkspaceCommandController(
         return ResponseEntity.ok(IdResponse(membershipId))
     }
 
-    @DeleteMapping("/{id}/members/{userId}")
+    @DeleteMapping("/{id}/members/{memberId}")
     @Operation(summary = "멤버 제거")
     @ApiResponses(value = [
         ApiResponse(responseCode = "204", description = "제거 완료"),
-        ApiResponse(responseCode = "400", description = "생성자 본인 제거 시도 — 생성자는 워크스페이스 멤버 row 자체가 아니라 제거 대상 X"),
+        ApiResponse(responseCode = "400", description = "생성자 본인 제거 시도"),
         ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님"),
-        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 해당 사용자가 워크스페이스 멤버 아님"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 workspace_member row 없음 / 다른 워크스페이스 소속"),
     ])
     fun removeMember(
         @PathVariable id: Long,
-        @PathVariable userId: Long,
+        @PathVariable memberId: Long,
     ): ResponseEntity<Unit> {
         removeHandler.handle(
             RemoveWorkspaceMemberCommand(
                 workspaceId = id,
                 requesterUserId = getCurrentUserId.get(),
-                userId = userId,
+                memberId = memberId,
             ),
         )
         return ResponseEntity.noContent().build()

@@ -141,9 +141,9 @@ class WorkspaceCommandControllerTest @Autowired constructor(
     @Test
     fun `DELETE members — happy, row 삭제 + 204`() {
         val workspace = seedWorkspace(createdBy = 1L)
-        memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 400L))
+        val invitee = memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 400L))
 
-        mockMvc.delete("/workspaces/${workspace.id}/members/400").andExpect {
+        mockMvc.delete("/workspaces/${workspace.id}/members/${invitee.id}").andExpect {
             status { isNoContent() }
         }
 
@@ -153,10 +153,10 @@ class WorkspaceCommandControllerTest @Autowired constructor(
     @Test
     fun `DELETE members — 호출자가 생성자 아님 → 403`() {
         val workspace = seedWorkspace(createdBy = 1L)
-        memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 500L))
+        val invitee = memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 500L))
         getCurrentUserId.userId = 999L
 
-        mockMvc.delete("/workspaces/${workspace.id}/members/500").andExpect {
+        mockMvc.delete("/workspaces/${workspace.id}/members/${invitee.id}").andExpect {
             status { isForbidden() }
         }
     }
@@ -164,8 +164,9 @@ class WorkspaceCommandControllerTest @Autowired constructor(
     @Test
     fun `DELETE members — 생성자 본인 제거 시도 → 400`() {
         val workspace = seedWorkspace(createdBy = 1L)
+        val creatorMember = memberRepository.findByWorkspaceIdAndUserId(workspace.id, 1L)!!
 
-        mockMvc.delete("/workspaces/${workspace.id}/members/1").andExpect {
+        mockMvc.delete("/workspaces/${workspace.id}/members/${creatorMember.id}").andExpect {
             status { isBadRequest() }
         }
     }
@@ -179,8 +180,8 @@ class WorkspaceCommandControllerTest @Autowired constructor(
         }
     }
 
-    private fun seedWorkspace(createdBy: Long): Workspace =
-        workspaceRepository.save(
+    private fun seedWorkspace(createdBy: Long): Workspace {
+        val workspace = workspaceRepository.save(
             Workspace(
                 notionWorkspaceId = "nw-cmd-${System.nanoTime()}",
                 notionWorkspaceName = "Test Workspace",
@@ -189,4 +190,7 @@ class WorkspaceCommandControllerTest @Autowired constructor(
                 createdAt = OffsetDateTime.now(),
             ),
         )
+        memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = createdBy))
+        return workspace
+    }
 }

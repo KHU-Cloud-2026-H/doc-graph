@@ -1,6 +1,8 @@
 package com.docgraph.backend.workspace.command.application
 
 import com.docgraph.backend.workspace.command.domain.Workspace
+import com.docgraph.backend.workspace.command.domain.WorkspaceMember
+import com.docgraph.backend.workspace.command.domain.WorkspaceMemberRepository
 import com.docgraph.backend.workspace.command.domain.WorkspaceRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -15,24 +17,30 @@ import kotlin.test.assertEquals
 class RegisterWorkspaceCommandHandlerTest {
 
     private val workspaceRepository = mockk<WorkspaceRepository>()
-    private val handler = RegisterWorkspaceCommandHandler(workspaceRepository)
+    private val workspaceMemberRepository = mockk<WorkspaceMemberRepository>()
+    private val handler = RegisterWorkspaceCommandHandler(workspaceRepository, workspaceMemberRepository)
 
     @Test
-    fun `새 notion_workspace_id — save 후 새 id 반환`() {
+    fun `새 notion_workspace_id — workspace + 생성자 workspace_member 동시 save, 새 id 반환`() {
         every { workspaceRepository.findByNotionWorkspaceId("nw-new") } returns null
-        val captured = slot<Workspace>()
-        every { workspaceRepository.save(capture(captured)) } answers {
-            captured.captured.also { it.id = 42L }
+        val capturedWorkspace = slot<Workspace>()
+        every { workspaceRepository.save(capture(capturedWorkspace)) } answers {
+            capturedWorkspace.captured.also { it.id = 42L }
+        }
+        val capturedMember = slot<WorkspaceMember>()
+        every { workspaceMemberRepository.save(capture(capturedMember)) } answers {
+            capturedMember.captured.also { it.id = 100L }
         }
 
         val id = handler.handle(RegisterWorkspaceCommand(1L, "nw-new", "Workspace", "bot-1"))
 
         assertEquals(42L, id)
-        assertEquals("nw-new", captured.captured.notionWorkspaceId)
-        assertEquals("Workspace", captured.captured.notionWorkspaceName)
-        assertEquals("bot-1", captured.captured.notionBotId)
-        assertEquals(1L, captured.captured.createdBy)
+        assertEquals("nw-new", capturedWorkspace.captured.notionWorkspaceId)
+        assertEquals(1L, capturedWorkspace.captured.createdBy)
+        assertEquals(42L, capturedMember.captured.workspaceId)
+        assertEquals(1L, capturedMember.captured.userId)
         verify(exactly = 1) { workspaceRepository.save(any()) }
+        verify(exactly = 1) { workspaceMemberRepository.save(any()) }
     }
 
     @Test
@@ -51,5 +59,6 @@ class RegisterWorkspaceCommandHandlerTest {
 
         assertEquals(99L, id)
         verify(exactly = 0) { workspaceRepository.save(any()) }
+        verify(exactly = 0) { workspaceMemberRepository.save(any()) }
     }
 }
