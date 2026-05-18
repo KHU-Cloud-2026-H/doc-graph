@@ -47,7 +47,7 @@ chore: gitignore에 build 산출물 추가
 
 ## Issue
 
-작업 단위 등록·진행 추적. 본문 형식은 자유. 
+작업 단위 등록·진행 추적.
 
 ### Label
 
