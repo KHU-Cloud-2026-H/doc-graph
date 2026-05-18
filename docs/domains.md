@@ -14,19 +14,17 @@ flowchart LR
     Validation[validation]
     Notification[notification]
 
-    Workspace -.-> Auth
-    Project -.-> Workspace
-    Document -.-> Project
-
+    Auth --> Workspace
+    Project --> Document
     Document --> Graph
+    Document --> Validation
     Graph --> Validation
     Validation --> Graph
+    Validation --> Document
     Validation --> Notification
-    Validation -.-> Graph
-    Validation -.-> Document
 ```
 
-> 실선: 이벤트 (쓰기) / 점선: Query API (읽기)
+> 화살표: 도메인 간 이벤트 흐름. Query API 의존은 각 도메인의 카탈로그 표 참조.
 
 전체 흐름은 두 축으로 나뉜다.
 
@@ -94,9 +92,9 @@ sequenceDiagram
     validation->>AI: 검증 요청
     AI-->>validation: 충돌 묶음
     alt 충돌 감지
-        validation->>graph: ConflictDetected
+        validation->>graph: ConflictDetectedEvent
         graph->>graph: 엣지 상태 업데이트
-        validation->>notification: ConflictDetected
+        validation->>notification: ConflictDetectedEvent
         notification->>notification: Webhook 알림 발송
     end
     Note right of validation: ignoredAt이 기록된 Conflict는 재검증 시 자동 해제
@@ -112,8 +110,35 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 - Notion OAuth 토큰 (암호화 저장)
 - 세션
 
+**주요 흐름 — OAuth 인증**
+1. 사용자가 `GET /oauth2/authorization/notion` 진입
+2. Notion authorization 페이지로 리다이렉트, 사용자 동의
+3. callback 수신 → Notion에서 access token + 워크스페이스 정보 교환
+4. 사용자 계정 upsert (Notion 이메일·이름 기반, 신규면 생성)
+5. 세션 생성 + 클라이언트 세션 쿠키 발급
+6. `NotionWorkspaceAuthorizedEvent` 발행 (워크스페이스 등록 트리거)
+7. 클라이언트로 redirect 응답
+
+**주요 흐름 — 세션**
+- 현재 사용자 조회 (`GET /auth/me`): 세션 → 사용자 식별
+- 로그아웃 (`DELETE /auth/sessions`): 세션 무효화
+
 **경계**
 - 워크스페이스 멤버십(초대, 제거)은 `workspace` 도메인 책임
+
+**도메인 간 인터페이스 — Event**
+
+| 이름 | 트리거 | 소비자 | 처리 |
+| --- | --- | --- | --- |
+| `NotionWorkspaceAuthorizedEvent` | Notion OAuth 콜백 완료 | workspace | 워크스페이스 자동 등록 + 생성자 자격 부여 |
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `GetCurrentUserIdQuery` | workspace·project·validation | REST 요청의 인증된 사용자 식별 |
+| `FindUserIdByEmailQuery` | workspace | 멤버 초대 시 이메일로 기존 사용자 식별 |
+| `SearchUserAccountsByIdsQuery` | workspace, project | 상세 조회 응답 보강 시 멤버 사용자 정보(이메일·이름) 일괄 조회 |
 
 ---
 
@@ -126,9 +151,23 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 - 워크스페이스 생성자 (createdBy) — 멤버 초대·프로젝트 생성 권한, 모든 프로젝트의 Project Admin 권한 자동 부여
 - 멤버 (워크스페이스에 초대된 사용자, 역할은 프로젝트 단위로 구분)
 
+**주요 흐름**
+- 워크스페이스 등록 (`auth`의 `NotionWorkspaceAuthorizedEvent` 수신 → 워크스페이스·생성자 멤버 영속화)
+- 멤버 초대 (이메일로 기존 사용자 식별 후 워크스페이스 멤버로 추가)
+- 멤버 제거 (워크스페이스 멤버 해제)
+- 워크스페이스 조회 (사용자 접근 가능 목록 + 멤버 사용자 정보 보강)
+
 **경계**
 - 프로젝트 단위 멤버 배정·역할(Admin/Member) 관리는 `project` 도메인 책임
 - Notion API 호출은 `document` 도메인 책임
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `FindWorkspaceIdByMemberIdQuery` | project | 프로젝트 멤버 배정·타입 담당자 설정 시 멤버의 워크스페이스 검증 |
+| `FindWorkspaceMemberIdByUserIdQuery` | project | 사용자의 워크스페이스 멤버 자격·멤버 ID 식별(권한 검증·프로젝트 멤버 등록) |
+| `FindWorkspaceCreatorIdByIdQuery` | project | 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여 |
 
 ---
 
@@ -143,14 +182,33 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 - 타입별 담당자 기본값 (P2, 멤버, 개별 문서에서 오버라이드 가능)
 
 **주요 흐름**
-- 워크스페이스 멤버를 프로젝트에 배정하고 역할 부여
+- 프로젝트 등록 (워크스페이스 + Notion 루트 페이지 → 프로젝트 영속, 워크스페이스 생성자에게 Project Admin 자동 부여)
 - 카테고리 설정 (프로젝트 생성 시 루트 페이지의 직계 자식 목록 불러와 타입 매핑)
+- 워크스페이스 멤버를 프로젝트에 배정하고 역할(Admin/Member) 부여
 - 타입별 담당자 기본값 설정
-- 초기 동기화 트리거 (수동)
+- 초기 동기화 트리거 (수동, `ProjectSyncTriggeredEvent` 발행)
+- 프로젝트 삭제 (`ProjectDiscardedEvent` 발행 — 연관 도메인 cascade 정리)
 
 **경계**
 - 프로젝트 간 정합성 검증은 지원하지 않음
 - Notion 페이지 트리 조회는 `document` 도메인 책임
+
+**도메인 간 인터페이스 — Event**
+
+| 이름 | 트리거 | 소비자 | 처리 |
+| --- | --- | --- | --- |
+| `ProjectSyncTriggeredEvent` | 초기/수동 동기화 트리거 | document | 프로젝트 루트 페이지 하위 트리 동기화 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | document | 프로젝트 소속 문서·블록 정리 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | graph | 프로젝트 소속 엣지·제안·룰 정리 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | validation | 프로젝트 소속 검증 작업·충돌 정리 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | notification | 프로젝트 webhook 설정 정리 |
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `SearchCategoriesByProjectQuery` | document | 페이지 동기화 시 조상 라인 카테고리 매핑으로 문서 타입 결정 |
+| `SearchAdminProjectIdsByUserIdQuery` | validation | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속 |
 
 ---
 
@@ -188,11 +246,33 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 2. Notion API로 루트 페이지 하위 트리 전체 조회
 3. 각 페이지에 대해 내용 변경 흐름과 동일하게 처리 (본문 스냅샷·블록 row·flat text 갱신, 매핑 조회, 링크·멘션 추출)
 
+**주요 흐름 — 충돌 해소 Notion 쓰기 (비동기 listener)**
+1. `validation`의 `ProposalApprovedEvent` 수신
+2. finding의 수정 제안을 target 문서의 Notion 페이지에 적용 (Notion API 쓰기)
+3. 쓰기 성공 시 `NotionWriteSucceededEvent` 발행
+4. 자기 쓰기로 발생한 webhook은 봇 actor 필터로 재처리되지 않음
+
 **경계**
 - 카테고리 설정은 `project` 도메인 책임
 - 의존 관계 생성은 `graph` 도메인 책임
 - AI 검증 로직은 `validation` 책임
 - worker 실패 시 `DocumentChangeNotice`는 `pending` 또는 `failed`로 남아 retry · stale row 재처리 worker가 재시도
+
+**도메인 간 인터페이스 — Event**
+
+| 이름 | 트리거 | 소비자 | 처리 |
+| --- | --- | --- | --- |
+| `DocumentContentChangedEvent` | 문서 본문 변경 (webhook 또는 초기 동기화) | graph | Notion 링크·멘션 diff로 엣지 재평가 |
+| `DocumentTypeChangedEvent` | 문서 타입 재분류 (부모 페이지 변경) | graph | 룰 기반 엣지·제안 재평가 |
+| `NotionWriteSucceededEvent` | 수정 제안의 Notion 쓰기 성공 | validation | 해당 Conflict 자동 해소 |
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `FindDocumentByIdQuery` | validation | ValidationTask 처리·제안 수락 시 양쪽 문서 본문·블록 조회 |
+| `SearchDocumentIdsByAssigneeQuery` | validation | 인박스 라우팅 — 사용자가 담당자로 지정된 문서 식별 |
+| `SearchUnassignedDocumentIdsByProjectQuery` | validation | 인박스 라우팅 — 담당자 미지정 문서를 Project Admin에게 귀속 |
 
 ---
 
@@ -212,6 +292,8 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 - (P1) Admin이 EdgeProposal 수락 시 DependencyEdge로 전환 → 정합성 검증 대기열에 추가
 - (P2) Admin이 커스텀 엣지 추가 시 → 정합성 검증 대기열에 추가
 - (P2) Admin의 커스텀 룰 추가/삭제
+- `validation`의 `ConflictDetectedEvent` 수신 시 엣지 충돌 상태 표시 (UI 빨간색)
+- `validation`의 `ConflictResolvedEvent` 수신 시 엣지 충돌 상태 복원
 
 **기본 제공 룰**
 
@@ -230,6 +312,21 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 **경계**
 - 엣지는 동일 프로젝트 내 문서 간에만 생성
+
+**도메인 간 인터페이스 — Event**
+
+| 이름 | 트리거 | 소비자 | 처리 |
+| --- | --- | --- | --- |
+| `ValidationPairCreatedEvent` | 엣지 자동 생성·재평가 또는 제안 수락 후 검증 대상 쌍 확정 | validation | `ValidationTask(pending)` 영속화(검증 대기열 등록) |
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `FindEdgeByIdQuery` | validation | ValidationTask 처리·제안 수락 시 엣지(source/target 문서·검증 기준) 조회 |
+| `SearchEdgeDetailsByProjectQuery` | validation | 프로젝트 충돌 목록 조회 시 엣지 정보 join |
+| `SearchEdgeIdsByProjectQuery` | validation | 프로젝트 검증 작업 목록 조회 시 엣지 ID 필터 |
+| `SearchEdgeIdsByTargetDocumentIdsQuery` | validation | 인박스 라우팅 — 사용자의 담당 문서로 향하는 엣지 식별 |
 
 ---
 
@@ -258,12 +355,22 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 6. 충돌 감지 시 기존 Conflict 갱신 또는 신규 생성, `notification`으로 이벤트 발행
 7. 재검증 결과 충돌 없음: 기존 Conflict 비활성화 (`ignored` 포함 해제)
 8. 사용자의 수동 무시 마킹 처리 — 해당 문서 쌍 재검증 시 자동 해제
-9. 담당자 기준 미해소 충돌 목록 조회 (인박스)
+9. 사용자의 finding 승인 처리 — `ProposalApprovedEvent` 발행 → `NotionWriteSucceededEvent` 수신 시 해당 Conflict 비활성화
+10. 담당자 기준 미해소 충돌 목록 조회 (인박스)
 
 **경계**
 - 동일 이벤트 재처리 시 중복 검증 방지 (idempotency)
 - 한 문서 쌍의 검증 실패가 다른 쌍에 영향을 주지 않아야 함 (실패 격리)
 - worker 실패 시 `ValidationTask`은 `pending` 또는 `failed`로 남아 retry · stale row 재처리 worker가 재시도
+
+**도메인 간 인터페이스 — Event**
+
+| 이름 | 트리거 | 소비자 | 처리 |
+| --- | --- | --- | --- |
+| `ConflictDetectedEvent` | 충돌 신규/갱신 | graph | 엣지 충돌 상태 표시 |
+| `ConflictDetectedEvent` | 충돌 신규/갱신 | notification | 프로젝트 webhook으로 외부 알림 발송 |
+| `ProposalApprovedEvent` | 사용자가 충돌 finding 수정 제안 승인 | document | 제안 내용을 target Notion 페이지에 적용 |
+| `ConflictResolvedEvent` | 충돌 비활성화 | graph | 엣지 충돌 상태 복원 |
 
 ---
 
@@ -272,8 +379,9 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 외부 알림 발송을 담당한다. `validation`으로부터 충돌 감지 이벤트를 수신한다.
 
 **주요 흐름**
-1. 충돌 감지 이벤트 수신
-2. 프로젝트 Webhook URL로 알림 발송 (Slack·Discord 호환)
+1. 프로젝트 Webhook URL 설정/조회 (`PUT`·`GET /projects/{id}/webhook`)
+2. `validation`의 `ConflictDetectedEvent` 수신
+3. 프로젝트 Webhook URL로 알림 발송 (Slack·Discord 호환 포맷)
 
 **경계**
 - Webhook 알림 발송 실패 시에도 인앱 충돌 표시는 `validation`이 유지
