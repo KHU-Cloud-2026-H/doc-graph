@@ -19,7 +19,6 @@ export interface DocumentNode {
   id: string;
   title: string;
   emoji?: string;
-  isFolder?: boolean;
   children?: DocumentNode[];
   hasIssue?: boolean;
   issues?: IntegrityIssue[];
@@ -42,7 +41,6 @@ export const useAppStore = create<AppState>((set) => ({
       id: 'planning',
       title: '기획 (Planning)',
       emoji: '💡',
-      isFolder: true,
       contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">기획 (Planning)</h1>
         <p class="mb-6">기획 단계의 문서들은 시스템이 해결하고자 하는 비즈니스 문제와 사용자 가치를 정의한다. 이는 이해관계자 간의 합의를 도출하고 개발의 방향성을 설정하는 기준 문서이다.</p>
@@ -236,7 +234,6 @@ export const useAppStore = create<AppState>((set) => ({
       id: 'meetings',
       title: '회의록 (Meeting Notes)',
       emoji: '🗓️',
-      isFolder: true,
       contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">회의록 (Meeting Notes)</h1>
         <p class="mb-6">회의록은 애자일 팀의 커뮤니케이션 맥락과 의사결정의 이력을 추적하는 데 핵심적인 역할을 한다. 개발 과정에서 발생하는 정책의 변경과 타협점은 이 문서에 고스란히 담긴다.</p>
@@ -310,7 +307,6 @@ export const useAppStore = create<AppState>((set) => ({
       id: 'design',
       title: '설계 (Design)',
       emoji: '💻',
-      isFolder: true,
       contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">설계 (Design)</h1>
         <div class="space-y-2">
@@ -446,7 +442,6 @@ export const useAppStore = create<AppState>((set) => ({
       id: 'qa',
       title: 'QA 및 테스트 (QA/Testing)',
       emoji: '🔍',
-      isFolder: true,
       contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">QA 및 테스트 (QA/Testing)</h1>
         <div class="space-y-2">
@@ -500,7 +495,6 @@ export const useAppStore = create<AppState>((set) => ({
       id: 'frontend',
       title: '프론트엔드/UI 명세 (Frontend/UI Specification)',
       emoji: '🎨',
-      isFolder: true,
       contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">프론트엔드/UI 명세 (Frontend/UI Specification)</h1>
         <div class="space-y-2">

@@ -63,7 +63,7 @@ sequenceDiagram
         document->>Notion: 루트 페이지 하위 트리 전체 조회
         Notion-->>document: 페이지 목록 + 콘텐츠
     end
-    document->>document: 본문 스냅샷·블록 row·flat text 갱신,<br/>상위 페이지-타입 매핑 조회
+    document->>document: 본문 스냅샷·블록 row·flat text 갱신,<br/>카테고리 매핑 조회
     alt 내용 변경 또는 초기 동기화
         document->>graph: 타입 + Notion 링크·멘션 diff
     else 부모 페이지 변경
@@ -139,12 +139,12 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 **핵심 개념**
 - 프로젝트 (Notion 루트 페이지 하위 트리 → DocGraph 프로젝트)
 - 프로젝트 멤버십 (Admin / Member 역할)
-- 상위 페이지-타입 매핑 (직계 상위 페이지 → 문서 타입)
-- 타입별 담당자 기본값 (멤버, 개별 문서에서 오버라이드 가능)
+- 카테고리 (프로젝트 루트의 직계 자식 페이지 → 문서 타입 매핑)
+- 타입별 담당자 기본값 (P2, 멤버, 개별 문서에서 오버라이드 가능)
 
 **주요 흐름**
 - 워크스페이스 멤버를 프로젝트에 배정하고 역할 부여
-- 상위 페이지-타입 매핑 설정 (프로젝트 생성 시 Notion 페이지 트리 불러와 매핑)
+- 카테고리 설정 (프로젝트 생성 시 루트 페이지의 직계 자식 목록 불러와 타입 매핑)
 - 타입별 담당자 기본값 설정
 - 초기 동기화 트리거 (수동)
 
@@ -173,13 +173,13 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 1. `DocumentChangeNotice(pending)` 1건 수신
 2. Notion API로 변경된 페이지 전체 내용 조회
 3. 본문 스냅샷(JSONB) · 블록 row · flat text 컬럼 갱신
-4. 상위 페이지-타입 매핑 조회 (타입 고정, 재분류 불필요)
+4. 조상 라인의 카테고리 매핑으로 타입 결정 (타입 고정, 재분류 불필요)
 5. Notion 링크·멘션 diff → `graph`로 전달
 6. `DocumentChangeNotice` 상태를 `done`으로 갱신
 
 **주요 흐름 — 부모 페이지 변경 (비동기 worker)**
 1. `DocumentChangeNotice(pending)` 1건 수신
-2. 변경된 부모 페이지로 상위 페이지-타입 매핑 재조회
+2. 변경된 부모 페이지 기준으로 조상 라인의 카테고리 매핑 재조회
 3. 타입 변경이 있으면 `graph`에 타입 변경 통보 (본문 갱신 불필요)
 4. `DocumentChangeNotice` 상태를 `done`으로 갱신
 
@@ -189,7 +189,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 3. 각 페이지에 대해 내용 변경 흐름과 동일하게 처리 (본문 스냅샷·블록 row·flat text 갱신, 매핑 조회, 링크·멘션 추출)
 
 **경계**
-- 상위 페이지-타입 매핑 설정은 `project` 도메인 책임
+- 카테고리 설정은 `project` 도메인 책임
 - 의존 관계 생성은 `graph` 도메인 책임
 - AI 검증 로직은 `validation` 책임
 - worker 실패 시 `DocumentChangeNotice`는 `pending` 또는 `failed`로 남아 retry · stale row 재처리 worker가 재시도

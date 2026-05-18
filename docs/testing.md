@@ -22,16 +22,9 @@
 
 비용이 높은 상위 테스트에서 이미 하위에서 검증한 케이스를 반복하지 않는다.
 
-## 명명 원칙 — 'test'는 포괄 의미일 때만
+## 명명 원칙
 
-테스트 관련 명명에서 'test'는 여러 테스트 레벨을 동시에 포괄할 때만 사용한다.
-
-| 포괄 의미 (OK) | 단일 의미 (다른 이름) |
-| --- | --- |
-| `application-test.yml` — unit·슬라이스·컴포넌트 공통 | acceptance 컨테이너 전용은 `application-acceptance.yaml` |
-| `docker-compose.test.yml` — 시스템·인수 stack 공통 | (단일 레벨 compose 파일은 그 레벨 이름) |
-| `tests/` 폴더 — 시스템·인수 | `tests/system/`·`tests/acceptance/`로 단일 레벨 분리 |
-| `@Profile("test")` — JUnit 환경 묶음 | acceptance stack은 `@Profile("acceptance")` |
+'test'는 여러 테스트 레벨을 동시에 포괄할 때만 사용한다 (예: `tests/`, `docker-compose.test.yml`). 단일 레벨이면 그 레벨 이름 (예: `application-acceptance.yaml`).
 
 ## 레벨별 상세
 

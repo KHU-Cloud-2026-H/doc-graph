@@ -26,7 +26,8 @@ class CompleteValidationTaskCommandHandler(
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handle(command: CompleteValidationTaskCommand) {
-        val task = taskRepository.findById(command.validationTaskId).orElseThrow()
+        val task = taskRepository.findById(command.validationTaskId)
+            ?: error("validation task not found: ${command.validationTaskId}")
         val now = OffsetDateTime.now()
 
         val existing = conflictRepository.findFirstByEdgeIdAndResolvedAtIsNull(task.edgeId)
@@ -67,6 +68,7 @@ class CompleteValidationTaskCommandHandler(
                     sourceBlockIds = f.sourceBlockIds,
                     targetBlockIds = f.targetBlockIds,
                     rationale = f.rationale,
+                    suggestion = f.suggestion,
                     detectedAt = now,
                 ),
             )

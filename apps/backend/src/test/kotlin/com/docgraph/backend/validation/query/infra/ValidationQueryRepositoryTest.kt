@@ -8,6 +8,9 @@ import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import com.docgraph.backend.validation.command.infra.ConflictFindingRepositoryImpl
+import com.docgraph.backend.validation.command.infra.ConflictRepositoryImpl
+import com.docgraph.backend.validation.command.infra.ValidationTaskRepositoryImpl
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -23,7 +26,13 @@ import kotlin.test.assertTrue
 @Tag("slice")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(SharedPostgresContainer::class, ValidationQueryRepository::class)
+@Import(
+    SharedPostgresContainer::class,
+    ValidationQueryRepository::class,
+    ConflictRepositoryImpl::class,
+    ConflictFindingRepositoryImpl::class,
+    ValidationTaskRepositoryImpl::class,
+)
 class ValidationQueryRepositoryTest @Autowired constructor(
     private val queryRepository: ValidationQueryRepository,
     private val conflictRepository: ConflictRepository,
@@ -82,6 +91,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b1"),
                 targetBlockIds = listOf("b2"),
                 rationale = "first",
+                suggestion = "sug1",
                 detectedAt = now,
             ),
         )
@@ -92,6 +102,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b3"),
                 targetBlockIds = listOf("b4"),
                 rationale = "second",
+                suggestion = "sug2",
                 detectedAt = now,
             ),
         )
@@ -102,11 +113,13 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 sourceBlockIds = listOf("b5"),
                 targetBlockIds = listOf("b6"),
                 rationale = "third",
+                suggestion = "sug3",
                 detectedAt = now,
             ),
         )
 
         val grouped = queryRepository.findFindingsByConflictIds(listOf(conflict1.id, conflict2.id))
+            .groupBy { it.conflictId }
 
         assertEquals(2, grouped[conflict1.id]?.size)
         assertEquals(1, grouped[conflict2.id]?.size)

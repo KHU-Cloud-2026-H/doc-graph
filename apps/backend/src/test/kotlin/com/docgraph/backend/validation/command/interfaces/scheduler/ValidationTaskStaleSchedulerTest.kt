@@ -6,7 +6,9 @@ import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskQueuedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import com.ninjasquad.springmockk.MockkBean
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -50,6 +52,10 @@ class ValidationTaskStaleSchedulerTest {
 
     @Autowired lateinit var repository: ValidationTaskRepository
 
+    @Autowired lateinit var em: EntityManager
+
+    @Autowired lateinit var txTemplate: TransactionTemplate
+
     @Autowired lateinit var probe: ValidationTaskQueuedEventCaptureProbe
 
     // 본 테스트는 scheduler의 publish만 검증. 후속 phase 3 listener 처리는 별 axis라 mock으로 봉인.
@@ -57,7 +63,9 @@ class ValidationTaskStaleSchedulerTest {
 
     @BeforeEach
     fun reset() {
-        repository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
     }
 
     @Test

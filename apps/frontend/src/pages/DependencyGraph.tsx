@@ -8,17 +8,16 @@ import {
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
+
 import { ExternalLink } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import { DocumentNode } from '../features/graph/DocumentNode';
 import { ConflictEdge } from '../features/graph/ConflictEdge';
 import { initialNodes, initialEdges } from '../features/graph/mockData';
 import type { AppEdge, DocumentFlowNode } from '../features/graph/mockData';
+
 import { GraphRightSidebar } from '../components/GraphRightSidebar';
 import { useAppStore } from '../store';
-
-
-
-
 
 const nodeTypes = {
   document: DocumentNode,
@@ -31,6 +30,7 @@ const edgeTypes = {
 
 export const DependencyGraph = () => {
   const workspace = useAppStore((state) => state.workspace);
+  const { workspaceId } = useParams();
   const [showRightSidebar, setShowRightSidebar] = useState(false);
 
   // TODO: workspaceId를 URL params에서 읽어오도록 수정 필요
@@ -58,7 +58,9 @@ export const DependencyGraph = () => {
       {/* Header */}
       <header className="h-14 flex items-center justify-between px-6 border-b border-slate-200 bg-white shrink-0 z-20">
         <div className="flex items-center text-sm text-slate-500 flex-1">
-          <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">{workspace}</span>
+          <Link to={`/w/${workspaceId}`} className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">
+            {workspace}
+          </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>
           <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px]">Dependency Graph</span>
         </div>
