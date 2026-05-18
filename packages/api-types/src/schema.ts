@@ -22,24 +22,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/type-mappings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 상위 페이지-타입 매핑 조회 */
-        get: operations["getTypeMappings"];
-        /** 상위 페이지-타입 매핑 수정 */
-        put: operations["updateTypeMappings"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/projects/{id}/type-assignees": {
         parameters: {
             query?: never;
@@ -51,7 +33,7 @@ export interface paths {
         get: operations["getTypeAssignees"];
         /**
          * 타입별 담당자 기본값 수정
-         * @description 문서 타입별 기본 담당자를 설정한다. assigneeMemberId는 워크스페이스 멤버 ID이며, null이면 담당자 없음을 의미한다.
+         * @description 문서 타입별 기본 담당자를 전체 replace 의미로 설정한다. assigneeMemberId는 워크스페이스 멤버 ID이며, null이면 담당자 없음을 의미한다. 빈 list는 전체 row 삭제.
          */
         put: operations["updateTypeAssignees"];
         post?: never;
@@ -68,12 +50,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 프로젝트 목록 */
+        /**
+         * 프로젝트 목록
+         * @description 본인이 ProjectMember로 배정된 프로젝트만 반환. 비멤버는 빈 list.
+         */
         get: operations["list"];
         put?: never;
         /**
          * 프로젝트 생성
-         * @description Notion 루트 페이지를 기준으로 프로젝트를 생성한다. 생성 직후 동기화는 실행되지 않는다. 타입 매핑·담당자 기본값·멤버 배정을 완료한 후 POST /projects/{id}/sync로 초기 동기화를 수동 트리거해야 한다.
+         * @description Notion 루트 페이지를 기준으로 프로젝트를 생성한다. 생성 직후 동기화는 실행되지 않는다. 카테고리 등록·담당자 기본값·멤버 배정을 완료한 후 POST /projects/{id}/sync로 초기 동기화를 수동 트리거해야 한다.
          */
         post: operations["create"];
         delete?: never;
@@ -130,7 +115,7 @@ export interface paths {
         put?: never;
         /**
          * 수동 동기화 트리거
-         * @description Notion 루트 페이지 하위 트리를 전체 조회해 문서 스냅샷을 갱신하고, 엣지·연결 제안 생성을 시작한다. 프로젝트 생성 후 타입 매핑·담당자 기본값·멤버 배정이 끝난 뒤 호출한다.
+         * @description Notion 루트 페이지 하위 트리를 전체 조회해 문서 스냅샷을 갱신하고, 엣지·연결 제안 생성을 시작한다. 프로젝트 생성 후 카테고리·담당자 기본값·멤버 배정이 끝난 뒤 호출한다. ProjectSyncTriggeredEvent 발행만 — document worker가 listen.
          */
         post: operations["sync"];
         delete?: never;
@@ -212,6 +197,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 카테고리 목록 */
+        get: operations["getCategories"];
+        put?: never;
+        /**
+         * 카테고리 등록
+         * @description 프로젝트 루트 페이지의 직계 자식 페이지를 카테고리로 등록하고 문서 타입을 매핑한다. 문서는 자기 조상 라인의 카테고리 매핑을 조회해 타입을 결정한다.
+         */
+        post: operations["registerCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conflicts/{id}/ignore": {
         parameters: {
             query?: never;
@@ -269,6 +275,24 @@ export interface paths {
         head?: never;
         /** 프로젝트 멤버 역할 변경 */
         patch: operations["updateMemberRole"];
+        trace?: never;
+    };
+    "/projects/{id}/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 카테고리 제거 */
+        delete: operations["removeCategory"];
+        options?: never;
+        head?: never;
+        /** 카테고리 타입 변경 */
+        patch: operations["changeCategoryType"];
         trace?: never;
     };
     "/workspaces": {
@@ -482,7 +506,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workspaces/{id}/members/{userId}": {
+    "/workspaces/{id}/members/{memberId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -577,22 +601,6 @@ export interface components {
              * @example https://hooks.slack.com/services/xxx/yyy/zzz
              */
             url?: string;
-        };
-        TypeMappingItem: {
-            /**
-             * @description Notion 페이지 ID
-             * @example abc1234567890def
-             */
-            notionPageId?: string;
-            /**
-             * @description 문서 타입
-             * @enum {string}
-             */
-            documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
-        };
-        UpdateTypeMappingsRequest: {
-            /** @description 상위 페이지-타입 매핑 목록 */
-            mappings?: components["schemas"]["TypeMappingItem"][];
         };
         TypeAssigneeItem: {
             /**
@@ -713,7 +721,7 @@ export interface components {
              * @description 배정할 워크스페이스 멤버 ID
              * @example 1
              */
-            memberId?: number;
+            workspaceMemberId?: number;
             /**
              * @description 역할
              * @enum {string}
@@ -739,6 +747,18 @@ export interface components {
              */
             validationCriterion?: string;
         };
+        RegisterCategoryRequest: {
+            /**
+             * @description Notion 페이지 ID
+             * @example abc1234567890def
+             */
+            notionPageId?: string;
+            /**
+             * @description 문서 타입
+             * @enum {string}
+             */
+            documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+        };
         IgnoreConflictRequest: {
             /**
              * @description 무시 사유 (선택)
@@ -759,6 +779,13 @@ export interface components {
              * @enum {string}
              */
             role?: "ADMIN" | "MEMBER";
+        };
+        ChangeCategoryTypeRequest: {
+            /**
+             * @description 변경할 문서 타입
+             * @enum {string}
+             */
+            documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
         };
         WorkspaceSummary: {
             /**
@@ -917,23 +944,6 @@ export interface components {
              * @description 생성 시각
              */
             createdAt?: string;
-        };
-        TypeMappingResponse: {
-            /**
-             * @description Notion 페이지 ID
-             * @example abc1234567890def
-             */
-            notionPageId?: string;
-            /**
-             * @description Notion 페이지 제목
-             * @example 회의록
-             */
-            notionPageTitle?: string;
-            /**
-             * @description 문서 타입
-             * @enum {string}
-             */
-            documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
         };
         TypeAssigneeResponse: {
             /**
@@ -1199,6 +1209,24 @@ export interface components {
              */
             size?: number;
         };
+        CategoryResponse: {
+            /**
+             * Format: int64
+             * @description 카테고리 ID
+             * @example 1
+             */
+            id?: number;
+            /**
+             * @description Notion 페이지 ID
+             * @example abc1234567890def
+             */
+            notionPageId?: string;
+            /**
+             * @description 문서 타입
+             * @enum {string}
+             */
+            documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+        };
         Block: {
             blockId?: string;
             parentBlockId?: string | null;
@@ -1316,52 +1344,6 @@ export interface operations {
             };
         };
     };
-    getTypeMappings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TypeMappingResponse"][];
-                };
-            };
-        };
-    };
-    updateTypeMappings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTypeMappingsRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     getTypeAssignees: {
         parameters: {
             query?: never;
@@ -1373,7 +1355,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1381,6 +1363,13 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["TypeAssigneeResponse"][];
                 };
+            };
+            /** @description 프로젝트 없음 또는 본인 비멤버 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1399,8 +1388,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 설정 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 또는 assignee가 프로젝트의 워크스페이스에 속하지 않음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1445,7 +1448,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 생성 완료 — project row id 반환 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1453,6 +1456,20 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+            /** @description 호출자가 워크스페이스 생성자 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 워크스페이스 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1536,8 +1553,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 트리거 완료 (이벤트 발행) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1631,7 +1662,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 배정 완료 — project_member row id 반환 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1639,6 +1670,27 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 또는 workspace_member가 프로젝트의 워크스페이스에 속하지 않음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 이미 프로젝트 멤버 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1687,6 +1739,82 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+        };
+    };
+    getCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryResponse"][];
+                };
+            };
+            /** @description 프로젝트 없음 또는 본인 비멤버 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    registerCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description 등록 완료 — category row id 반환 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IdResponse"];
+                };
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 같은 notion_page_id 카테고리 이미 존재 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1813,8 +1941,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 제거 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 자기 자신 제거 시도 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 또는 project_member 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1838,8 +1987,103 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 변경 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 자기 자신 역할 변경 시도 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 또는 project_member 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                categoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 제거 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 또는 카테고리 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    changeCategoryType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                categoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeCategoryTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description 변경 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 또는 카테고리 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1909,7 +2153,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1917,6 +2161,13 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["ProjectDetail"];
                 };
+            };
+            /** @description 프로젝트 없음 또는 본인 비멤버 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1931,8 +2182,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 삭제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2157,7 +2422,7 @@ export interface operations {
             header?: never;
             path: {
                 id: number;
-                userId: number;
+                memberId: number;
             };
             cookie?: never;
         };
@@ -2170,7 +2435,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 생성자 본인 제거 시도 — 생성자는 워크스페이스 멤버 row 자체가 아니라 제거 대상 X */
+            /** @description 생성자 본인 제거 시도 */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2184,7 +2449,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 워크스페이스 없음 또는 해당 사용자가 워크스페이스 멤버 아님 */
+            /** @description 워크스페이스 없음 또는 workspace_member row 없음 / 다른 워크스페이스 소속 */
             404: {
                 headers: {
                     [name: string]: unknown;
