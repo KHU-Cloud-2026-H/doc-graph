@@ -23,12 +23,14 @@ class RemoveWorkspaceMemberCommandHandler(
             throw WorkspacePermissionDeniedException(command.workspaceId, command.requesterUserId)
         }
 
-        if (command.userId == workspace.createdBy) {
+        val member = memberRepository.findById(command.memberId)
+            ?: throw WorkspaceMemberNotFoundException(command.workspaceId, command.memberId)
+        if (member.workspaceId != command.workspaceId) {
+            throw WorkspaceMemberNotFoundException(command.workspaceId, command.memberId)
+        }
+        if (member.userId == workspace.createdBy) {
             throw WorkspaceCreatorRemovalException(command.workspaceId)
         }
-
-        val member = memberRepository.findByWorkspaceIdAndUserId(command.workspaceId, command.userId)
-            ?: throw WorkspaceMemberNotFoundException(command.workspaceId, command.userId)
 
         memberRepository.delete(member)
     }
