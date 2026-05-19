@@ -97,8 +97,8 @@ class ConflictReconcilerTest {
 
     private fun sampleFinding() = DetectedConflict(
         sourceBlockIds = listOf("s1"),
-        targetBlockIds = listOf("t1"),
+        targetBlockId = "t1",
         rationale = "rationale",
-        suggestion = "suggestion",
+        newText = "suggestion",
     )
 }

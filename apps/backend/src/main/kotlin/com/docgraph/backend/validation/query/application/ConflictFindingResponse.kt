@@ -8,12 +8,12 @@ data class ConflictFindingResponse(
     val id: Long,
     @Schema(description = "source 측 충돌 블록 ID 목록 (Notion block id)")
     val sourceBlockIds: List<String>,
-    @Schema(description = "target 측 충돌 블록 ID 목록 (Notion block id)")
-    val targetBlockIds: List<String>,
+    @Schema(description = "target 측 충돌 블록 ID (Notion block id)")
+    val targetBlockId: String,
     @Schema(description = "충돌 근거 (AI 판정)", example = "planning 3.2절 결정사항이 requirements에 반영되지 않음")
     val rationale: String,
-    @Schema(description = "AI 수정 제안 — target 측에 적용 가능한 자연어 수정안", example = "requirements 3.2절을 'A 옵션 선택'으로 변경")
-    val suggestion: String,
+    @Schema(description = "target 블록을 교체할 새 텍스트 (replace patch)", example = "requirements 3.2절을 'A 옵션 선택'으로 변경")
+    val newText: String,
     @Schema(description = "감지 시각")
     val detectedAt: OffsetDateTime,
 )

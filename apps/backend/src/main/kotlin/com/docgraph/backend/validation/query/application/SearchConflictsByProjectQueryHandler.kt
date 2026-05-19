@@ -39,9 +39,9 @@ class SearchConflictsByProjectQueryHandler(
                 ConflictFindingResponse(
                     id = row.id,
                     sourceBlockIds = row.sourceBlockIds,
-                    targetBlockIds = row.targetBlockIds,
+                    targetBlockId = row.targetBlockId,
                     rationale = row.rationale,
-                    suggestion = row.suggestion,
+                    newText = row.newText,
                     detectedAt = row.detectedAt,
                 )
             }

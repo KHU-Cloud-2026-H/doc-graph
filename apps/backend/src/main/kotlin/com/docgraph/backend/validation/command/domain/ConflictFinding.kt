@@ -26,15 +26,14 @@ class ConflictFinding(
     @Column(name = "source_block_ids", nullable = false, columnDefinition = "jsonb")
     val sourceBlockIds: List<String>,
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "target_block_ids", nullable = false, columnDefinition = "jsonb")
-    val targetBlockIds: List<String>,
+    @Column(name = "target_block_id", nullable = false, columnDefinition = "text")
+    val targetBlockId: String,
 
     @Column(name = "rationale", nullable = false, columnDefinition = "text")
     val rationale: String,
 
-    @Column(name = "suggestion", nullable = false, columnDefinition = "text")
-    val suggestion: String,
+    @Column(name = "new_text", nullable = false, columnDefinition = "text")
+    val newText: String,
 
     @Column(name = "detected_at", nullable = false, updatable = false)
     val detectedAt: OffsetDateTime,

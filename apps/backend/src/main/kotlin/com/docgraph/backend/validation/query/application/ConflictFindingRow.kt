@@ -6,8 +6,8 @@ data class ConflictFindingRow(
     val id: Long,
     val conflictId: Long,
     val sourceBlockIds: List<String>,
-    val targetBlockIds: List<String>,
+    val targetBlockId: String,
     val rationale: String,
-    val suggestion: String,
+    val newText: String,
     val detectedAt: OffsetDateTime,
 )

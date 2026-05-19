@@ -40,7 +40,7 @@ class ConflictFindingRepositoryImplTest @Autowired constructor(
     private lateinit var em: EntityManager
 
     @Test
-    fun `JSONB List String 라운드트립`() {
+    fun `ConflictFinding 라운드트립 — source_block_ids JSONB + target_block_id·new_text TEXT`() {
         val task = taskRepository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 21L))
         em.flush()
         val now = OffsetDateTime.now()
@@ -54,9 +54,9 @@ class ConflictFindingRepositoryImplTest @Autowired constructor(
                 conflictId = conflict.id,
                 validationTaskId = task.id,
                 sourceBlockIds = listOf("block-1", "block-2"),
-                targetBlockIds = listOf("target-1"),
+                targetBlockId = "target-1",
                 rationale = "회의록의 결정사항이 요구사항에 반영되지 않음",
-                suggestion = "requirements 3.2절을 'A 옵션'으로 변경",
+                newText = "requirements 3.2절을 'A 옵션'으로 변경",
                 detectedAt = now,
             ),
         )
@@ -66,9 +66,9 @@ class ConflictFindingRepositoryImplTest @Autowired constructor(
         val loaded = findingRepository.findById(saved.id)
         assertNotNull(loaded)
         assertEquals(listOf("block-1", "block-2"), loaded.sourceBlockIds)
-        assertEquals(listOf("target-1"), loaded.targetBlockIds)
+        assertEquals("target-1", loaded.targetBlockId)
         assertEquals("회의록의 결정사항이 요구사항에 반영되지 않음", loaded.rationale)
-        assertEquals("requirements 3.2절을 'A 옵션'으로 변경", loaded.suggestion)
+        assertEquals("requirements 3.2절을 'A 옵션'으로 변경", loaded.newText)
     }
 
     @Test
@@ -130,9 +130,9 @@ class ConflictFindingRepositoryImplTest @Autowired constructor(
             conflictId = conflictId,
             validationTaskId = taskId,
             sourceBlockIds = listOf("s"),
-            targetBlockIds = listOf("t"),
+            targetBlockId = "t",
             rationale = "r",
-            suggestion = "sug",
+            newText = "sug",
             detectedAt = detectedAt,
         )
 }

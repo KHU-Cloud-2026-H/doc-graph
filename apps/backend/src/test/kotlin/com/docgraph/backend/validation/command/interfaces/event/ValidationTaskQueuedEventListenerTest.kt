@@ -159,6 +159,10 @@ class ValidationTaskQueuedEventListenerTest {
         val fired = probe.latch.await(5, TimeUnit.SECONDS)
         assertTrue(fired, "ValidationTaskPreparedEvent did not fire within 5s")
 
+        awaitCondition(Duration.ofSeconds(5)) {
+            findEdge.callCount.get() == 2 && findDocument.callCount.get() == 4
+        }
+
         assertEquals(task.id, probe.received?.validationTaskId)
         assertEquals(2, findEdge.callCount.get(), "FindEdge 2회 호출 기대 (Process handler + Prepared listener)")
         assertEquals(4, findDocument.callCount.get(), "FindDocument 4회 호출 기대 (Process + Prepared 각각 source+target)")
@@ -208,5 +212,14 @@ class ValidationTaskQueuedEventListenerTest {
             Thread.sleep(50)
         }
         throw AssertionError("task $taskId did not reach status $expected within $timeout")
+    }
+
+    private fun awaitCondition(timeout: Duration, predicate: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeout.toMillis()
+        while (System.currentTimeMillis() < deadline) {
+            if (predicate()) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("condition not satisfied within $timeout")
     }
 }

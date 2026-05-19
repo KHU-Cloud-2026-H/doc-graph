@@ -271,9 +271,9 @@ class ValidationCommandControllerTest @Autowired constructor(
                 conflictId = conflict.id,
                 validationTaskId = task.id,
                 sourceBlockIds = listOf("s"),
-                targetBlockIds = listOf("t"),
+                targetBlockId = "t",
                 rationale = "r",
-                suggestion = "sug",
+                newText = "sug",
                 detectedAt = OffsetDateTime.now(),
             ),
         )

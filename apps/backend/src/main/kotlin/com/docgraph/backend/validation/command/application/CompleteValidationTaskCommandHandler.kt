@@ -66,9 +66,9 @@ class CompleteValidationTaskCommandHandler(
                     conflictId = conflictId,
                     validationTaskId = taskId,
                     sourceBlockIds = f.sourceBlockIds,
-                    targetBlockIds = f.targetBlockIds,
+                    targetBlockId = f.targetBlockId,
                     rationale = f.rationale,
-                    suggestion = f.suggestion,
+                    newText = f.newText,
                     detectedAt = now,
                 ),
             )

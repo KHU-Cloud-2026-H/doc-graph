@@ -25,6 +25,21 @@ class ConflictDetectionPromptBuilderTest {
     }
 
     @Test
+    fun `system content — finding 단위·필드 명세 안내`() {
+        val system = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "c")[0].content
+        assertTrue(system.contains("target_block_id"), "target_block_id 필드명 안내")
+        assertTrue(system.contains("new_text"), "new_text 필드명 안내")
+        assertTrue(system.contains("source_block_ids"), "source_block_ids 필드명 안내")
+    }
+
+    @Test
+    fun `system content — target block 단위 + 같은 block 합침 안내`() {
+        val system = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "c")[0].content
+        assertTrue(system.contains("target") && system.contains("block"), "target block 단위 안내")
+        assertTrue(system.contains("합친다") || system.contains("하나"), "같은 target_block_id 사안은 1건으로 합침 안내")
+    }
+
+    @Test
     fun `user content — 변경 블록 block_id 태깅 포함`() {
         val changed = listOf(block("b1", "변경 내용 X"))
         val user = ConflictDetectionPromptBuilder.build(changed, emptyList(), "c")[1].content
