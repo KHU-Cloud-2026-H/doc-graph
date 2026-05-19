@@ -159,6 +159,7 @@ class ApproveProposalCommandHandlerTest {
             notionPageId = "page",
             title = "title",
             type = DocumentType.REQUIREMENTS,
+            parentDocumentId = null,
             assigneeMemberId = null,
             notionLastEditedAt = targetEdited,
             blocks = emptyList(),

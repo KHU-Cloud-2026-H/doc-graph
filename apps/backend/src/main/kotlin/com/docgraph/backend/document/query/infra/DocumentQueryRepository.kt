@@ -53,6 +53,7 @@ class DocumentQueryRepository {
             notionPageId = document.notionPageId,
             title = document.title,
             type = document.type,
+            parentDocumentId = document.parentDocumentId,
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
             blocks = blocks,
@@ -80,6 +81,7 @@ class DocumentQueryRepository {
                     notionPageId = d.notionPageId,
                     title = d.title,
                     type = d.type,
+                    parentDocumentId = d.parentDocumentId,
                 )
             }
 

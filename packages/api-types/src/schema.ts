@@ -1089,6 +1089,12 @@ export interface components {
              * @enum {string|null}
              */
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
+            /**
+             * Format: int64
+             * @description 부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)
+             * @example 1
+             */
+            parentDocumentId?: number | null;
         };
         PageResponseDocumentSummary: {
             content?: components["schemas"]["DocumentSummary"][];
@@ -1257,6 +1263,12 @@ export interface components {
              * @enum {string|null}
              */
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
+            /**
+             * Format: int64
+             * @description 부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)
+             * @example 1
+             */
+            parentDocumentId?: number | null;
             /**
              * Format: int64
              * @description 담당자 워크스페이스 멤버 ID (없으면 null)
