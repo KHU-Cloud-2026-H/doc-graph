@@ -29,6 +29,15 @@ class UserSession(
     @Column(name = "revoked_at")
     var revokedAt: OffsetDateTime? = null,
 ) {
+    init {
+        require(tokenHash.isNotBlank()) {
+            "tokenHash must not be blank"
+        }
+        require(expiresAt.isAfter(createdAt)) {
+            "expiresAt must be after createdAt"
+        }
+    }
+
     fun revoke(at: OffsetDateTime = OffsetDateTime.now()) {
         revokedAt = at
     }
