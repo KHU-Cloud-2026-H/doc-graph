@@ -8,7 +8,12 @@ CREATE TABLE notion_connection (
     token_type                VARCHAR(50) NOT NULL,
     connected_at              TIMESTAMP WITH TIME ZONE NOT NULL,
     revoked_at                TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT uk_notion_connection_user_workspace UNIQUE (user_id, notion_workspace_id)
+    CONSTRAINT uk_notion_connection_user_workspace UNIQUE (user_id, notion_workspace_id),
+    CONSTRAINT ck_notion_connection_workspace_id CHECK (notion_workspace_id <> ''),
+    CONSTRAINT ck_notion_connection_workspace_name CHECK (notion_workspace_name <> ''),
+    CONSTRAINT ck_notion_connection_bot_id CHECK (notion_bot_id <> ''),
+    CONSTRAINT ck_notion_connection_token_encrypted CHECK (access_token_encrypted <> ''),
+    CONSTRAINT ck_notion_connection_token_type CHECK (token_type <> '')
 );
 
 CREATE INDEX ix_notion_connection_notion_workspace_id

@@ -5,7 +5,9 @@ CREATE TABLE user_session (
     expires_at  TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
     revoked_at  TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT uk_user_session_token_hash UNIQUE (token_hash)
+    CONSTRAINT uk_user_session_token_hash UNIQUE (token_hash),
+    CONSTRAINT ck_user_session_token_hash CHECK (token_hash <> ''),
+    CONSTRAINT ck_user_session_expires_at CHECK (expires_at > created_at)
 );
 
 CREATE INDEX ix_user_session_user_id ON user_session (user_id);
