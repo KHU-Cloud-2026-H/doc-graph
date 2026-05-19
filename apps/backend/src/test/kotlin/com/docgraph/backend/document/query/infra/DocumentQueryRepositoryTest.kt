@@ -188,4 +188,58 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         assertEquals(0L, result.totalElements)
         assertTrue(result.content.isEmpty())
     }
+
+    @Test
+    fun `findDetail — parentDocumentId가 그대로 매핑 (non-null)`() {
+        val parent = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "parent-page", title = "Parent"),
+        )
+        val child = documentRepository.save(
+            Document(
+                projectId = 1L,
+                notionPageId = "child-page",
+                title = "Child",
+                parentDocumentId = parent.id,
+            ),
+        )
+
+        val detail = queryRepository.findDetail(child.id)
+
+        assertNotNull(detail)
+        assertEquals(parent.id, detail!!.parentDocumentId)
+    }
+
+    @Test
+    fun `findDetail — parentDocumentId 미세팅이면 null (루트 또는 프로젝트 경계 밖)`() {
+        val document = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "root-page", title = "Root"),
+        )
+
+        val detail = queryRepository.findDetail(document.id)
+
+        assertNotNull(detail)
+        assertNull(detail!!.parentDocumentId)
+    }
+
+    @Test
+    fun `searchSummariesByProject — parentDocumentId가 summary에 매핑`() {
+        val parent = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "parent-page", title = "Parent"),
+        )
+        val child = documentRepository.save(
+            Document(
+                projectId = 1L,
+                notionPageId = "child-page",
+                title = "Child",
+                parentDocumentId = parent.id,
+            ),
+        )
+
+        val result = queryRepository.searchSummariesByProject(1L, PageRequest.of(0, 10))
+
+        val parentSummary = result.content.first { it.id == parent.id }
+        val childSummary = result.content.first { it.id == child.id }
+        assertNull(parentSummary.parentDocumentId)
+        assertEquals(parent.id, childSummary.parentDocumentId)
+    }
 }
