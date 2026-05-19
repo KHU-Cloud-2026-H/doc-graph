@@ -14,30 +14,30 @@ class ConflictDetectionResponseParserTest {
 
     @Test
     fun `정상 — 1건 반환, snake_case → camelCase 매핑`() {
-        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_ids":["b"],"rationale":"r","suggestion":"s"}]}"""
+        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_id":"b","rationale":"r","new_text":"s"}]}"""
         val result = parser.parse(json)
         assertEquals(1, result.size)
         assertEquals(listOf("a"), result[0].sourceBlockIds)
-        assertEquals(listOf("b"), result[0].targetBlockIds)
+        assertEquals("b", result[0].targetBlockId)
         assertEquals("r", result[0].rationale)
-        assertEquals("s", result[0].suggestion)
+        assertEquals("s", result[0].newText)
     }
 
     @Test
-    fun `정상 — 여러 건 + 다중 block_ids 보존`() {
+    fun `정상 — 여러 건 + 다중 source_block_ids 보존`() {
         val json = """
             {"conflicts":[
-              {"source_block_ids":["a","b"],"target_block_ids":["c"],"rationale":"r1","suggestion":"s1"},
-              {"source_block_ids":["d"],"target_block_ids":["e","f"],"rationale":"r2","suggestion":"s2"}
+              {"source_block_ids":["a","b"],"target_block_id":"c","rationale":"r1","new_text":"s1"},
+              {"source_block_ids":["d"],"target_block_id":"e","rationale":"r2","new_text":"s2"}
             ]}
         """.trimIndent()
         val result = parser.parse(json)
         assertEquals(2, result.size)
         assertEquals(listOf("a", "b"), result[0].sourceBlockIds)
-        assertEquals(listOf("e", "f"), result[1].targetBlockIds)
+        assertEquals("e", result[1].targetBlockId)
         assertEquals("r2", result[1].rationale)
-        assertEquals("s1", result[0].suggestion)
-        assertEquals("s2", result[1].suggestion)
+        assertEquals("s1", result[0].newText)
+        assertEquals("s2", result[1].newText)
     }
 
     @Test
@@ -63,8 +63,8 @@ class ConflictDetectionResponseParserTest {
     }
 
     @Test
-    fun `suggestion 누락 — 예외 (Structured Outputs strict 보호막 우회 시)`() {
-        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_ids":["b"],"rationale":"r"}]}"""
+    fun `new_text 누락 — 예외 (Structured Outputs strict 보호막 우회 시)`() {
+        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_id":"b","rationale":"r"}]}"""
         assertThrows(Exception::class.java) { parser.parse(json) }
     }
 }

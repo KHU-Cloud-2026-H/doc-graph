@@ -90,7 +90,7 @@ sequenceDiagram
     validation->>document: FindDocumentByIdQuery
     document-->>validation: DocumentDetail
     validation->>AI: 검증 요청
-    AI-->>validation: 충돌 묶음
+    AI-->>validation: finding 배열
     alt 충돌 감지
         validation->>graph: ConflictDetectedEvent
         graph->>graph: 엣지 상태 업데이트
@@ -249,9 +249,10 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 **주요 흐름 — 충돌 해소 Notion 쓰기 (비동기 listener)**
 1. `validation`의 `ProposalApprovedEvent` 수신
-2. finding의 수정 제안을 target 문서의 Notion 페이지에 적용 (Notion API 쓰기)
-3. 쓰기 성공 시 `NotionWriteSucceededEvent` 발행
-4. 자기 쓰기로 발생한 webhook은 봇 actor 필터로 재처리되지 않음
+2. `FindConflictFindingByIdQuery`로 finding 본문(`target_block_id`, `new_text`) 조회
+3. target 블록을 `new_text`로 교체 (Notion API 쓰기)
+4. 쓰기 성공 시 `NotionWriteSucceededEvent` 발행
+5. 자기 쓰기로 발생한 webhook은 봇 actor 필터로 재처리되지 않음
 
 **경계**
 - 카테고리 설정은 `project` 도메인 책임
@@ -338,7 +339,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 **핵심 개념**
 - ValidationTask (검증 작업, 상태: `pending` / `success` / `failed`) — 한 엣지 × 한 변경 batch = ValidationTask 1건 = AI 호출 1건. 동시에 graph → validation 사이의 outbox 역할도 수행한다.
 - Conflict (열린 충돌. `ignoredAt`, `ignoredBy`, `ignoreReason?` 필드를 가질 수 있음)
-- ConflictResult (충돌 구간, 원인, 수정 제안 — ValidationTask에 귀속). 충돌 한 묶음은 블록 N:M 관계: `source_block_ids[]`, `target_block_ids[]`, `rationale`.
+- ConflictFinding (ValidationTask에 귀속). target block 1개 단위 충돌 사안: `source_block_ids[]`, `target_block_id`, `rationale`, `new_text` (target 블록을 교체할 텍스트). 한 ValidationTask는 finding 0..N건을 가지며, 같은 target block에 대한 사안은 finding 1건으로 합친다.
 - 충돌 해소는 별도 상태가 아닌 Conflict 레코드의 비활성화로 표현. 이력은 물리 삭제 없이 보존.
 
 **담당자 라우팅**
@@ -351,7 +352,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 1. `graph`로부터 검증 대상 쌍 수신 (변경 감지, 제안 수락, 수동 엣지 추가 경로 모두 동일) → `ValidationTask(pending)` 영속화
 2. 비동기 worker가 `ValidationTask(pending)` 1건 수신
 3. 두 문서의 본문 스냅샷·블록 row 조회, 변경 batch의 변경 블록 식별
-4. AI API non-blocking 호출 (타임아웃 30초). 입력 = (변경 블록, 반대편 문서 전체 블록, 검증 기준). 응답 = 블록 N:M 충돌 묶음 배열.
+4. AI API non-blocking 호출 (타임아웃 30초). 입력 = (변경 블록, 반대편 문서 전체 블록, 검증 기준). 응답 = finding 배열 (각 finding은 target block 1개 단위, source block 다수 참조, `rationale`, `new_text`).
 5. ValidationTask 결과 저장, `graph`의 엣지 상태 업데이트
 6. 충돌 감지 시 기존 Conflict 갱신 또는 신규 생성, `notification`으로 이벤트 발행
 7. 재검증 결과 충돌 없음: 기존 Conflict 비활성화 (`ignored` 포함 해제)
@@ -370,8 +371,14 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 | --- | --- | --- | --- |
 | `ConflictDetectedEvent` | 충돌 신규/갱신 | graph | 엣지 충돌 상태 표시 |
 | `ConflictDetectedEvent` | 충돌 신규/갱신 | notification | 프로젝트 webhook으로 외부 알림 발송 |
-| `ProposalApprovedEvent` | 사용자가 충돌 finding 수정 제안 승인 | document | 제안 내용을 target Notion 페이지에 적용 |
+| `ProposalApprovedEvent` | 사용자가 충돌 finding 수정 제안 승인 | document | finding 본문 조회 후 target 블록을 Notion에 적용 |
 | `ConflictResolvedEvent` | 충돌 비활성화 | graph | 엣지 충돌 상태 복원 |
+
+**도메인 간 인터페이스 — Query API**
+
+| 이름 | 소비자 | 호출 의도 |
+| --- | --- | --- |
+| `FindConflictFindingByIdQuery` | document | `ProposalApprovedEvent` listener가 patch 본문(`target_block_id`, `new_text`) 조회 후 Notion 쓰기 |
 
 ---
 

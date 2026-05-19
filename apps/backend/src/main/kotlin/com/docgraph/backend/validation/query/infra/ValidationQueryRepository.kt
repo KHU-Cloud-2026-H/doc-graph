@@ -3,6 +3,7 @@ package com.docgraph.backend.validation.query.infra
 import com.docgraph.backend.validation.command.domain.QConflict
 import com.docgraph.backend.validation.command.domain.QConflictFinding
 import com.docgraph.backend.validation.command.domain.QValidationTask
+import com.docgraph.backend.validation.query.application.ConflictFindingDetailRow
 import com.docgraph.backend.validation.query.application.ConflictFindingRow
 import com.docgraph.backend.validation.query.application.ConflictRow
 import com.docgraph.backend.validation.query.application.ValidationTaskRow
@@ -70,15 +71,35 @@ class ValidationQueryRepository {
                     f.id,
                     f.conflictId,
                     f.sourceBlockIds,
-                    f.targetBlockIds,
+                    f.targetBlockId,
                     f.rationale,
-                    f.suggestion,
+                    f.newText,
                     f.detectedAt,
                 ),
             )
             .from(f)
             .where(f.conflictId.`in`(conflictIds))
             .fetch()
+    }
+
+    fun findFindingDetailById(findingId: Long): ConflictFindingDetailRow? {
+        val f = QConflictFinding.conflictFinding
+        val c = QConflict.conflict
+
+        return queryFactory
+            .select(
+                Projections.constructor(
+                    ConflictFindingDetailRow::class.java,
+                    f.id,
+                    c.edgeId,
+                    f.targetBlockId,
+                    f.newText,
+                ),
+            )
+            .from(f)
+            .join(c).on(c.id.eq(f.conflictId))
+            .where(f.id.eq(findingId))
+            .fetchOne()
     }
 
     fun findValidationTasksByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ValidationTaskRow> {

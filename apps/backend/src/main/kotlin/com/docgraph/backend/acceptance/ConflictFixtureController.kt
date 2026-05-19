@@ -60,9 +60,9 @@ class ConflictFixtureController(
                     conflictId = conflict.id,
                     validationTaskId = task.id,
                     sourceBlockIds = item.sourceBlockIds,
-                    targetBlockIds = item.targetBlockIds,
+                    targetBlockId = item.targetBlockId,
                     rationale = item.rationale,
-                    suggestion = item.suggestion ?: "",
+                    newText = item.newText ?: "",
                     detectedAt = now,
                 ),
             )
@@ -85,9 +85,9 @@ data class SeedConflictRequest(
 
 data class SeedFindingItem(
     val sourceBlockIds: List<String>,
-    val targetBlockIds: List<String>,
+    val targetBlockId: String,
     val rationale: String,
-    val suggestion: String? = null,
+    val newText: String? = null,
 )
 
 data class SeedConflictResponse(

@@ -14,9 +14,9 @@ class ConflictDetectionResponseParser(private val mapper: ObjectMapper) {
         return envelope.conflicts.map {
             DetectedConflict(
                 sourceBlockIds = it.sourceBlockIds,
-                targetBlockIds = it.targetBlockIds,
+                targetBlockId = it.targetBlockId,
                 rationale = it.rationale,
-                suggestion = it.suggestion,
+                newText = it.newText,
             )
         }
     }
@@ -25,8 +25,8 @@ class ConflictDetectionResponseParser(private val mapper: ObjectMapper) {
 
     private data class RawConflict(
         @JsonProperty("source_block_ids") val sourceBlockIds: List<String>,
-        @JsonProperty("target_block_ids") val targetBlockIds: List<String>,
+        @JsonProperty("target_block_id") val targetBlockId: String,
         val rationale: String,
-        val suggestion: String,
+        @JsonProperty("new_text") val newText: String,
     )
 }
