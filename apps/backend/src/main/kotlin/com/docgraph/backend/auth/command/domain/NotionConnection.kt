@@ -49,8 +49,25 @@ class NotionConnection(
     fun rotateToken(accessTokenEncrypted: String, tokenType: String) {
         require(accessTokenEncrypted.isNotBlank()) { "accessTokenEncrypted must not be blank" }
         require(tokenType.isNotBlank()) { "tokenType must not be blank" }
+        require(revokedAt == null) { "cannot rotate token for revoked connection" }
         this.accessTokenEncrypted = accessTokenEncrypted
         this.tokenType = tokenType
+    }
+
+    fun reconnect(
+        accessTokenEncrypted: String,
+        tokenType: String,
+        notionWorkspaceName: String,
+        notionBotId: String,
+    ) {
+        require(accessTokenEncrypted.isNotBlank()) { "accessTokenEncrypted must not be blank" }
+        require(tokenType.isNotBlank()) { "tokenType must not be blank" }
+        require(notionWorkspaceName.isNotBlank()) { "notionWorkspaceName must not be blank" }
+        require(notionBotId.isNotBlank()) { "notionBotId must not be blank" }
+        this.accessTokenEncrypted = accessTokenEncrypted
+        this.tokenType = tokenType
+        this.notionWorkspaceName = notionWorkspaceName
+        this.notionBotId = notionBotId
         this.revokedAt = null
     }
 

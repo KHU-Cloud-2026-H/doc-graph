@@ -35,7 +35,25 @@ class NotionConnectionTest {
     }
 
     @Test
-    fun `rotateToken — 토큰 갱신 시 revoke 상태 해제`() {
+    fun `rotateToken — active connection의 토큰 갱신`() {
+        val connection = NotionConnection.connect(
+            userId = 1L,
+            notionWorkspaceId = "workspace-1",
+            notionWorkspaceName = "Workspace",
+            notionBotId = "bot-1",
+            accessTokenEncrypted = "old-token",
+            tokenType = "bearer",
+        )
+
+        connection.rotateToken(accessTokenEncrypted = "new-token", tokenType = "bearer")
+
+        assertEquals("new-token", connection.accessTokenEncrypted)
+        assertEquals("bearer", connection.tokenType)
+        assertNull(connection.revokedAt)
+    }
+
+    @Test
+    fun `rotateToken — revoked connection에서는 실패`() {
         val connection = NotionConnection.connect(
             userId = 1L,
             notionWorkspaceId = "workspace-1",
@@ -46,10 +64,34 @@ class NotionConnectionTest {
         )
         connection.revoke(OffsetDateTime.parse("2026-05-20T10:00:00+09:00"))
 
-        connection.rotateToken(accessTokenEncrypted = "new-token", tokenType = "bearer")
+        assertThrows(IllegalArgumentException::class.java) {
+            connection.rotateToken(accessTokenEncrypted = "new-token", tokenType = "bearer")
+        }
+    }
+
+    @Test
+    fun `reconnect — revoked connection 재활성화`() {
+        val connection = NotionConnection.connect(
+            userId = 1L,
+            notionWorkspaceId = "workspace-1",
+            notionWorkspaceName = "Old Workspace",
+            notionBotId = "old-bot",
+            accessTokenEncrypted = "old-token",
+            tokenType = "bearer",
+        )
+        connection.revoke(OffsetDateTime.parse("2026-05-20T10:00:00+09:00"))
+
+        connection.reconnect(
+            accessTokenEncrypted = "new-token",
+            tokenType = "bearer",
+            notionWorkspaceName = "New Workspace",
+            notionBotId = "new-bot",
+        )
 
         assertEquals("new-token", connection.accessTokenEncrypted)
         assertEquals("bearer", connection.tokenType)
+        assertEquals("New Workspace", connection.notionWorkspaceName)
+        assertEquals("new-bot", connection.notionBotId)
         assertNull(connection.revokedAt)
     }
 
