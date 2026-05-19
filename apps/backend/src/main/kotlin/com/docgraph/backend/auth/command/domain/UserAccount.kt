@@ -32,7 +32,25 @@ class UserAccount(
     @Column(name = "last_login_at", nullable = false)
     var lastLoginAt: OffsetDateTime = createdAt,
 ) {
+    init {
+        require(notionUserId.isNotBlank()) {
+            "notionUserId must not be blank"
+        }
+        require(email.isNotBlank()) {
+            "email must not be blank"
+        }
+        require(name.isNotBlank()) {
+            "name must not be blank"
+        }
+    }
+
     fun updateProfile(email: String, name: String, avatarUrl: String?) {
+        require(email.isNotBlank()) {
+            "email must not be blank"
+        }
+        require(name.isNotBlank()) {
+            "name must not be blank"
+        }
         this.email = email
         this.name = name
         this.avatarUrl = avatarUrl
@@ -49,13 +67,24 @@ class UserAccount(
             name: String,
             avatarUrl: String?,
             now: OffsetDateTime = OffsetDateTime.now(),
-        ): UserAccount = UserAccount(
-            notionUserId = notionUserId,
-            email = email,
-            name = name,
-            avatarUrl = avatarUrl,
-            createdAt = now,
-            lastLoginAt = now,
-        )
+        ): UserAccount {
+            require(notionUserId.isNotBlank()) {
+                "notionUserId must not be blank"
+            }
+            require(email.isNotBlank()) {
+                "email must not be blank"
+            }
+            require(name.isNotBlank()) {
+                "name must not be blank"
+            }
+            return UserAccount(
+                notionUserId = notionUserId,
+                email = email,
+                name = name,
+                avatarUrl = avatarUrl,
+                createdAt = now,
+                lastLoginAt = now,
+            )
+        }
     }
 }
