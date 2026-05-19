@@ -71,6 +71,30 @@ class NotionConnectionTest {
     }
 
     @Test
+    fun `connect — 같은 Notion 워크스페이스를 여러 사용자가 연결할 수 있음`() {
+        val first = NotionConnection.connect(
+            userId = 1L,
+            notionWorkspaceId = "workspace-1",
+            notionWorkspaceName = "Workspace",
+            notionBotId = "bot-1",
+            accessTokenEncrypted = "first-token",
+            tokenType = "bearer",
+        )
+        val second = NotionConnection.connect(
+            userId = 2L,
+            notionWorkspaceId = "workspace-1",
+            notionWorkspaceName = "Workspace",
+            notionBotId = "bot-2",
+            accessTokenEncrypted = "second-token",
+            tokenType = "bearer",
+        )
+
+        assertEquals(first.notionWorkspaceId, second.notionWorkspaceId)
+        assertEquals(1L, first.userId)
+        assertEquals(2L, second.userId)
+    }
+
+    @Test
     fun `revoke — 연결 해제 시각 기록`() {
         val revokedAt = OffsetDateTime.parse("2026-05-20T10:00:00+09:00")
         val connection = NotionConnection.connect(
