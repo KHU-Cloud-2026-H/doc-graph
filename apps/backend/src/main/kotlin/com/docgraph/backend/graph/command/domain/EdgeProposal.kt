@@ -47,6 +47,13 @@ class EdgeProposal(
         }
     }
 
+    /**
+     * Accepts this proposal and returns a new DependencyEdge.
+     *
+     * Note: The application service must handle the proposal lifecycle
+     * by saving the edge and deleting this proposal in a single transaction
+     * to prevent duplicate edge/proposal with the same direction.
+     */
     fun accept(at: OffsetDateTime = OffsetDateTime.now()): DependencyEdge =
         DependencyEdge(
             projectId = projectId,
