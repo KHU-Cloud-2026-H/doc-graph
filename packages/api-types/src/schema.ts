@@ -1132,18 +1132,18 @@ export interface components {
             id?: number;
             /** @description source 측 충돌 블록 ID 목록 (Notion block id) */
             sourceBlockIds?: string[];
-            /** @description target 측 충돌 블록 ID 목록 (Notion block id) */
-            targetBlockIds?: string[];
+            /** @description target 측 충돌 블록 ID (Notion block id) */
+            targetBlockId?: string;
             /**
              * @description 충돌 근거 (AI 판정)
              * @example planning 3.2절 결정사항이 requirements에 반영되지 않음
              */
             rationale?: string;
             /**
-             * @description AI 수정 제안 — target 측에 적용 가능한 자연어 수정안
+             * @description target 블록을 교체할 새 텍스트 (replace patch)
              * @example requirements 3.2절을 'A 옵션 선택'으로 변경
              */
-            suggestion?: string;
+            newText?: string;
             /**
              * Format: date-time
              * @description 감지 시각
