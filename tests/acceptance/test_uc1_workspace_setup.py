@@ -1,8 +1,8 @@
 """UC1: 회원가입 및 워크스페이스 연결.
 
-OAuth handshake 자체는 슬라이스 테스트에서 검증. 시스템 테스트는
-인증된 사용자 컨텍스트에서 워크스페이스 등록·조회가 가능한지
-확인한다.
+OAuth handshake·인증 거부 경계는 슬라이스/컴포넌트 테스트에서 검증.
+인수 테스트는 인증된 사용자 컨텍스트에서 워크스페이스 등록·조회가
+가능한지(=데모 가능 상태)를 확인한다.
 """
 
 
@@ -41,12 +41,3 @@ def test_uc1_workspace_owner_is_current_user(client, auth_headers):
 
     # 응답에 owner 정보가 포함되어 있고 현재 사용자임
     assert "createdBy" in body or "ownerId" in body
-
-
-def test_uc1_unauthenticated_workspace_create_rejected(client):
-    """인증 헤더 없이는 워크스페이스 생성 거부."""
-    response = client.post(
-        "/workspaces",
-        json={"notionWorkspaceId": "x", "name": "x"},
-    )
-    assert response.status_code in (401, 403)

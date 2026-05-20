@@ -239,7 +239,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 
 **핵심 개념**
 - ValidationTask (검증 작업, 상태: `pending` / `success` / `failed`) — 한 엣지 × 한 변경 batch = ValidationTask 1건 = AI 호출 1건. 동시에 graph → validation 사이의 outbox 역할도 수행한다.
-- Conflict (열린 위반. `ignoredAt`, `ignoredBy`, `ignoreReason?` 필드를 가질 수 있음)
+- Conflict (열린 충돌. `ignoredAt`, `ignoredBy`, `ignoreReason?` 필드를 가질 수 있음)
 - ConflictResult (충돌 구간, 원인, 수정 제안 — ValidationTask에 귀속). 충돌 한 묶음은 블록 N:M 관계: `source_block_ids[]`, `target_block_ids[]`, `rationale`.
 - 충돌 해소는 별도 상태가 아닌 Conflict 레코드의 비활성화로 표현. 이력은 물리 삭제 없이 보존.
 
@@ -276,4 +276,4 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 2. 프로젝트 Webhook URL로 알림 발송 (Slack·Discord 호환)
 
 **경계**
-- Webhook 알림 발송 실패 시에도 인앱 위반 표시는 `validation`이 유지
+- Webhook 알림 발송 실패 시에도 인앱 충돌 표시는 `validation`이 유지

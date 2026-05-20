@@ -56,18 +56,23 @@ just test-all                 # 전체
 just test-class [ClassName]   # 단일 클래스
 ```
 
-### 시스템 테스트
+### 시스템·인수 테스트
 
 ```bash
-just systest   # Testcontainers가 PostgreSQL · WireMock · backend image 자동 빌드·기동
+just test-system                  # 부팅·env wiring (로컬 compose 자동)
+just test-acceptance              # UC happy path · local-mock (default)
+just test-acceptance local-live   # 로컬 backend + 실제 외부 API
+just test-acceptance remote-live  # ECS endpoint + 실제 외부 API
 ```
 
-### API 타입 생성
+원격 모드 사용 전 `.env.local`에 `ACCEPTANCE_REMOTE_BACKEND_URL`을 채운다.
 
-백엔드 OpenAPI 스펙으로부터 TypeScript 타입을 생성한다. 백엔드가 실행 중인 상태에서 실행한다.
+### API 스펙 산출물
 
 ```bash
-just gen-types   # packages/api-types/src/schema.ts 갱신
+just openapi-dump   # packages/api-types/openapi.json 추출
+just gen-types      # packages/api-types/src/schema.ts 생성 (openapi-dump 포함)
+just gen-redoc      # apps/docs/dist/index.html Redoc 빌드 (openapi-dump 포함)
 ```
 
 ---
