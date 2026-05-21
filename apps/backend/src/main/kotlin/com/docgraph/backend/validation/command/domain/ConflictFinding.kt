@@ -26,13 +26,31 @@ class ConflictFinding(
     @Column(name = "source_block_ids", nullable = false, columnDefinition = "jsonb")
     val sourceBlockIds: List<String>,
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "target_block_ids", nullable = false, columnDefinition = "jsonb")
-    val targetBlockIds: List<String>,
+    @Column(name = "target_block_id", nullable = false, columnDefinition = "text")
+    val targetBlockId: String,
 
     @Column(name = "rationale", nullable = false, columnDefinition = "text")
     val rationale: String,
 
+    @Column(name = "new_text", nullable = false, columnDefinition = "text")
+    val newText: String,
+
     @Column(name = "detected_at", nullable = false, updatable = false)
     val detectedAt: OffsetDateTime,
-)
+
+    @Column(name = "approved_at")
+    var approvedAt: OffsetDateTime? = null,
+
+    @Column(name = "approved_by")
+    var approvedBy: Long? = null,
+) {
+    val isApproved: Boolean get() = approvedAt != null
+
+    fun approve(by: Long, at: OffsetDateTime) {
+        if (isApproved) {
+            throw IllegalConflictFindingStateException(id, "이미 승인된 finding")
+        }
+        approvedAt = at
+        approvedBy = by
+    }
+}

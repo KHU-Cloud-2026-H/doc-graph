@@ -40,8 +40,9 @@
 | 컨테이너 | 호스트 포트 | 용도 |
 | --- | --- | --- |
 | postgres | 5433 | 개발용 DB (데이터 영구 보존) |
-| ngrok | 4040 | Notion Webhook을 로컬에서 수신하기 위한 터널 |
-| backend | 8080 | 백엔드 컨테이너 (`just compose-up` 시에만 실행) |
+| backend | 8080 | 백엔드 컨테이너 (`just compose-up` 시에만 실행, acceptance profile) |
+| ngrok | 4040 | Notion Webhook 로컬 수신 터널 (`live` mode 한정) |
+| wiremock | env | 외부 API stub (`mock` mode 한정) |
 
 ---
 
@@ -82,9 +83,12 @@ just gen-redoc      # apps/docs/dist/index.html Redoc 빌드 (openapi-dump 포�
 백엔드를 직접 수정하지 않고 프론트엔드나 인프라 작업만 할 때는 백엔드를 컨테이너로 띄운다.
 
 ```bash
-just compose-up    # postgres + ngrok + 백엔드 컨테이너
+just compose-up            # postgres + backend + wiremock (default mock)
+just compose-up live       # mock 대신 ngrok + 실제 외부 API
 just compose-down
 ```
+
+mock 모드는 외부 API(Notion·OpenAI)를 wiremock으로 stub한다. live 모드는 실제 호출.
 
 처음 실행 시 백엔드 이미지를 빌드하므로 시간이 소요된다.
 

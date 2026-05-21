@@ -32,7 +32,7 @@
 | `api-types` | `packages/api-types/` |
 | `tests` | `tests/` |
 | `docs` | `docs/` |
-| `infra` | `infra/`, 루트 `docker-compose.yml`·`.env.example` 등 |
+| `infra` | `infra/` |
 
 ### 예시
 
@@ -44,3 +44,20 @@ refactor(backend): validation worker를 단일 메서드로 통합
 test(backend): ValidationTask 라이프사이클 시나리오 추가
 chore: gitignore에 build 산출물 추가
 ```
+
+## Issue
+
+작업 단위 등록·진행 추적.
+
+### Label
+
+| 축 | label | 비고 |
+| --- | --- | --- |
+| priority | `priority:P0` / `priority:P1` / `priority:P2` | `docs/product.md` 우선순위 매핑 |
+| type | `type:feature` / `type:bug` / `type:refactor` / `type:docs` / `type:chore` / `type:test` | commit type과 일관 |
+| scope | `scope:frontend` / `scope:backend` / `scope:api-types` / `scope:tests` / `scope:docs` / `scope:infra` | commit scope 매핑. 두 영역 이상이면 생략 |
+| domain | `domain:auth` / `domain:workspace` / `domain:project` / `domain:document` / `domain:graph` / `domain:validation` / `domain:notification` | 제품 모델. 현재는 `scope:backend` issue 위주. 단일 도메인일 때만 |
+
+### 닫기
+
+PR 본문에 `closes #N`으로 자동 닫는다. 수동 close는 *작업 폐기* 등 예외만.

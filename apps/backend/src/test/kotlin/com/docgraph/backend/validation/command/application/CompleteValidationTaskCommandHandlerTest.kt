@@ -10,6 +10,7 @@ import com.docgraph.backend.validation.command.domain.ConflictResolvedEvent
 import com.docgraph.backend.validation.command.domain.DetectedConflict
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.event.EventListener
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -58,15 +60,19 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     private val taskRepository: ValidationTaskRepository,
     private val conflictRepository: ConflictRepository,
     private val findingRepository: ConflictFindingRepository,
+    private val em: EntityManager,
+    private val txTemplate: TransactionTemplate,
     private val detectedProbe: ConflictDetectedProbe,
     private val resolvedProbe: ConflictResolvedProbe,
 ) {
 
     @BeforeEach
     fun reset() {
-        findingRepository.deleteAll()
-        conflictRepository.deleteAll()
-        taskRepository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ConflictFinding").executeUpdate()
+            em.createQuery("DELETE FROM Conflict").executeUpdate()
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
         detectedProbe.received.clear()
         resolvedProbe.received.clear()
     }
@@ -77,10 +83,10 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
 
         handler.handle(CompleteValidationTaskCommand(task.id, findings = emptyList()))
 
-        val reloaded = taskRepository.findById(task.id).orElseThrow()
+        val reloaded = taskRepository.findById(task.id)!!
         assertEquals(OutboxStatus.SUCCESS, reloaded.status)
-        assertEquals(0, conflictRepository.count())
-        assertEquals(0, findingRepository.count())
+        assertEquals(0L, conflictCount())
+        assertEquals(0L, findingCount())
         assertTrue(detectedProbe.received.isEmpty())
         assertTrue(resolvedProbe.received.isEmpty())
     }
@@ -89,14 +95,14 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     fun `Detected — 기존 활성 없음 + findings 있음, 새 Conflict + Finding, ConflictDetectedEvent 발행`() {
         val task = newPendingTask(edgeId = 32L)
         val findings = listOf(
-            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockIds = listOf("t1"), rationale = "r1"),
-            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockIds = listOf("t2"), rationale = "r2"),
+            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockId = "t1", rationale = "r1", newText = "sug1"),
+            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockId = "t2", rationale = "r2", newText = "sug2"),
         )
 
         handler.handle(CompleteValidationTaskCommand(task.id, findings))
 
-        assertEquals(OutboxStatus.SUCCESS, taskRepository.findById(task.id).orElseThrow().status)
-        val conflicts = conflictRepository.findAll()
+        assertEquals(OutboxStatus.SUCCESS, taskRepository.findById(task.id)!!.status)
+        val conflicts = allConflicts()
         assertEquals(1, conflicts.size)
         val conflict = conflicts.single()
         assertEquals(32L, conflict.edgeId)
@@ -104,6 +110,7 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
         val savedFindings = findingRepository.findByConflictIdOrderByDetectedAtDesc(conflict.id)
         assertEquals(2, savedFindings.size)
         assertTrue(savedFindings.all { it.validationTaskId == task.id })
+        assertEquals(setOf("sug1", "sug2"), savedFindings.map { it.newText }.toSet())
         assertEquals(1, detectedProbe.received.size)
         assertEquals(conflict.id, detectedProbe.received.single().conflictId)
         assertEquals(32L, detectedProbe.received.single().edgeId)
@@ -114,7 +121,7 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     fun `Updated — 기존 활성(ignored) + findings 있음, ignored 해제·lastDetectedAt 갱신·Finding 추가, 이벤트 없음`() {
         val task = newPendingTask(edgeId = 33L)
         val older = OffsetDateTime.now().minusMinutes(10)
-        val existing = conflictRepository.saveAndFlush(
+        val existing = conflictRepository.save(
             Conflict(edgeId = 33L, firstDetectedAt = older, lastDetectedAt = older).apply {
                 ignore(by = 99L, reason = "임시 무시", at = older)
             },
@@ -123,11 +130,11 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
         handler.handle(
             CompleteValidationTaskCommand(
                 task.id,
-                findings = listOf(DetectedConflict(listOf("s"), listOf("t"), "r")),
+                findings = listOf(DetectedConflict(listOf("s"), "t", "r", "sug")),
             ),
         )
 
-        val reloaded = conflictRepository.findById(existing.id).orElseThrow()
+        val reloaded = conflictRepository.findById(existing.id)!!
         assertNull(reloaded.resolvedAt)
         assertNull(reloaded.ignoredAt)
         assertNull(reloaded.ignoredBy)
@@ -144,15 +151,15 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     fun `Resolved — 기존 활성 + findings 없음, resolvedAt 세팅·ConflictResolvedEvent 발행`() {
         val task = newPendingTask(edgeId = 34L)
         val older = OffsetDateTime.now().minusMinutes(10)
-        val existing = conflictRepository.saveAndFlush(
+        val existing = conflictRepository.save(
             Conflict(edgeId = 34L, firstDetectedAt = older, lastDetectedAt = older),
         )
 
         handler.handle(CompleteValidationTaskCommand(task.id, findings = emptyList()))
 
-        val reloaded = conflictRepository.findById(existing.id).orElseThrow()
+        val reloaded = conflictRepository.findById(existing.id)!!
         assertNotNull(reloaded.resolvedAt)
-        assertEquals(0, findingRepository.count())
+        assertEquals(0L, findingCount())
         assertTrue(detectedProbe.received.isEmpty())
         assertEquals(1, resolvedProbe.received.size)
         assertEquals(existing.id, resolvedProbe.received.single().conflictId)
@@ -160,5 +167,14 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     }
 
     private fun newPendingTask(edgeId: Long): ValidationTask =
-        taskRepository.saveAndFlush(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
+        taskRepository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
+
+    private fun conflictCount(): Long =
+        em.createQuery("SELECT COUNT(c) FROM Conflict c", Long::class.javaObjectType).singleResult
+
+    private fun findingCount(): Long =
+        em.createQuery("SELECT COUNT(f) FROM ConflictFinding f", Long::class.javaObjectType).singleResult
+
+    private fun allConflicts(): List<Conflict> =
+        em.createQuery("SELECT c FROM Conflict c", Conflict::class.java).resultList
 }

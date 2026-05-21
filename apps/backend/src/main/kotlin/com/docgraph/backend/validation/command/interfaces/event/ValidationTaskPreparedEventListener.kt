@@ -38,7 +38,8 @@ class ValidationTaskPreparedEventListener(
         ),
     )
     fun on(event: ValidationTaskPreparedEvent) {
-        val task = taskRepository.findById(event.validationTaskId).orElseThrow()
+        val task = taskRepository.findById(event.validationTaskId)
+            ?: error("validation task not found: ${event.validationTaskId}")
         if (task.status != OutboxStatus.PENDING) return
 
         val edge = findEdgeById.find(task.edgeId)

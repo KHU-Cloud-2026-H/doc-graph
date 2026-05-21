@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
-import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
 
@@ -44,13 +43,13 @@ class ProcessValidationTaskCommandHandlerTest {
     )
 
     private fun document(id: Long): DocumentDetail =
-        DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, emptyList())
+        DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, emptyList())
 
     @Test
     fun `정상 흐름 — recordAttempt + 두 문서 조회 + InputsResolved 발행`() {
         val taskId = 1L
         val edgeId = 100L
-        every { repository.findById(taskId) } returns Optional.of(pendingTask(taskId, edgeId))
+        every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
         every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
         every { findDocumentById.find(any()) } returns document(0L)
 
@@ -67,7 +66,7 @@ class ProcessValidationTaskCommandHandlerTest {
     fun `task가 PENDING이 아니면 즉시 return — query 호출 없음`() {
         val taskId = 1L
         val task = pendingTask(taskId, 100L).apply { status = OutboxStatus.SUCCESS }
-        every { repository.findById(taskId) } returns Optional.of(task)
+        every { repository.findById(taskId) } returns task
 
         handler.handle(ProcessValidationTaskCommand(taskId))
 
@@ -80,7 +79,7 @@ class ProcessValidationTaskCommandHandlerTest {
     fun `findEdgeById null — markFailed 즉시, retry 없음`() {
         val taskId = 1L
         val edgeId = 100L
-        every { repository.findById(taskId) } returns Optional.of(pendingTask(taskId, edgeId))
+        every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
         every { findEdgeById.find(edgeId) } returns null
 
         handler.handle(ProcessValidationTaskCommand(taskId))
@@ -94,7 +93,7 @@ class ProcessValidationTaskCommandHandlerTest {
     fun `source document null — markFailed 즉시`() {
         val taskId = 1L
         val edgeId = 100L
-        every { repository.findById(taskId) } returns Optional.of(pendingTask(taskId, edgeId))
+        every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
         every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
         every { findDocumentById.find(200L) } returns null
 
@@ -108,7 +107,7 @@ class ProcessValidationTaskCommandHandlerTest {
     fun `target document null — markFailed 즉시`() {
         val taskId = 1L
         val edgeId = 100L
-        every { repository.findById(taskId) } returns Optional.of(pendingTask(taskId, edgeId))
+        every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
         every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
         every { findDocumentById.find(200L) } returns document(200L)
         every { findDocumentById.find(300L) } returns null
@@ -123,7 +122,7 @@ class ProcessValidationTaskCommandHandlerTest {
     fun `findEdgeById throw — handler가 rethrow (Retryable이 잡음)`() {
         val taskId = 1L
         val edgeId = 100L
-        every { repository.findById(taskId) } returns Optional.of(pendingTask(taskId, edgeId))
+        every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
         every { findEdgeById.find(edgeId) } throws RuntimeException("transient")
 
         val ex = assertThrows(RuntimeException::class.java) {

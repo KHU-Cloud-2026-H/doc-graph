@@ -1,11 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
-
-// TODO: feat/frontend-ui 머지 후 아래 import 활성화
-// import { Layout } from './components/Layout'
-// import { WorkspaceSelection } from './pages/WorkspaceSelection'
-// import { DependencyGraph } from './pages/DependencyGraph'
-// import { DocumentView } from './pages/DocumentView'
+import { Layout } from './components/Layout'
+import { DependencyGraph } from './pages/DependencyGraph'
+import { DocumentView } from './pages/DocumentView'
+import { WorkspaceSelection } from './pages/WorkspaceSelection'
 
 export const router = createBrowserRouter([
   {
@@ -14,15 +12,24 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/workspaces',
-        element: <div />, // TODO: <WorkspaceSelection />
+        element: <WorkspaceSelection />,
       },
       {
         path: '/w/:workspaceId',
-        element: <div />, // TODO: <Layout />
+        element: <Layout />,
         children: [
-          { index: true, element: <Navigate to="graph" replace /> },
-          { path: 'graph', element: <div /> }, // TODO: <DependencyGraph />
-          { path: 'docs/:docId', element: <div /> }, // TODO: <DocumentView />
+          {
+            index: true,
+            element: <Navigate to="graph" replace />,
+          },
+          {
+            path: 'graph',
+            element: <DependencyGraph />,
+          },
+          {
+            path: 'docs/:docId',
+            element: <DocumentView />,
+          },
         ],
       },
     ],

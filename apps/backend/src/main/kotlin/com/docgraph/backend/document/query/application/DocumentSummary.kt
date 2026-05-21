@@ -9,6 +9,8 @@ data class DocumentSummary(
     val notionPageId: String,
     @Schema(description = "문서 제목", example = "2024-01 스프린트 회의록")
     val title: String,
-    @Schema(description = "문서 타입")
-    val type: DocumentType,
+    @Schema(description = "문서 타입 (project type-mapping 미분류 시 null)")
+    val type: DocumentType?,
+    @Schema(description = "부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)", example = "1")
+    val parentDocumentId: Long?,
 )

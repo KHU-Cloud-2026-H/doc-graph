@@ -4,7 +4,6 @@
 
 # Node.js
 node_modules/
-package-lock.json
 
 # Python
 .venv/
@@ -55,6 +54,9 @@ nbdist/
 
 # VS Code
 .vscode/
+
+# Cursor
+.cursor/
 
 # Kotlin
 .kotlin

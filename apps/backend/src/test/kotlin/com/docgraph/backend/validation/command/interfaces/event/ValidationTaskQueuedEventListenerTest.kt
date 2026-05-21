@@ -11,7 +11,9 @@ import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskQueuedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -118,6 +120,10 @@ class ValidationTaskQueuedEventListenerTest {
 
     @Autowired lateinit var repository: ValidationTaskRepository
 
+    @Autowired lateinit var em: EntityManager
+
+    @Autowired lateinit var txTemplate: TransactionTemplate
+
     @Autowired lateinit var probe: ValidationTaskPreparedProbe
 
     @Autowired lateinit var findEdge: FakeFindEdgeByIdQuery
@@ -126,7 +132,9 @@ class ValidationTaskQueuedEventListenerTest {
 
     @BeforeEach
     fun reset() {
-        repository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
         probe.reset()
         findEdge.reset()
         findDocument.reset()
@@ -141,7 +149,7 @@ class ValidationTaskQueuedEventListenerTest {
             if (id == edgeId) EdgeDetail(edgeId, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, emptyList())
+            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, emptyList())
         }
 
         val task = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
@@ -151,11 +159,15 @@ class ValidationTaskQueuedEventListenerTest {
         val fired = probe.latch.await(5, TimeUnit.SECONDS)
         assertTrue(fired, "ValidationTaskPreparedEvent did not fire within 5s")
 
-        assertEquals(task.id, probe.received?.validationTaskId)
-        assertEquals(1, findEdge.callCount.get(), "FindEdge 1회 호출 기대")
-        assertEquals(2, findDocument.callCount.get(), "FindDocument 2회 호출 기대 (source + target)")
+        awaitCondition(Duration.ofSeconds(5)) {
+            findEdge.callCount.get() == 2 && findDocument.callCount.get() == 4
+        }
 
-        val updated = repository.findById(task.id).orElseThrow()
+        assertEquals(task.id, probe.received?.validationTaskId)
+        assertEquals(2, findEdge.callCount.get(), "FindEdge 2회 호출 기대 (Process handler + Prepared listener)")
+        assertEquals(4, findDocument.callCount.get(), "FindDocument 4회 호출 기대 (Process + Prepared 각각 source+target)")
+
+        val updated = repository.findById(task.id)!!
         assertEquals(OutboxStatus.PENDING, updated.status, "처리 직전 단계 — status PENDING 유지")
         assertEquals(1, updated.attempts)
         assertNotNull(updated.lastAttemptAt)
@@ -173,7 +185,7 @@ class ValidationTaskQueuedEventListenerTest {
             }
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, emptyList())
+            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, null, null, emptyList())
         }
 
         val taskOk = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeIdOk))
@@ -187,7 +199,7 @@ class ValidationTaskQueuedEventListenerTest {
         // taskOk 처리 완료 시점은 latch와 별개 — async tx commit 대기 buffer
         Thread.sleep(500)
 
-        val updatedOk = repository.findById(taskOk.id).orElseThrow()
+        val updatedOk = repository.findById(taskOk.id)!!
         assertEquals(OutboxStatus.PENDING, updatedOk.status, "정상 task가 격리 미준수로 영향 — REQUIRES_NEW 미적용 의심")
         assertEquals(1, updatedOk.attempts)
     }
@@ -195,10 +207,19 @@ class ValidationTaskQueuedEventListenerTest {
     private fun awaitTaskStatus(taskId: Long, expected: OutboxStatus, timeout: Duration) {
         val deadline = System.currentTimeMillis() + timeout.toMillis()
         while (System.currentTimeMillis() < deadline) {
-            val task = repository.findById(taskId).orElse(null)
+            val task = repository.findById(taskId)
             if (task?.status == expected) return
             Thread.sleep(50)
         }
         throw AssertionError("task $taskId did not reach status $expected within $timeout")
+    }
+
+    private fun awaitCondition(timeout: Duration, predicate: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeout.toMillis()
+        while (System.currentTimeMillis() < deadline) {
+            if (predicate()) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("condition not satisfied within $timeout")
     }
 }

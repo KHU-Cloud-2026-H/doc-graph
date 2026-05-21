@@ -1,8 +1,11 @@
 package com.docgraph.backend.document.query.application
 
+import com.docgraph.backend.document.query.infra.DocumentQueryRepository
 import org.springframework.stereotype.Service
 
 @Service
-class FindDocumentByIdQueryHandler : FindDocumentByIdQuery {
-    override fun find(documentId: Long): DocumentDetail? = TODO("document 도메인 query 미구현")
+class FindDocumentByIdQueryHandler(
+    private val repository: DocumentQueryRepository,
+) : FindDocumentByIdQuery {
+    override fun find(documentId: Long): DocumentDetail? = repository.findDetail(documentId)
 }
