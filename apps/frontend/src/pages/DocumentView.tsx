@@ -1,5 +1,5 @@
 import { ExternalLink, CheckCircle, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { RightSidebar } from "../components/RightSidebar";
 import { useAppStore } from '../store';
@@ -44,7 +44,11 @@ export const DocumentView = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const SLIDE_DURATION_MS = 225;
 
-  // 알약 버튼 클릭 / openIssues=true 진입 시 호출
+  // openIssues=true 쿼리 파라미터로 panel을 연 직후, 같은 useEffect가
+  // setSearchParams로 인해 다시 실행되면서 else 분기(즉시 닫기)로 들어가는 것을 방지하는 플래그.
+  const wasOpenedByQueryRef = useRef(false);
+
+  // 알약 버튼 클릭 / 본문 issue-target 클릭 시 호출
   const openPanel = () => {
     setShowRightSidebar(true);
     // 다음 frame에 isPanelOpen=true → 슬라이드 인 + 본문 mr transition 동시 시작
@@ -60,18 +64,28 @@ export const DocumentView = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    // 1) openIssues=true로 진입한 경우 (Inbox 알림 클릭 등): 즉시 열고 파라미터 제거.
     if (searchParams.get("openIssues") === "true") {
-      // 페이지 진입 시 슬라이드 인 없이 즉시 열린 채로 시작
       setShowRightSidebar(true);
       setIsPanelOpen(true);
+      wasOpenedByQueryRef.current = true;
       searchParams.delete("openIssues");
       setSearchParams(searchParams, { replace: true });
-    } else {
-      // 페이지 전환 시 즉시 닫기 (의도된 동작)
-      setShowRightSidebar(false);
-      setIsPanelOpen(false);
+      return;
     }
-  }, [activeDoc?.id, searchParams]);
+
+    // 2) 위의 setSearchParams 호출 때문에 effect가 곧장 한 번 더 실행되는데,
+    //    이때는 panel을 그대로 열어둬야 한다 (닫지 않음).
+    if (wasOpenedByQueryRef.current) {
+      wasOpenedByQueryRef.current = false;
+      return;
+    }
+
+    // 3) 일반적인 doc 전환: panel 즉시 닫기 (의도된 동작).
+    setShowRightSidebar(false);
+    setIsPanelOpen(false);
+  }, [activeDoc?.id, searchParams, setSearchParams]);
 
   let processedHtml = activeDoc?.contentHtml || '';
 
@@ -247,7 +261,10 @@ export const DocumentView = () => {
                   return;
                 }
                 if (target.closest('.issue-target')) {
-                  setShowRightSidebar(true);
+                  // openPanel을 호출해야 isPanelOpen도 true로 전환되어 슬라이드 인 + 본문 mr transition이 동시 발동된다.
+                  // setShowRightSidebar(true)만 호출하면 마운트는 되지만 isPanelOpen=false 상태라
+                  // translate-x-full로 화면 밖에 머문다.
+                  openPanel();
                 }
               }}
             >
