@@ -1,150 +1,182 @@
-import { X, Calendar, User, RefreshCw, Lightbulb, ChevronUp } from "lucide-react";
+import { X, AlertTriangle, CheckCircle, FileText, ExternalLink, RefreshCw, ChevronUp, Lightbulb } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import type { DocumentNode } from "../store";
+import { formatRelativeTime } from "../lib/timeAgo";
 
-export const RightSidebar = ({ document: doc, onClose }: { document: DocumentNode, onClose: () => void }) => {
+interface RightSidebarProps {
+  document: DocumentNode;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarProps) => {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggleCollapsed = (id: string) => {
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // mock: 마지막 검증 시각. 실제 연동 시 ValidationTaskResponse.createdAt 또는
+  // ConflictFindingResponse.detectedAt 기반으로 계산.
+  // TODO(API): 백엔드에 문서 단위 재검증 트리거 API 추가 필요 (현재는 /projects/{id}/sync 프로젝트 전체만).
+  const lastValidatedAt = new Date(Date.now() - 2 * 60 * 1000);
+  const validatedAgo = formatRelativeTime(lastValidatedAt);
+
+  const issueCount = doc.issues?.length ?? 0;
+  const hasIssues = issueCount > 0;
+
   return (
-    <aside className="w-[320px] bg-white border-l border-slate-200 h-screen hidden lg:flex flex-col shrink-0 shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-30 font-sans">
+    <aside
+      className={`w-[400px] bg-white border-l border-slate-200 h-screen hidden lg:flex flex-col shrink-0 shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] z-30 font-sans
+        absolute right-0 top-0
+        transform transition-transform duration-[225ms] ease-out
+        ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+    >
+      {/* 헤더: 아이콘 + 타이틀 + 이슈 배지 + 검증 시각 버튼 + 닫기 */}
       <div className="border-b border-slate-200 flex items-center gap-2 h-14 px-4 shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <path d="M22 4L12 14.01l-3-3"/>
-        </svg>
-        <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
-          INTEGRITY ISSUES
-          {doc.issues && doc.issues.length > 0 && (
-            <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-bold">
-              {doc.issues.length}
-            </span>
-          )}
-        </h3>
-        <button 
+        {hasIssues ? (
+          <AlertTriangle className="w-4 h-4 text-red-600" />
+        ) : (
+          <CheckCircle className="w-4 h-4 text-green-600" />
+        )}
+        <h3 className="font-bold text-sm text-slate-900 tracking-tight">INTEGRITY ISSUES</h3>
+        {hasIssues && (
+          <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-bold leading-none">
+            {issueCount}
+          </span>
+        )}
+        {/* 검증 시각 버튼: X 버튼과 비슷한 사이즈, 호버 효과
+            TODO(API): 클릭 시 실제 재검증 트리거. 현재 백엔드에 문서 단위 재검증 API 없음. */}
+        <button
+          className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          title="다시 검증하기"
+        >
+          <RefreshCw className="w-3 h-3" />
+          <span>{validatedAgo} 갱신</span>
+        </button>
+        <button
           onClick={onClose}
-          className="ml-auto p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center"
+          className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center"
+          aria-label="닫기"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Mini Graph Area */}
-        <div className="h-[250px] bg-slate-50 border-b border-slate-200 relative flex items-center justify-center p-4">
-          <div className="relative w-full h-full">
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-              <line stroke="#dc2626" strokeWidth="2" x1="50%" x2="20%" y1="50%" y2="20%"></line>
-              <line stroke="#cbd5e1" strokeWidth="1.5" x1="50%" x2="80%" y1="50%" y2="30%"></line>
-              <line stroke="#cbd5e1" strokeDasharray="4" strokeWidth="1.5" x1="50%" x2="70%" y1="50%" y2="80%"></line>
-            </svg>
-            
-            {/* Center Node */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-blue-600 ring-4 ring-blue-600/10 z-20 shadow-lg cursor-pointer"></div>
-            <div className="absolute top-1/2 left-1/2 translate-x-4 translate-y-4 text-[11px] font-bold text-blue-600 z-20 leading-tight w-24">
-              {doc.title}
-            </div>
+      {/* 본문: 이슈 있으면 카드 리스트, 없으면 빈 상태 */}
+      {hasIssues ? (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {doc.issues?.map((issue, index) => {
+            const isCollapsed = !!collapsed[issue.id];
+            return (
+              <div key={issue.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                {/* 카드 헤더 */}
+                <button
+                  onClick={() => toggleCollapsed(issue.id)}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-[18px] h-[18px] text-amber-600" />
+                    <span className="text-[15px] font-semibold text-slate-900">정합성 충돌 의심 #{index + 1}</span>
+                  </div>
+                  <ChevronUp className={`w-5 h-5 text-slate-400 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+                </button>
 
-            {/* Conflict Node */}
-            <div className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-100 border-2 border-red-600 z-10 cursor-pointer shadow-sm hover:scale-110 transition-transform"></div>
-            <div className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-6 text-[10px] font-semibold text-red-600 whitespace-nowrap z-10 bg-white/80 px-1 rounded">
-              {doc.issues?.[0]?.targetDocumentTitle.substring(0, 15)}...
-            </div>
-
-            {/* Parent Node */}
-            <div className="absolute top-[30%] left-[80%] -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300 z-10 cursor-pointer hover:border-blue-600 transition-all shadow-sm"></div>
-            <div className="absolute top-[30%] left-[80%] translate-x-3 -translate-y-3 text-[10px] font-medium text-slate-500 whitespace-nowrap z-10 bg-white/80 px-1 rounded">
-              WorkSync<br/>Project
-            </div>
-
-            {/* Child Node */}
-            <div className="absolute top-[80%] left-[70%] -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300 z-10 cursor-pointer hover:border-blue-600 transition-all shadow-sm"></div>
-            <div className="absolute top-[80%] left-[70%] -translate-x-1/2 translate-y-3 text-[10px] font-medium text-slate-500 whitespace-nowrap z-10 text-center bg-white/80 px-1 rounded">
-              Other<br/>Docs
-            </div>
-          </div>
-        </div>
-
-        {/* Document Details */}
-        <div className="p-4 space-y-6">
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Properties</div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2"><Calendar className="w-4 h-4" /> Last Edited</span>
-                <span className="text-slate-900">Today, 14:30</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2"><User className="w-4 h-4" /> Edited By</span>
-                <div className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                  <img alt="Author" className="w-4 h-4 rounded-full object-cover" src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop" />
-                  <span className="text-xs">서동현</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2">
-                  <span className="w-4 h-4 text-center text-red-500 font-bold">!</span> Integrity
-                </span>
-                <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
-                  <RefreshCw className="w-3.5 h-3.5 cursor-pointer hover:text-red-800" />
-                  <span>{doc.issues?.length} Issues Found</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Integrity Issues</div>
-            <ul className="space-y-4">
-              {doc.issues?.map((issue, index) => (
-                <li key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between cursor-pointer group">
-                      <span className="text-sm font-semibold text-slate-900">{issue.title}</span>
-                      <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-900 transition-colors" />
+                {!isCollapsed && (
+                  <div className="px-4 pb-4 space-y-4">
+                    {/* 충돌 원인 파악 */}
+                    <div className="text-sm leading-relaxed">
+                      <span className="text-slate-900 font-semibold inline-block">충돌 원인 파악</span>
+                      <span className="inline-block ml-2 px-1.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 leading-none align-middle rounded-full relative -top-[1px]">AI</span>
+                      <p className="text-slate-600 mt-1">{issue.rationale}</p>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="space-y-3">
-                        <div className="text-xs leading-relaxed">
-                          <span className="text-slate-900 font-semibold block mb-1">현재 작성된 내용</span>
-                          <p className="text-slate-600 bg-red-50 p-2 border-l-2 border-red-400">"{issue.currentText}"</p>
-                        </div>
-                        <div className="text-xs leading-relaxed">
-                          <span className="text-slate-900 font-semibold mb-1 inline-block">충돌 원인 파악</span>
-                          <span className="inline-block ml-2 px-1.5 py-0.5 text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 leading-none align-middle rounded-full relative -top-[1px]">AI</span>
-                          <p className="text-slate-600 mt-1">{issue.description}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-semibold text-slate-900 uppercase tracking-wider">충돌 대상 문서 정보</div>
-                        <div className="text-xs text-slate-900 flex items-center gap-1">
-                          Target: <Link to={`/w/sample-workspace/docs/${issue.targetDocumentId}`} className="text-blue-600 hover:underline flex items-center gap-0.5">🔗 {issue.targetDocumentTitle}</Link>
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700">
-                          <Lightbulb className="w-4 h-4" />
-                          DocGraph AI 제안
-                        </div>
-                        <p className="text-xs text-slate-900 font-medium">{issue.aiSuggestion}</p>
-                        <div className="text-[11px] text-slate-600 leading-relaxed">
-                          <span className="opacity-60 block">수정될 텍스트 초안:</span>
-                          <span className="bg-green-50 px-1 border-l-2 border-green-400 block mt-1 py-1 text-slate-800">"{issue.suggestedText}"</span>
+                    {/* 소스 페이지(노란색) + 회색 직사각형(검증 기준 + 버튼들) */}
+                    <div className="relative">
+                      <div className="border border-yellow-200 rounded-lg overflow-hidden shadow-sm relative z-10 bg-white">
+                        <Link
+                          to={`/w/sample-workspace/docs/${issue.sourceDocumentId}`}
+                          className="bg-yellow-50 px-3 py-2 flex items-center justify-between gap-2 border-b border-yellow-100 hover:bg-yellow-100 transition-colors"
+                          title="원본 문서로 이동"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <FileText className="w-4 h-4 text-yellow-700 shrink-0" />
+                            <span className="text-[13px] font-bold text-yellow-900 truncate">{issue.sourceDocumentTitle}</span>
+                          </div>
+                          <ExternalLink className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
+                        </Link>
+                        <div className="bg-white p-3">
+                          <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                            {issue.sourceBlockText}
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded transition-colors">Ignore</button>
-                        <button className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors">Apply Fix</button>
+                      <div className="bg-slate-100 rounded-lg px-3 pt-4 pb-3 -mt-2">
+                        <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                          💡 {issue.validationCriterion}
+                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* TODO(API): "연결 무시" — edge 자체를 ignore. 현재 백엔드에는 conflict ignore만 있음. */}
+                          <button className="px-2 py-1 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded transition-colors">
+                            연결 무시
+                          </button>
+                          <Link
+                            to={`/w/sample-workspace/graph`}
+                            className="px-2 py-1 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded transition-colors flex items-center gap-1"
+                          >
+                            Dependency Graph
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* DocGraph AI 제안 + diff */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Lightbulb className="w-[18px] h-[18px] text-blue-600" />
+                        <span className="text-[13px] font-semibold text-slate-900">DocGraph AI 제안</span>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 overflow-hidden text-[13px]">
+                        <div className="flex items-start gap-2 bg-red-50 text-slate-700 p-2.5 border-b border-slate-200">
+                          <span className="bg-red-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">-</span>
+                          <span className="whitespace-pre-wrap leading-relaxed">{issue.currentText}</span>
+                        </div>
+                        <div className="flex items-start gap-2 bg-green-50 text-slate-700 p-2.5">
+                          <span className="bg-green-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">+</span>
+                          <span className="whitespace-pre-wrap leading-relaxed">{issue.newText}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 하단 액션 버튼
+                        TODO(API): "제안 적용하기" = POST /conflicts/{cid}/findings/{fid}/approve
+                                   "무시하기" = POST /conflicts/{id}/ignore */}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                        무시하기
+                      </button>
+                      <button className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors">
+                        제안 적용하기
+                      </button>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        /* 빈 상태: 정합성 이슈 없음 */
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <CheckCircle className="w-16 h-16 text-slate-300 mb-4" strokeWidth={1.5} />
+          <p className="text-[18px] text-slate-500 leading-relaxed whitespace-pre-line">
+            {'이 문서에서는 정합성 충돌이\n발견되지 않았습니다!'}
+          </p>
+        </div>
+      )}
     </aside>
   );
 };
