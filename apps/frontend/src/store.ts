@@ -3,16 +3,20 @@ import { create } from 'zustand';
 // TODO: 이 파일의 mock 데이터는 API 연동 시 전부 교체됩니다.
 // workspace, documents, notifications 모두 실제 API 응답으로 대체 예정
 
+// 정합성 충돌 finding 1건.
+// 실제 백엔드 API의 ConflictFindingResponse + EdgeResponse 일부를 합친 mock 표현.
+// 주의: 본 mock에서 issue가 달린 문서가 "보고 있는 문서(=target)"이고,
+//      sourceDocumentId가 가리키는 문서가 "충돌 상대(=source)"이다.
+//      이전 mock은 필드명이 정반대였으나 API 매핑 혼동 방지를 위해 정정됨.
 export interface IntegrityIssue {
   id: string;
-  type: string;
-  title: string;
-  description: string;
-  targetDocumentId: string;
-  targetDocumentTitle: string;
-  aiSuggestion: string;
-  currentText: string;
-  suggestedText: string;
+  rationale: string;             // API: ConflictFindingResponse.rationale (충돌 원인 AI 판정)
+  sourceDocumentId: string;      // API: ConflictResponse.sourceDocumentId (충돌의 근거가 된 다른 문서)
+  sourceDocumentTitle: string;   // API 미제공, mock 임시 (실연동 시 별도 조회 필요)
+  sourceBlockText: string;       // API: sourceBlockIds[]로 조회한 source 블록 본문 (mock 임시)
+  currentText: string;           // mock 한정: 보고 있는 문서(=target)의 충돌 블록 현재 본문
+  newText: string;               // API: ConflictFindingResponse.newText (해당 블록 수정 후 본문)
+  validationCriterion: string;   // API: EdgeResponse.validationCriterion (자연어 검증 기준)
 }
 
 export interface DocumentNode {
@@ -60,25 +64,23 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-4',
-              type: 'Type A: 결정사항 전파 누락',
-              title: '결정사항 전파 누락',
-              description: '문서 1의 핵심 요구사항에서는 모바일 환경에서 iOS 및 Android 양쪽 모두를 지원해야 한다고 기재되어 있으나, QA 테스트 전략에서는 오직 Android 환경에서만 테스트를 수행하도록 제한하여 충돌이 발생함.',
-              targetDocumentId: 'qa-strategy',
-              targetDocumentTitle: 'QA 테스트 전략 및 품질 보증 계획',
-              aiSuggestion: 'QA 테스트 전략에 맞춰 요구사항을 Android 우선 지원으로 수정하거나, QA 전략 문서에 iOS 테스트를 추가할 것을 제안합니다. 아래는 QA 명세에 맞춰 PRD를 수정하는 방안입니다.',
+              rationale: '문서 1의 핵심 요구사항에서는 모바일 환경에서 iOS 및 Android 양쪽 모두를 지원해야 한다고 기재되어 있으나, QA 테스트 전략에서는 오직 Android 환경에서만 테스트를 수행하도록 제한하여 충돌이 발생함.',
+              sourceDocumentId: 'qa-strategy',
+              sourceDocumentTitle: 'QA 테스트 전략 및 품질 보증 계획',
+              sourceBlockText: '크로스 플랫폼 호환성을 유지하기 위해 QA 팀은 프론트엔드 렌더링 및 모바일 앱 동작 검증을 오직 Android OS 12 이상 환경에서만 수행하도록 정책을 제한하여 테스트 리소스를 최적화한다.',
               currentText: '사용자는 모바일 기기(iOS 및 Android) 및 웹 브라우저를 통해 출근 및 퇴근 상태를 기록할 수 있어야 한다.',
-              suggestedText: '사용자는 모바일 기기(Android OS 우선 지원) 및 웹 브라우저를 통해 출근 및 퇴근 상태를 기록할 수 있어야 한다.'
+              newText: '사용자는 모바일 기기(Android OS 우선 지원) 및 웹 브라우저를 통해 출근 및 퇴근 상태를 기록할 수 있어야 한다.',
+              validationCriterion: '요구사항 명세서와 QA 문서 관계이므로 자동 연결되었습니다.'
             },
             {
               id: 'err-9',
-              type: 'Type C: 비즈니스 정책 충돌',
-              title: '비즈니스 정책 충돌',
-              description: '보안 요구사항에서는 비밀번호 강도를 10자리 이상으로 엄격히 통제하나, 클라이언트 에러 명세의 8자리 제한 안내 메시지와 모순됨.',
-              targetDocumentId: 'error-mapping',
-              targetDocumentTitle: '클라이언트 에러 코드 매핑',
-              aiSuggestion: '클라이언트 정책인 최소 8자리에 맞추어 보안 정책을 하향 조정하거나 프론트엔드 에러 문구를 상향 수정해야 합니다. 여기서는 프론트 정책을 따르는 방안을 제안합니다.',
+              rationale: '보안 요구사항에서는 비밀번호 강도를 10자리 이상으로 엄격히 통제하나, 클라이언트 에러 명세의 8자리 제한 안내 메시지와 모순됨.',
+              sourceDocumentId: 'error-mapping',
+              sourceDocumentTitle: '클라이언트 에러 코드 매핑',
+              sourceBlockText: '422 PASSWORD_TOO_SHORT 에러 발생 시 사용자에게 노출되는 안내 메시지: \'보안 기준 미달: 비밀번호는 최소 8자리 이상이어야 합니다.\'',
               currentText: '영문 대소문자, 숫자, 특수문자를 모두 포함한 10자리 이상',
-              suggestedText: '영문 대소문자, 숫자, 특수문자를 모두 포함한 최소 8자리 이상'
+              newText: '영문 대소문자, 숫자, 특수문자를 모두 포함한 최소 8자리 이상',
+              validationCriterion: '보안 요구사항과 클라이언트 에러 메시지 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -111,14 +113,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-7',
-              type: 'Type B: 데이터 컨벤션 불일치',
-              title: '데이터 컨벤션 불일치',
-              description: '비기능 요구사항은 시간 표기를 ISO 8601 문자열 포맷으로 강제하나, SIT 시나리오에서는 숫자형 Unix Timestamp로 전송하고 있어 포맷 충돌이 일어남.',
-              targetDocumentId: 'sit',
-              targetDocumentTitle: '시스템 통합 테스트 (SIT) 시나리오',
-              aiSuggestion: '백엔드/통합 테스트 명세에 맞춰 내부 전송 규격을 Unix Timestamp로 수정할 것을 제안합니다.',
+              rationale: '비기능 요구사항은 시간 표기를 ISO 8601 문자열 포맷으로 강제하나, SIT 시나리오에서는 숫자형 Unix Timestamp로 전송하고 있어 포맷 충돌이 일어남.',
+              sourceDocumentId: 'sit',
+              sourceDocumentTitle: '시스템 통합 테스트 (SIT) 시나리오',
+              sourceBlockText: 'TC-INT-01 시나리오에서는 출근 기록 전송 시 checkInTime 필드를 Unix Timestamp(예: 1682812800 같은 숫자형 Long Type)로 페이로드에 삽입하여 전송한다.',
               currentText: 'ISO 8601 표준 포맷(예: YYYY-MM-DDTHH:mm:ss+09:00)을 엄격히 따른다.',
-              suggestedText: 'Unix Timestamp(Long Type) 포맷을 엄격히 따른다.'
+              newText: 'Unix Timestamp(Long Type) 포맷을 엄격히 따른다.',
+              validationCriterion: '시스템 요구사항과 통합 테스트 시나리오 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -160,14 +161,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-8',
-              type: 'Type C: 비즈니스 정책 충돌',
-              title: '비즈니스 정책 충돌',
-              description: '09:10:59까지의 기록을 정상 출근으로 유예 인정한다고 정책을 명시하였으나 단위 테스트에서는 09:00:01 기록부터 즉각 지각(LATE) 처리되도록 하드코딩되어 모순됨.',
-              targetDocumentId: 'unit-test',
-              targetDocumentTitle: '백엔드 비즈니스 로직 단위 테스트',
-              aiSuggestion: '개발된 백엔드 로직에 맞추어 유예 시간을 제거하고 정각 출근 정책으로 수정할 것을 제안합니다.',
+              rationale: '09:10:59까지의 기록을 정상 출근으로 유예 인정한다고 정책을 명시하였으나 단위 테스트에서는 09:00:01 기록부터 즉각 지각(LATE) 처리되도록 하드코딩되어 모순됨.',
+              sourceDocumentId: 'unit-test',
+              sourceDocumentTitle: '백엔드 비즈니스 로직 단위 테스트',
+              sourceBlockText: '단위 테스트 케이스에서 09:00:01 입력 시 즉각 LATE 상태로 전이되는지를 경계값으로 검증하도록 하드코딩되어 있다.',
               currentText: "'오전 9시 10분 59초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 정확히 09:11:00의 기록부터 지각(LATE) 상태로 산정되어 리포트에 기록된다.",
-              suggestedText: "'오전 9시 00분 00초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 09시 정각 이후의 기록부터 즉시 지각(LATE) 상태로 산정되어 리포트에 기록된다."
+              newText: "'오전 9시 00분 00초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 09시 정각 이후의 기록부터 즉시 지각(LATE) 상태로 산정되어 리포트에 기록된다.",
+              validationCriterion: '비즈니스 정책과 단위 테스트 검증 규칙 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -192,14 +192,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-10',
-              type: 'Type C: 비즈니스 정책 충돌',
-              title: '비즈니스 정책 충돌 (인가 설계 누락)',
-              description: 'RBAC 매트릭스에서는 일반 사원이 타인의 근태 기록을 열람하는 것을 완벽히 차단해야 한다고 명확히 요구함. 그러나 Attendance 다건 조회 API는 토큰의 유효성만 확인할 뿐 필터링 로직이 누락됨.',
-              targetDocumentId: 'api-attendance',
-              targetDocumentTitle: 'API 명세서 (Attendance 도메인)',
-              aiSuggestion: '해당 정책을 백엔드에서 아직 지원하지 못하는 상태라면, 현재 구현된 시스템 사양에 맞게 임시로 정책을 하향 조정할 수 있습니다.',
+              rationale: 'RBAC 매트릭스에서는 일반 사원이 타인의 근태 기록을 열람하는 것을 완벽히 차단해야 한다고 명확히 요구함. 그러나 Attendance 다건 조회 API는 토큰의 유효성만 확인할 뿐 필터링 로직이 누락됨.',
+              sourceDocumentId: 'api-attendance',
+              sourceDocumentTitle: 'API 명세서 (Attendance 도메인)',
+              sourceBlockText: 'Attendance 다건 조회 API(GET /api/v1/attendance)는 JWT 토큰의 유효성만 확인할 뿐, Role 기반 필터링 로직이 명세에 포함되어 있지 않다.',
               currentText: '일반 사원. 타인의 근태 기록 열람 및 조회는 시스템적으로 완벽히 차단(Deny)되어야 함.',
-              suggestedText: '일반 사원. (현재 v1.0 기준 동일 부서/팀원 간의 열람은 허용됨)'
+              newText: '일반 사원. (현재 v1.0 기준 동일 부서/팀원 간의 열람은 허용됨)',
+              validationCriterion: '권한 정책과 API 인가 로직 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -325,14 +324,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-2',
-              type: 'Type A: 결정사항 전파 누락',
-              title: '결정사항 전파 누락',
-              description: '회고 및 플래닝 과정에서 휴가 결재 프로세스를 부서장 1차 승인만으로 단축하고 HR 2차 승인 단계를 폐지하기로 결정했으나 비즈니스 상태 전이도에 여전히 PENDING_HR 단계가 존재함.',
-              targetDocumentId: 'meet-retro',
-              targetDocumentTitle: 'Sprint 1 회고 및 Sprint 2 플래닝',
-              aiSuggestion: '변경된 기획에 따라 아키텍처 명세서에서 해당 상태를 완전히 삭제할 것을 제안합니다.',
+              rationale: '회고 및 플래닝 과정에서 휴가 결재 프로세스를 부서장 1차 승인만으로 단축하고 HR 2차 승인 단계를 폐지하기로 결정했으나 비즈니스 상태 전이도에 여전히 PENDING_HR 단계가 존재함.',
+              sourceDocumentId: 'meet-retro',
+              sourceDocumentTitle: 'Sprint 1 회고 및 Sprint 2 플래닝',
+              sourceBlockText: '고객 피드백을 반영하여 휴가 결재 프로세스에서 인사부서(HR) 2차 최종 승인 단계를 전면 폐지하고, 부서장 1차 승인만으로 휴가 결재가 완료되도록 단축하기로 결정함.',
               currentText: '- PENDING_HR: 부서장 승인 후 인사부서(HR)의 최종 결재를 대기 중인 상태.',
-              suggestedText: '(해당 줄 삭제됨)'
+              newText: '(해당 줄 삭제됨)',
+              validationCriterion: '회의록 결정사항이 시스템 아키텍처에 반영되어야 하는 관계입니다.'
             }
           ],
           contentHtml: `
@@ -356,14 +354,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-5',
-              type: 'Type B: 데이터 컨벤션 및 타입 불일치',
-              title: '데이터 컨벤션 및 타입 불일치',
-              description: 'DB 스키마는 정수형 타입에 스네이크 케이스를 적용한 employee_no (INTEGER)로 설계되었으나, Auth API 명세서에서는 카멜케이스 기반의 문자열 타입인 employeeId 로 응답을 정의함.',
-              targetDocumentId: 'design-erd',
-              targetDocumentTitle: '데이터베이스 스키마 설계서',
-              aiSuggestion: 'DB 스키마에 맞춰 API 응답 구조를 정수형 employee_no로 수정하는 것을 제안합니다.',
+              rationale: 'DB 스키마는 정수형 타입에 스네이크 케이스를 적용한 employee_no (INTEGER)로 설계되었으나, Auth API 명세서에서는 카멜케이스 기반의 문자열 타입인 employeeId 로 응답을 정의함.',
+              sourceDocumentId: 'design-erd',
+              sourceDocumentTitle: '데이터베이스 스키마 설계서',
+              sourceBlockText: '사원 고유 식별자는 employee_no 컬럼으로 정의하며, 데이터 타입은 INTEGER, 스네이크 케이스 네이밍 컨벤션을 적용한다.',
               currentText: '"employeeId": "EMP-928374",  // 문자열 형태로 추상화된 사원 식별자',
-              suggestedText: '"employee_no": 928374,  // 정수형 사원 고유 번호'
+              newText: '"employee_no": 928374,  // 정수형 사원 고유 번호',
+              validationCriterion: 'DB 스키마와 API 명세 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -386,25 +383,23 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-1',
-              type: 'Type A: 결정사항 전파 누락',
-              title: '결정사항 전파 누락 (GPS 파라미터)',
-              description: '회의록에서는 위치 수집 기능을 완전히 삭제하기로 합의하였으나 API 명세서의 Request Body에는 여전히 latitude와 longitude가 필수 파라미터로 남아있음.',
-              targetDocumentId: 'meet-urgent',
-              targetDocumentTitle: '긴급 정책 변경 회의',
-              aiSuggestion: '회의 결정사항을 반영하여 GPS 관련 파라미터를 요청 규격에서 삭제해야 합니다.',
+              rationale: '회의록에서는 위치 수집 기능을 완전히 삭제하기로 합의하였으나 API 명세서의 Request Body에는 여전히 latitude와 longitude가 필수 파라미터로 남아있음.',
+              sourceDocumentId: 'meet-urgent',
+              sourceDocumentTitle: '긴급 정책 변경 회의',
+              sourceBlockText: '개인정보보호법 위반 우려와 노조 반발 리스크를 고려하여, 모바일 앱의 GPS 기반 위치 수집 기능을 이번 릴리즈에서 완전히 폐지하기로 개발팀 전원이 합의함.',
               currentText: '"latitude": 37.5665,\n"longitude": 126.9780,',
-              suggestedText: '(삭제)'
+              newText: '(삭제)',
+              validationCriterion: '회의록 결정사항이 API 명세에 반영되어야 하는 관계입니다.'
             },
             {
               id: 'err-6',
-              type: 'Type B: 데이터 컨벤션 및 타입 불일치',
-              title: '데이터 컨벤션 불일치',
-              description: '백엔드는 attendance_status라는 명칭의 열거형 문자열을 반환하도록 규정하나 프론트엔드 상태 관리는 단순 boolean인 isCheckedIn 속성으로 정의하여 충돌함.',
-              targetDocumentId: 'fe-state',
-              targetDocumentTitle: '프론트엔드 상태 관리 명세',
-              aiSuggestion: '백엔드 스펙은 유지하고 프론트엔드 상태 명세를 수정하는 것이 일반적이나, 현재 API 명세서를 프론트 기준에 맞춰 단순 boolean으로 수정할 수도 있습니다. (프론트 명세 수정을 권장합니다)',
+              rationale: '백엔드는 attendance_status라는 명칭의 열거형 문자열을 반환하도록 규정하나 프론트엔드 상태 관리는 단순 boolean인 isCheckedIn 속성으로 정의하여 충돌함.',
+              sourceDocumentId: 'fe-state',
+              sourceDocumentTitle: '프론트엔드 상태 관리 명세',
+              sourceBlockText: '출근 여부 상태는 isCheckedIn이라는 boolean 타입 속성으로 정의하며, true는 출근, false는 미출근을 의미한다.',
               currentText: '"attendance_status": "PRESENT",',
-              suggestedText: '"isCheckedIn": true,'
+              newText: '"isCheckedIn": true,',
+              validationCriterion: 'API 명세와 프론트엔드 상태 정의 관계이므로 자동 연결되었습니다.'
             }
           ],
           contentHtml: `
@@ -513,14 +508,13 @@ export const useAppStore = create<AppState>((set) => ({
           issues: [
             {
               id: 'err-3',
-              type: 'Type A: 결정사항 전파 누락',
-              title: '결정사항 전파 누락',
-              description: '데일리 스크럼에서 오프라인 출퇴근 기록 보정(Sync) 기능을 제외하기로 결정하였으나 컴포넌트 설계서에는 액션 버튼과 모달이 남아있음.',
-              targetDocumentId: 'meet-daily',
-              targetDocumentTitle: '데일리 스크럼 (Sprint 1 후반부)',
-              aiSuggestion: '의사결정 사항을 반영하여 UI 명세서에서 해당 버튼 컴포넌트를 완전히 삭제할 것을 제안합니다.',
+              rationale: '데일리 스크럼에서 오프라인 출퇴근 기록 보정(Sync) 기능을 제외하기로 결정하였으나 컴포넌트 설계서에는 액션 버튼과 모달이 남아있음.',
+              sourceDocumentId: 'meet-daily',
+              sourceDocumentTitle: '데일리 스크럼 (Sprint 1 후반부)',
+              sourceBlockText: '오프라인 출퇴근 기록 보정(Sync) 기능은 로직 복잡도가 높아 이번 릴리즈에서 제외하고 다음 마일스톤으로 이관하기로 프론트엔드 리드와 PM이 합의함.',
               currentText: '버튼 3: 네트워크가 단절되었던 상황에서 로컬 스토리지에 적재된 출퇴근 데이터를 서버로 일괄 전송하기 위한 액션 버튼.',
-              suggestedText: '(삭제됨)'
+              newText: '(삭제됨)',
+              validationCriterion: '데일리 스크럼 결정사항이 UI 컴포넌트 설계에 반영되어야 하는 관계입니다.'
             }
           ],
           contentHtml: `

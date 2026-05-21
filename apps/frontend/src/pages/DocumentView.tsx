@@ -151,23 +151,38 @@ export const DocumentView = () => {
                   {activeDoc?.title}
                 </h1>
 
+                {/* 메타데이터 영역
+                    TODO(API): 프로젝트 = ProjectSummary.name (현재는 부모 카테고리 page로 임시 표현).
+                               담당자 = 본 mock에서는 한 명을 5번 반복 표시. 실제 API에서는 DocumentDetail.assigneeMemberId
+                                       (단수) + ProjectDetail.members[] 등의 조합으로 정해야 함 (백엔드 협의 필요).
+                               최근 수정 시각 = DocumentDetail.notionLastEditedAt.
+                               최근 수정자(이름)는 현재 API에 없음. 백엔드 추가 요청 후보. */}
                 <div className="mb-8 space-y-3 text-sm">
                   <div className="flex items-center">
-                    <span className="w-32 text-slate-500">Status</span>
-                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">🏃 진행 중</span>
+                    <span className="w-32 text-slate-500">프로젝트</span>
+                    <span className="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1">
+                      {parentPage?.emoji && <span>{parentPage.emoji}</span>}
+                      <span>{parentPage?.title ?? '—'}</span>
+                    </span>
                   </div>
-                  <div className="flex items-center">
-                    <span className="w-32 text-slate-500">Assignee</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                        <img alt="Author" className="w-4 h-4 rounded-full object-cover" src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop" />
-                        <span className="text-sm">서동현</span>
-                      </div>
+                  <div className="flex items-start">
+                    <span className="w-32 text-slate-500 shrink-0 leading-6">담당자</span>
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                          <img alt="Author" className="w-4 h-4 rounded-full object-cover" src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop" />
+                          <span className="text-sm">서동현</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <span className="w-32 text-slate-500">Date Created</span>
-                    <span className="text-slate-900">2026년 4월 10일</span>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <span className="w-32 text-slate-500 shrink-0">최근 수정</span>
+                    <span className="text-slate-900">2026년 5월 21일 14:30</span>
+                    <div className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                      <img alt="Author" className="w-4 h-4 rounded-full object-cover" src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop" />
+                      <span className="text-sm">서동현</span>
+                    </div>
                   </div>
                 </div>
 
