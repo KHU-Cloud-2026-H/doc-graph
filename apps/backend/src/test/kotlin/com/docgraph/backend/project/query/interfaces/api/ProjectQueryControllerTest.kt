@@ -40,7 +40,7 @@ class FakeGetCurrentUserIdQueryQ : GetCurrentUserIdQuery {
 
 class FakeSearchUserAccountsByIdsQueryQ : SearchUserAccountsByIdsQuery {
     @Volatile var behavior: (List<Long>) -> List<UserResponse> = { ids ->
-        ids.map { UserResponse(id = it, email = "user-$it@example.com", name = "User $it") }
+        ids.map { UserResponse(id = it, email = "user-$it@example.com", name = "User $it", avatarUrl = null) }
     }
     override fun search(userIds: List<Long>): List<UserResponse> = behavior(userIds)
 }

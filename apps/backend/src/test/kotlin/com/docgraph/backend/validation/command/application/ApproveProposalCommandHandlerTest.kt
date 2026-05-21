@@ -160,6 +160,7 @@ class ApproveProposalCommandHandlerTest {
             title = "title",
             type = DocumentType.REQUIREMENTS,
             parentDocumentId = null,
+            icon = null,
             assigneeMemberId = null,
             notionLastEditedAt = targetEdited,
             blocks = emptyList(),
