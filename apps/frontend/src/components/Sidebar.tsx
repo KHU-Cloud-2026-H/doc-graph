@@ -56,7 +56,7 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
 
         {node.hasIssue && (
           <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full shrink-0">
-            1
+            {node.issues?.length ?? 1}
           </span>
         )}
       </div>
@@ -104,34 +104,34 @@ export const Sidebar = () => {
     {
       id: 1,
       type: "issue",
-      title: "정합성 문제(결정사항 전파 누락)가 발견되었습니다.",
+      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
       target: "📄 제품 요구사항 명세서 (PRD)",
       time: "2시간 전",
       read: false,
-      docId: 1,
+      docId: 2,
     },
     {
       id: 3,
       type: "issue",
-      title: "정합성 문제(용어 불일치)가 발견되었습니다.",
+      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
       target: "📄 API 명세서 (User & Auth 도메인)",
       time: "5시간 전",
       read: true,
-      docId: 10,
+      docId: 13,
     },
     {
       id: 4,
       type: "issue",
-      title: "정합성 문제(상태 정의 누락)가 발견되었습니다.",
+      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
       target: "📄 데이터베이스 스키마 설계서 (ERD 물리 모델)",
       time: "12시간 전",
       read: true,
-      docId: 12,
+      docId: 15,
     },
     {
       id: 2,
       type: "invite",
-      title: "'frontend' 프로젝트에 초대되었습니다.",
+      title: '"WorkSync 도입 프로젝트" 프로젝트에 초대되었습니다.',
       target: "엔터프라이즈 근태관리 B2B SaaS 프로젝트",
       time: "1일 전",
       read: false,
@@ -280,7 +280,7 @@ export const Sidebar = () => {
       {projectId ? (
         <div className="flex-1 overflow-y-auto mx-2 scrollbar-hide">
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-2">
-            팀스페이스
+            {projects.find((p) => p.id === Number(projectId))?.name || '팀스페이스'}
           </div>
           <ul className="space-y-0.5">
             {documents.map((doc) => (
@@ -303,7 +303,7 @@ export const Sidebar = () => {
             <Inbox className={`w-4 h-4 ${isInboxOpen ? 'text-slate-700' : 'text-slate-500'}`} />
             <span className="text-[13px] font-medium">Inbox</span>
           </div>
-          <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">2</span>
+          <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">{inboxNotifications.filter((n) => !n.read).length}</span>
         </button>
         {isInboxOpen && (
           <div
