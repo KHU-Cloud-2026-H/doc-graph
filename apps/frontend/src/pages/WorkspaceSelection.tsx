@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import { Settings, FileText, Star, ChevronDown, Plus, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
+import { useAppStore } from '../store';
 
 export const WorkspaceSelection = () => {
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(true);
   const [isConnectedOpen, setIsConnectedOpen] = useState(true);
   const [isUnconnectedOpen, setIsUnconnectedOpen] = useState(true);
 
+  const workspaces = useAppStore((s) => s.workspaces);
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
       {/* TopAppBar */}
@@ -65,23 +67,28 @@ export const WorkspaceSelection = () => {
           
           {isFavoritesOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* TODO: 실제 workspaceId로 교체 필요 (API 연동 시) */}
-              <Link to="/w/sample-workspace/graph" className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block ring-2 ring-blue-500/20">
-                <button className="absolute top-4 right-4 text-blue-500 hover:text-blue-700 transition-colors z-10">
-                  <Star className="w-5 h-5 fill-current" />
-                </button>
-                <div className="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 rounded-lg text-lg font-bold mb-4 group-hover:scale-110 transition-transform origin-bottom-left">
-                  엔
-                </div>
-                <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center">
-                  엔터프라이즈 근태관리 B2B SaaS 프로젝트
-                </h3>
-                <p className="text-sm text-slate-500 mb-4 truncate">4명의 멤버</p>
-                <div className="mt-auto flex items-center justify-between text-xs font-medium text-slate-400 border-t border-slate-100 pt-3">
-                  <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> 25개의 소스</span>
-                  <span>1분 전</span>
-                </div>
-              </Link>
+              {workspaces.map((ws) => (
+                <Link
+                  key={ws.id}
+                  to={`/w/${ws.id}`}
+                  className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block ring-2 ring-blue-500/20"
+                >
+                  <button className="absolute top-4 right-4 text-blue-500 hover:text-blue-700 transition-colors z-10">
+                    <Star className="w-5 h-5 fill-current" />
+                  </button>
+                  <div className="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 rounded-lg text-lg font-bold mb-4 group-hover:scale-110 transition-transform origin-bottom-left">
+                    {ws.name[0]}
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center">
+                    {ws.name}
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4 truncate">4명의 멤버</p>
+                  <div className="mt-auto flex items-center justify-between text-xs font-medium text-slate-400 border-t border-slate-100 pt-3">
+                    <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> 25개의 소스</span>
+                    <span>1분 전</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
         </section>
@@ -104,7 +111,7 @@ export const WorkspaceSelection = () => {
           {isConnectedOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {/* TODO: 실제 workspaceId로 교체 필요 (API 연동 시) */}
-              <Link to="/w/sample-workspace/graph" className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block">
+              <Link to={workspaces.length > 0 ? `/w/${workspaces[0].id}` : '#'} className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col relative block">
                 <button className="absolute top-4 right-4 text-slate-300 hover:text-blue-500 transition-colors z-10">
                   <Star className="w-5 h-5" />
                 </button>

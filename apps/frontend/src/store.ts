@@ -3,6 +3,14 @@ import { create } from 'zustand';
 // TODO: 이 파일의 mock 데이터는 API 연동 시 전부 교체됩니다.
 // workspace, documents, notifications 모두 실제 API 응답으로 대체 예정
 
+// ID 매핑 테이블 (슬러그 → number, 디버깅용)
+// 'planning' → 1, 'prd' → 2, 'srs' → 3, 'policy' → 4, 'rbac' → 5,
+// 'meetings' → 6, 'meet-sprint1' → 7, 'meet-urgent' → 8, 'meet-daily' → 9, 'meet-retro' → 10,
+// 'design' → 11, 'design-arch' → 12, 'design-api-auth' → 13, 'design-api-attendance' → 14, 'design-erd' → 15,
+// 'qa' → 16, 'qa-strategy' → 17, 'sit' → 18, 'unit-test' → 19, 'uat' → 20,
+// 'frontend' → 21, 'fe-ui' → 22, 'fe-state' → 23, 'fe-routing' → 24, 'error-mapping' → 25,
+// 'api-attendance' → 26 (sourceDocumentId only; no matching DocumentNode id)
+
 // 정합성 충돌 finding 1건.
 // 실제 백엔드 API의 ConflictFindingResponse + EdgeResponse 일부를 합친 mock 표현.
 // 주의: 본 mock에서 issue가 달린 문서가 "보고 있는 문서(=target)"이고,
@@ -11,7 +19,7 @@ import { create } from 'zustand';
 export interface IntegrityIssue {
   id: string;
   rationale: string;             // API: ConflictFindingResponse.rationale (충돌 원인 AI 판정)
-  sourceDocumentId: string;      // API: ConflictResponse.sourceDocumentId (충돌의 근거가 된 다른 문서)
+  sourceDocumentId: number;      // API: ConflictResponse.sourceDocumentId (충돌의 근거가 된 다른 문서)
   sourceDocumentTitle: string;   // API 미제공, mock 임시 (실연동 시 별도 조회 필요)
   sourceBlockText: string;       // API: sourceBlockIds[]로 조회한 source 블록 본문 (mock 임시)
   currentText: string;           // mock 한정: 보고 있는 문서(=target)의 충돌 블록 현재 본문
@@ -20,7 +28,7 @@ export interface IntegrityIssue {
 }
 
 export interface DocumentNode {
-  id: string;
+  id: number;
   title: string;
   emoji?: string;
   children?: DocumentNode[];
@@ -29,11 +37,28 @@ export interface DocumentNode {
   contentHtml?: string;
 }
 
+interface Workspace {
+  id: number;
+  name: string;
+}
+
+interface Project {
+  id: number;
+  name: string;
+  workspaceId: number;
+  notionRootPageId?: string;
+}
+
 interface AppState {
   workspace: string;
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   documents: DocumentNode[];
+  workspaces: Workspace[];
+  projects: Project[];
+  currentWorkspaceId: number | null;
+  currentProjectId: number | null;
+  setCurrentProject: (projectId: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -42,7 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   documents: [
     {
-      id: 'planning',
+      id: 1,
       title: '기획 (Planning)',
       emoji: '💡',
       contentHtml: `
@@ -57,7 +82,7 @@ export const useAppStore = create<AppState>((set) => ({
       `,
       children: [
         {
-          id: 'prd',
+          id: 2,
           title: '제품 요구사항 명세서 (PRD)',
           emoji: '📄',
           hasIssue: true,
@@ -65,7 +90,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-4',
               rationale: '문서 1의 핵심 요구사항에서는 모바일 환경에서 iOS 및 Android 양쪽 모두를 지원해야 한다고 기재되어 있으나, QA 테스트 전략에서는 오직 Android 환경에서만 테스트를 수행하도록 제한하여 충돌이 발생함.',
-              sourceDocumentId: 'qa-strategy',
+              sourceDocumentId: 17,
               sourceDocumentTitle: 'QA 테스트 전략 및 품질 보증 계획',
               sourceBlockText: '크로스 플랫폼 호환성을 유지하기 위해 QA 팀은 프론트엔드 렌더링 및 모바일 앱 동작 검증을 오직 Android OS 12 이상 환경에서만 수행하도록 정책을 제한하여 테스트 리소스를 최적화한다.',
               currentText: '사용자는 모바일 기기(iOS 및 Android) 및 웹 브라우저를 통해 출근 및 퇴근 상태를 기록할 수 있어야 한다.',
@@ -75,7 +100,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-9',
               rationale: '보안 요구사항에서는 비밀번호 강도를 10자리 이상으로 엄격히 통제하나, 클라이언트 에러 명세의 8자리 제한 안내 메시지와 모순됨.',
-              sourceDocumentId: 'error-mapping',
+              sourceDocumentId: 25,
               sourceDocumentTitle: '클라이언트 에러 코드 매핑',
               sourceBlockText: '422 PASSWORD_TOO_SHORT 에러 발생 시 사용자에게 노출되는 안내 메시지: \'보안 기준 미달: 비밀번호는 최소 8자리 이상이어야 합니다.\'',
               currentText: '영문 대소문자, 숫자, 특수문자를 모두 포함한 10자리 이상',
@@ -106,7 +131,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'srs',
+          id: 3,
           title: '시스템 기능 및 비기능 요구사항 명세서 (SRS)',
           emoji: '📄',
           hasIssue: true,
@@ -114,7 +139,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-7',
               rationale: '비기능 요구사항은 시간 표기를 ISO 8601 문자열 포맷으로 강제하나, SIT 시나리오에서는 숫자형 Unix Timestamp로 전송하고 있어 포맷 충돌이 일어남.',
-              sourceDocumentId: 'sit',
+              sourceDocumentId: 18,
               sourceDocumentTitle: '시스템 통합 테스트 (SIT) 시나리오',
               sourceBlockText: 'TC-INT-01 시나리오에서는 출근 기록 전송 시 checkInTime 필드를 Unix Timestamp(예: 1682812800 같은 숫자형 Long Type)로 페이로드에 삽입하여 전송한다.',
               currentText: 'ISO 8601 표준 포맷(예: YYYY-MM-DDTHH:mm:ss+09:00)을 엄격히 따른다.',
@@ -154,7 +179,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'policy',
+          id: 4,
           title: 'B2B 기업 근태 및 휴가 정책 정의서',
           emoji: '📄',
           hasIssue: true,
@@ -162,7 +187,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-8',
               rationale: '09:10:59까지의 기록을 정상 출근으로 유예 인정한다고 정책을 명시하였으나 단위 테스트에서는 09:00:01 기록부터 즉각 지각(LATE) 처리되도록 하드코딩되어 모순됨.',
-              sourceDocumentId: 'unit-test',
+              sourceDocumentId: 19,
               sourceDocumentTitle: '백엔드 비즈니스 로직 단위 테스트',
               sourceBlockText: '단위 테스트 케이스에서 09:00:01 입력 시 즉각 LATE 상태로 전이되는지를 경계값으로 검증하도록 하드코딩되어 있다.',
               currentText: "'오전 9시 10분 59초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 정확히 09:11:00의 기록부터 지각(LATE) 상태로 산정되어 리포트에 기록된다.",
@@ -185,7 +210,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'rbac',
+          id: 5,
           title: '권한(Role) 및 접근 제어 정의서',
           emoji: '📄',
           hasIssue: true,
@@ -193,7 +218,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-10',
               rationale: 'RBAC 매트릭스에서는 일반 사원이 타인의 근태 기록을 열람하는 것을 완벽히 차단해야 한다고 명확히 요구함. 그러나 Attendance 다건 조회 API는 토큰의 유효성만 확인할 뿐 필터링 로직이 누락됨.',
-              sourceDocumentId: 'api-attendance',
+              sourceDocumentId: 14,
               sourceDocumentTitle: 'API 명세서 (Attendance 도메인)',
               sourceBlockText: 'Attendance 다건 조회 API(GET /api/v1/attendance)는 JWT 토큰의 유효성만 확인할 뿐, Role 기반 필터링 로직이 명세에 포함되어 있지 않다.',
               currentText: '일반 사원. 타인의 근태 기록 열람 및 조회는 시스템적으로 완벽히 차단(Deny)되어야 함.',
@@ -230,7 +255,7 @@ export const useAppStore = create<AppState>((set) => ({
       ]
     },
     {
-      id: 'meetings',
+      id: 6,
       title: '회의록 (Meeting Notes)',
       emoji: '🗓️',
       contentHtml: `
@@ -245,7 +270,7 @@ export const useAppStore = create<AppState>((set) => ({
       `,
       children: [
         {
-          id: 'meet-sprint1',
+          id: 7,
           title: '주간 스프린트 1 플래닝 회의록',
           emoji: '📄',
           contentHtml: `
@@ -261,7 +286,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'meet-urgent',
+          id: 8,
           title: '스프린트 1 진행 중 긴급 정책 변경 회의',
           emoji: '📄',
           hasIssue: false, // Target document (issue belongs to API Spec)
@@ -276,7 +301,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'meet-daily',
+          id: 9,
           title: '데일리 스크럼 (Sprint 1 후반부)',
           emoji: '📄',
           contentHtml: `
@@ -288,7 +313,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'meet-retro',
+          id: 10,
           title: 'Sprint 1 회고 및 Sprint 2 플래닝',
           emoji: '📄',
           contentHtml: `
@@ -303,7 +328,7 @@ export const useAppStore = create<AppState>((set) => ({
       ]
     },
     {
-      id: 'design',
+      id: 11,
       title: '설계 (Design)',
       emoji: '💻',
       contentHtml: `
@@ -317,7 +342,7 @@ export const useAppStore = create<AppState>((set) => ({
       `,
       children: [
         {
-          id: 'design-arch',
+          id: 12,
           title: '시스템 아키텍처 및 상태 머신 설계서',
           emoji: '📄',
           hasIssue: true,
@@ -325,7 +350,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-2',
               rationale: '회고 및 플래닝 과정에서 휴가 결재 프로세스를 부서장 1차 승인만으로 단축하고 HR 2차 승인 단계를 폐지하기로 결정했으나 비즈니스 상태 전이도에 여전히 PENDING_HR 단계가 존재함.',
-              sourceDocumentId: 'meet-retro',
+              sourceDocumentId: 10,
               sourceDocumentTitle: 'Sprint 1 회고 및 Sprint 2 플래닝',
               sourceBlockText: '고객 피드백을 반영하여 휴가 결재 프로세스에서 인사부서(HR) 2차 최종 승인 단계를 전면 폐지하고, 부서장 1차 승인만으로 휴가 결재가 완료되도록 단축하기로 결정함.',
               currentText: '- PENDING_HR: 부서장 승인 후 인사부서(HR)의 최종 결재를 대기 중인 상태.',
@@ -347,7 +372,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'design-api-auth',
+          id: 13,
           title: 'API 명세서 (User & Auth 도메인)',
           emoji: '📄',
           hasIssue: true,
@@ -355,7 +380,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-5',
               rationale: 'DB 스키마는 정수형 타입에 스네이크 케이스를 적용한 employee_no (INTEGER)로 설계되었으나, Auth API 명세서에서는 카멜케이스 기반의 문자열 타입인 employeeId 로 응답을 정의함.',
-              sourceDocumentId: 'design-erd',
+              sourceDocumentId: 15,
               sourceDocumentTitle: '데이터베이스 스키마 설계서',
               sourceBlockText: '사원 고유 식별자는 employee_no 컬럼으로 정의하며, 데이터 타입은 INTEGER, 스네이크 케이스 네이밍 컨벤션을 적용한다.',
               currentText: '"employeeId": "EMP-928374",  // 문자열 형태로 추상화된 사원 식별자',
@@ -376,7 +401,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'design-api-attendance',
+          id: 14,
           title: 'API 명세서 (Attendance 도메인)',
           emoji: '📄',
           hasIssue: true,
@@ -384,7 +409,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-1',
               rationale: '회의록에서는 위치 수집 기능을 완전히 삭제하기로 합의하였으나 API 명세서의 Request Body에는 여전히 latitude와 longitude가 필수 파라미터로 남아있음.',
-              sourceDocumentId: 'meet-urgent',
+              sourceDocumentId: 8,
               sourceDocumentTitle: '긴급 정책 변경 회의',
               sourceBlockText: '개인정보보호법 위반 우려와 노조 반발 리스크를 고려하여, 모바일 앱의 GPS 기반 위치 수집 기능을 이번 릴리즈에서 완전히 폐지하기로 개발팀 전원이 합의함.',
               currentText: '"latitude": 37.5665,\n"longitude": 126.9780,',
@@ -394,7 +419,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-6',
               rationale: '백엔드는 attendance_status라는 명칭의 열거형 문자열을 반환하도록 규정하나 프론트엔드 상태 관리는 단순 boolean인 isCheckedIn 속성으로 정의하여 충돌함.',
-              sourceDocumentId: 'fe-state',
+              sourceDocumentId: 23,
               sourceDocumentTitle: '프론트엔드 상태 관리 명세',
               sourceBlockText: '출근 여부 상태는 isCheckedIn이라는 boolean 타입 속성으로 정의하며, true는 출근, false는 미출근을 의미한다.',
               currentText: '"attendance_status": "PRESENT",',
@@ -422,7 +447,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'design-erd',
+          id: 15,
           title: '데이터베이스 스키마 설계서 (ERD 물리 모델)',
           emoji: '📄',
           contentHtml: `
@@ -434,7 +459,7 @@ export const useAppStore = create<AppState>((set) => ({
       ]
     },
     {
-      id: 'qa',
+      id: 16,
       title: 'QA 및 테스트 (QA/Testing)',
       emoji: '🔍',
       contentHtml: `
@@ -448,7 +473,7 @@ export const useAppStore = create<AppState>((set) => ({
       `,
       children: [
         {
-          id: 'qa-strategy',
+          id: 17,
           title: 'QA 테스트 전략 및 품질 보증 계획',
           emoji: '📄',
           contentHtml: `
@@ -457,7 +482,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'sit',
+          id: 18,
           title: '시스템 통합 테스트 (SIT) 시나리오',
           emoji: '📄',
           contentHtml: `
@@ -466,7 +491,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'unit-test',
+          id: 19,
           title: '백엔드 비즈니스 로직 단위 테스트(Unit Test) 체크리스트',
           emoji: '📄',
           contentHtml: `
@@ -477,7 +502,7 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'uat',
+          id: 20,
           title: '사용자 인수 테스트 (UAT) 시나리오',
           emoji: '📄',
           contentHtml: `
@@ -487,7 +512,7 @@ export const useAppStore = create<AppState>((set) => ({
       ]
     },
     {
-      id: 'frontend',
+      id: 21,
       title: '프론트엔드/UI 명세 (Frontend/UI Specification)',
       emoji: '🎨',
       contentHtml: `
@@ -501,7 +526,7 @@ export const useAppStore = create<AppState>((set) => ({
       `,
       children: [
         {
-          id: 'fe-ui',
+          id: 22,
           title: 'UI/UX 컴포넌트 아키텍처 및 마크업 명세서',
           emoji: '📄',
           hasIssue: true,
@@ -509,7 +534,7 @@ export const useAppStore = create<AppState>((set) => ({
             {
               id: 'err-3',
               rationale: '데일리 스크럼에서 오프라인 출퇴근 기록 보정(Sync) 기능을 제외하기로 결정하였으나 컴포넌트 설계서에는 액션 버튼과 모달이 남아있음.',
-              sourceDocumentId: 'meet-daily',
+              sourceDocumentId: 9,
               sourceDocumentTitle: '데일리 스크럼 (Sprint 1 후반부)',
               sourceBlockText: '오프라인 출퇴근 기록 보정(Sync) 기능은 로직 복잡도가 높아 이번 릴리즈에서 제외하고 다음 마일스톤으로 이관하기로 프론트엔드 리드와 PM이 합의함.',
               currentText: '버튼 3: 네트워크가 단절되었던 상황에서 로컬 스토리지에 적재된 출퇴근 데이터를 서버로 일괄 전송하기 위한 액션 버튼.',
@@ -527,13 +552,13 @@ export const useAppStore = create<AppState>((set) => ({
           `
         },
         {
-          id: 'fe-state',
+          id: 23,
           title: '프론트엔드 상태 관리 (State Management) 명세',
           emoji: '📄',
           contentHtml: `
             <pre class="bg-slate-100 p-4 rounded text-sm mt-4">
 interface AttendanceState {
-  isCheckedIn: boolean; 
+  isCheckedIn: boolean;
   lastCheckInTime: string | null;
 }
 interface LeaveState {
@@ -542,13 +567,13 @@ interface LeaveState {
           `
         },
         {
-          id: 'fe-routing',
+          id: 24,
           title: '화면 흐름도 (Screen Flow) 및 네비게이션 라우팅 정책',
           emoji: '📄',
           contentHtml: `<p>사용자의 권한과 인증 상태에 따른 페이지 접근 제어 및 라우팅 흐름도이다.</p>`
         },
         {
-          id: 'error-mapping',
+          id: 25,
           title: '클라이언트 에러 코드 매핑 및 화면 노출 명세서',
           emoji: '📄',
           contentHtml: `
@@ -559,4 +584,9 @@ interface LeaveState {
       ]
     }
   ],
+  workspaces: [{ id: 1, name: '엔터프라이즈 근태관리 B2B SaaS 프로젝트' }],
+  projects: [{ id: 1, name: 'WorkSync 도입 프로젝트', workspaceId: 1 }],
+  currentWorkspaceId: 1,
+  currentProjectId: 1,
+  setCurrentProject: (projectId) => set(() => ({ currentProjectId: projectId })),
 }));

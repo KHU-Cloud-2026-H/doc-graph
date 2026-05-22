@@ -1,5 +1,5 @@
 import { X, AlertTriangle, CheckCircle, FileText, ExternalLink, RefreshCw, ChevronUp, Lightbulb } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useState } from "react";
 import type { DocumentNode } from "../store";
 import { formatRelativeTime } from "../lib/timeAgo";
@@ -11,6 +11,7 @@ interface RightSidebarProps {
 }
 
 export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarProps) => {
+  const { workspaceId, projectId } = useParams();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const toggleCollapsed = (id: string) => {
@@ -96,7 +97,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                     <div className="relative">
                       <div className="border border-yellow-200 rounded-lg overflow-hidden shadow-sm relative z-10 bg-white">
                         <Link
-                          to={`/w/sample-workspace/docs/${issue.sourceDocumentId}`}
+                          to={`/w/${workspaceId}/p/${projectId}/docs/${issue.sourceDocumentId}`}
                           className="bg-yellow-50 px-3 py-2 flex items-center justify-between gap-2 border-b border-yellow-100 hover:bg-yellow-100 transition-colors"
                           title="원본 문서로 이동"
                         >
@@ -123,7 +124,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                             연결 무시
                           </button>
                           <Link
-                            to={`/w/sample-workspace/graph`}
+                            to={`/w/${workspaceId}/p/${projectId}/graph`}
                             className="px-2 py-1 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded transition-colors flex items-center gap-1"
                           >
                             Dependency Graph
