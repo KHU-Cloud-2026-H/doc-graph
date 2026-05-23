@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Settings, FileText, Star, ChevronDown, Plus, RefreshCw, Search } from "lucide-react";
+import { FileText, Star, ChevronDown, Plus, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { useAppStore } from '../store';
+import { TopAppBar } from '../components/TopAppBar';
 
 export const WorkspaceSelection = () => {
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(true);
@@ -11,33 +12,7 @@ export const WorkspaceSelection = () => {
   const workspaces = useAppStore((s) => s.workspaces);
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
-      {/* TopAppBar */}
-      <header className="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-white border-b border-slate-200 antialiased">
-        <div className="flex items-center gap-6">
-          <div className="font-bold tracking-tight text-slate-900 text-2xl">
-            DocGraph
-          </div>
-        </div>
-        <div className="flex justify-center max-w-md mx-4 absolute left-1/2 -translate-x-1/2">
-          <button className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-full border border-slate-200 transition-colors text-sm font-medium">
-            <img alt="Notion logo" className="w-5 h-5 object-contain opacity-80" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Notion-logo.svg/3840px-Notion-logo.svg.png" />
-            <span className="text-slate-700">artboi@khu.ac.kr</span>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          </button>
-        </div>
-        <div className="flex items-center text-slate-600 font-medium gap-2">
-          <button className="hover:bg-slate-100 transition-colors duration-200 p-2 rounded-full hover:text-slate-900 text-slate-600 flex items-center justify-center">
-            <Settings className="w-5 h-5" />
-          </button>
-          <button className="hover:bg-slate-100 transition-colors duration-200 p-2 rounded-full hover:text-slate-900 text-slate-600 flex items-center justify-center relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full"></span>
-          </button>
-          <button className="hover:bg-slate-100 transition-colors duration-200 p-1 rounded-full flex items-center justify-center border border-slate-200">
-            <img alt="User profile" className="w-8 h-8 rounded-full object-cover" src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop" />
-          </button>
-        </div>
-      </header>
+      <TopAppBar centerLabel="artboi@khu.ac.kr" />
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 py-10">
