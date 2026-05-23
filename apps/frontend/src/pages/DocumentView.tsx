@@ -7,8 +7,9 @@ import type { IntegrityIssue } from '../store';
 import { formatRelativeTime } from '../lib/timeAgo';
 
 const findParentPage = (docs: any[], targetId: string): any | null => {
+  const numId = Number(targetId);
   for (const doc of docs) {
-    if (doc.children?.some((c: any) => c.id === targetId)) return doc;
+    if (doc.children?.some((c: any) => c.id === numId)) return doc;
     if (doc.children) {
       const found = findParentPage(doc.children, targetId);
       if (found) return found;
@@ -18,11 +19,14 @@ const findParentPage = (docs: any[], targetId: string): any | null => {
 };
 
 export const DocumentView = () => {
-  const { docId: id, workspaceId } = useParams();
+  const { docId: id, workspaceId, projectId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const workspace = useAppStore((state) => state.workspace);
+  const workspaces = useAppStore((state) => state.workspaces);
+  const projects = useAppStore((state) => state.projects);
   const documents = useAppStore((state) => state.documents);
+  const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? workspaceId;
+  const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
 
   // Flatten documents tree to find the active one
   const flattenDocs = (docs: any[]): any[] => {
@@ -35,7 +39,7 @@ export const DocumentView = () => {
   };
   
   const allDocs = flattenDocs(documents);
-  const activeDoc = allDocs.find((d) => d.id === id) || allDocs[0];
+  const activeDoc = allDocs.find((d) => d.id === Number(id)) || allDocs[0];
   const parentPage = id ? findParentPage(documents, id) : null;
   
   const [showRightSidebar, setShowRightSidebar] = useState(false);
@@ -152,13 +156,20 @@ export const DocumentView = () => {
               to={`/w/${workspaceId}`}
               className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900"
             >
-              {workspace}
+              {workspaceName}
+            </Link>
+            <span className="mx-1 text-[14px] opacity-40">/</span>
+            <Link
+              to={`/w/${workspaceId}/p/${projectId}/graph`}
+              className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900"
+            >
+              {projectName}
             </Link>
             {parentPage && (
               <>
                 <span className="mx-1 text-[14px] opacity-40">/</span>
                 <Link
-                  to={`/w/${workspaceId}/docs/${parentPage.id}`}
+                  to={`/w/${workspaceId}/p/${projectId}/docs/${parentPage.id}`}
                   className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
                 >
                   {parentPage.emoji && <span>{parentPage.emoji}</span>}
@@ -202,13 +213,12 @@ export const DocumentView = () => {
                 <div className="mb-8 space-y-3 text-sm">
                   <div className="flex items-center">
                     <span className="w-32 text-slate-500">프로젝트</span>
-                    {parentPage ? (
+                    {projectName ? (
                       <Link
-                        to={`/w/${workspaceId}/docs/${parentPage.id}`}
+                        to={`/w/${workspaceId}/p/${projectId}/graph`}
                         className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900 hover:bg-slate-200 transition-colors"
                       >
-                        {parentPage.emoji && <span>{parentPage.emoji}</span>}
-                        <span className="text-sm">{parentPage.title}</span>
+                        <span className="text-sm">{projectName}</span>
                       </Link>
                     ) : (
                       <span className="text-slate-500">—</span>
@@ -255,10 +265,18 @@ export const DocumentView = () => {
                 const target = e.target as HTMLElement;
                 const link = target.closest('a');
                 const href = link?.getAttribute('href');
-                if (href && (href.startsWith('/docs/') || href.startsWith('/w/sample-workspace/docs/'))) {
-                  e.preventDefault();
-                  navigate(href);
-                  return;
+                if (href) {
+                  if (href.startsWith('/docs/')) {
+                    e.preventDefault();
+                    navigate(`/w/${workspaceId}/p/${projectId}${href}`);
+                    return;
+                  }
+                  const oldDocMatch = href.match(/^\/w\/[^/]+\/docs\/(.+)$/);
+                  if (oldDocMatch) {
+                    e.preventDefault();
+                    navigate(`/w/${workspaceId}/p/${projectId}/docs/${oldDocMatch[1]}`);
+                    return;
+                  }
                 }
                 if (target.closest('.issue-target')) {
                   // openPanel을 호출해야 isPanelOpen도 true로 전환되어 슬라이드 인 + 본문 mr transition이 동시 발동된다.
