@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Settings, Inbox } from "lucide-react";
-import { InboxPopup, inboxNotifications } from "./InboxPopup";
+import { InboxPopup } from "./InboxPopup";
+import { inboxNotifications } from "./InboxList";
 
 interface TopAppBarProps {
   centerLabel: string;
@@ -12,7 +13,7 @@ const NOTION_LOGO =
 const PROFILE_IMAGE =
   "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop";
 
-const unreadCount = inboxNotifications.filter((n) => !n.read).length;
+const unreadCount = inboxNotifications.length;
 
 export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
   const [isInboxOpen, setIsInboxOpen] = useState(false);
