@@ -9,8 +9,8 @@ import com.docgraph.backend.project.query.application.AssignedDocumentType
 import com.docgraph.backend.project.query.application.CategoryProjection
 import com.docgraph.backend.project.query.application.CategoryResponse
 import com.docgraph.backend.project.query.application.ProjectMembershipRow
+import com.docgraph.backend.project.query.application.ProjectRef
 import com.docgraph.backend.project.query.application.ProjectRow
-import com.docgraph.backend.project.query.application.ProjectSummary
 import com.docgraph.backend.project.query.application.TypeAssigneeResponse
 import com.docgraph.backend.workspace.command.domain.QWorkspaceMember
 import com.querydsl.core.types.Projections
@@ -28,12 +28,12 @@ class ProjectQueryRepository {
     private val queryFactory: JPAQueryFactory
         get() = JPAQueryFactory(entityManager)
 
-    fun findAccessibleProjectSummaries(workspaceId: Long, userId: Long): List<ProjectSummary> {
+    fun findAccessibleProjectRefsByWorkspace(workspaceId: Long, userId: Long): List<ProjectRef> {
         val p = QProject.project
         val pm = QProjectMember.projectMember
         val wm = QWorkspaceMember.workspaceMember
         return queryFactory
-            .select(Projections.constructor(ProjectSummary::class.java, p.id, p.name))
+            .select(Projections.constructor(ProjectRef::class.java, p.id, p.name))
             .from(p)
             .join(pm).on(pm.projectId.eq(p.id))
             .join(wm).on(wm.id.eq(pm.workspaceMemberId))
@@ -103,14 +103,26 @@ class ProjectQueryRepository {
             .fetch()
     }
 
-    fun findSummariesByIds(projectIds: List<Long>): List<ProjectSummary> {
+    fun findProjectRefsByIds(projectIds: Collection<Long>): List<ProjectRef> {
         if (projectIds.isEmpty()) return emptyList()
         val p = QProject.project
         return queryFactory
-            .select(Projections.constructor(ProjectSummary::class.java, p.id, p.name))
+            .select(Projections.constructor(ProjectRef::class.java, p.id, p.name))
             .from(p)
             .where(p.id.`in`(projectIds))
             .fetch()
+    }
+
+    fun findProjectMemberCountsByIds(projectIds: Collection<Long>): Map<Long, Int> {
+        if (projectIds.isEmpty()) return emptyMap()
+        val pm = QProjectMember.projectMember
+        return queryFactory
+            .select(pm.projectId, pm.count())
+            .from(pm)
+            .where(pm.projectId.`in`(projectIds))
+            .groupBy(pm.projectId)
+            .fetch()
+            .associate { it.get(pm.projectId)!! to it.get(pm.count())!!.toInt() }
     }
 
     fun findAssignedDocumentTypesByUserId(userId: Long): List<AssignedDocumentType> {
@@ -137,5 +149,16 @@ class ProjectQueryRepository {
             .from(c)
             .where(c.projectId.eq(projectId))
             .fetch()
+    }
+
+    fun findProjectIdsByWorkspaceIdIn(workspaceIds: Collection<Long>): Map<Long, List<Long>> {
+        if (workspaceIds.isEmpty()) return emptyMap()
+        val p = QProject.project
+        return queryFactory
+            .select(p.workspaceId, p.id)
+            .from(p)
+            .where(p.workspaceId.`in`(workspaceIds))
+            .fetch()
+            .groupBy({ it.get(p.workspaceId)!! }, { it.get(p.id)!! })
     }
 }

@@ -11,10 +11,10 @@ import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.SearchEdgeDetailsByIdsQuery
 import com.docgraph.backend.graph.query.application.SearchEdgeIdsByTargetDocumentIdsQuery
 import com.docgraph.backend.project.query.application.AssignedDocumentType
-import com.docgraph.backend.project.query.application.ProjectSummary
+import com.docgraph.backend.project.query.application.ProjectRef
 import com.docgraph.backend.project.query.application.SearchAdminProjectIdsByUserIdQuery
 import com.docgraph.backend.project.query.application.SearchAssignedDocumentTypesByUserIdQuery
-import com.docgraph.backend.project.query.application.SearchProjectSummariesByIdsQuery
+import com.docgraph.backend.project.query.application.SearchProjectRefsByIdsQuery
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import com.docgraph.backend.workspace.query.application.SearchWorkspaceMemberIdsByUserIdQuery
 import io.mockk.every
@@ -40,7 +40,7 @@ class SearchMyConflictsQueryHandlerTest {
     private val searchDocumentReferences = mockk<SearchDocumentReferencesByIdsQuery>()
     private val searchEdgeIdsByTargetDocuments = mockk<SearchEdgeIdsByTargetDocumentIdsQuery>()
     private val searchEdgeDetailsByIds = mockk<SearchEdgeDetailsByIdsQuery>()
-    private val searchProjectSummaries = mockk<SearchProjectSummariesByIdsQuery>()
+    private val searchProjectRefs = mockk<SearchProjectRefsByIdsQuery>()
     private val validationQueryRepository = mockk<ValidationQueryRepository>()
 
     private val handler = SearchMyConflictsQueryHandler(
@@ -54,7 +54,7 @@ class SearchMyConflictsQueryHandlerTest {
         searchDocumentReferences,
         searchEdgeIdsByTargetDocuments,
         searchEdgeDetailsByIds,
-        searchProjectSummaries,
+        searchProjectRefs,
         validationQueryRepository,
     )
 
@@ -110,9 +110,9 @@ class SearchMyConflictsQueryHandlerTest {
             DocumentReference(41L, 2L, "S41", DocumentType.REQUIREMENTS),
         )
         // project summaries
-        every { searchProjectSummaries.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
-            ProjectSummary(1L, "P1"),
-            ProjectSummary(2L, "P2"),
+        every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
+            ProjectRef(1L, "P1"),
+            ProjectRef(2L, "P2"),
         )
 
         val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
@@ -159,7 +159,7 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
-        every { searchProjectSummaries.search(listOf(1L)) } returns listOf(ProjectSummary(1L, "P"))
+        every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, "P"))
 
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 

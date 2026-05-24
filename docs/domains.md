@@ -209,6 +209,8 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | --- | --- | --- |
 | `SearchCategoriesByProjectQuery` | document | 페이지 동기화 시 조상 라인 카테고리 매핑으로 문서 타입 결정 |
 | `SearchAdminProjectIdsByUserIdQuery` | validation | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속 |
+| `SearchProjectIdsByWorkspaceIdsQuery` | workspace | 워크스페이스 카드 응답 조립 — workspace별 프로젝트 ID 묶음 조회 |
+| `SearchProjectRefsByIdsQuery` | validation | 인박스 라우팅 — 프로젝트 ID 묶음으로 이름 조회 |
 
 ---
 
@@ -275,6 +277,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `FindDocumentByIdQuery` | validation | ValidationTask 처리·제안 수락 시 양쪽 문서 본문·블록 조회 |
 | `SearchDocumentIdsByAssigneeQuery` | validation | 인박스 라우팅 — 사용자가 담당자로 지정된 문서 식별 |
 | `SearchUnassignedDocumentIdsByProjectQuery` | validation | 인박스 라우팅 — 담당자 미지정 문서를 Project Admin에게 귀속 |
+| `SearchDocumentStatsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 문서 수·Notion 최근 변경 시각 조회 |
 
 ---
 
@@ -328,6 +331,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `FindEdgeByIdQuery` | validation | ValidationTask 처리·제안 수락 시 엣지(source/target 문서·검증 기준) 조회 |
 | `SearchEdgeDetailsByProjectQuery` | validation | 프로젝트 충돌 목록 조회 시 엣지 정보 join |
 | `SearchEdgeIdsByProjectQuery` | validation | 프로젝트 검증 작업 목록 조회 시 엣지 ID 필터 |
+| `SearchEdgeIdsByProjectIdsQuery` | validation | 카드 미해소 충돌 카운트 조립 — 프로젝트 묶음의 엣지 ID 일괄 조회 |
 | `SearchEdgeIdsByTargetDocumentIdsQuery` | validation | 인박스 라우팅 — 사용자의 담당 문서로 향하는 엣지 식별 |
 
 ---
@@ -379,6 +383,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
 | `FindConflictFindingByIdQuery` | document | `ProposalApprovedEvent` listener가 patch 본문(`target_block_id`, `new_text`) 조회 후 Notion 쓰기 |
+| `CountUnresolvedConflictsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 미해소(active 미무시) 충돌 카운트 조회 |
 
 ---
 

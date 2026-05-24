@@ -819,6 +819,35 @@ export interface components {
              * @example My Team
              */
             name?: string;
+            /**
+             * Format: int32
+             * @description 워크스페이스에 직접 초대된 멤버 수
+             * @example 7
+             */
+            memberCount?: number;
+            /**
+             * Format: int32
+             * @description 워크스페이스 내 프로젝트 수
+             * @example 3
+             */
+            projectCount?: number;
+            /**
+             * Format: int64
+             * @description 워크스페이스 내 모든 프로젝트의 동기화된 문서 합산
+             * @example 120
+             */
+            documentCount?: number;
+            /**
+             * Format: int64
+             * @description 워크스페이스 내 모든 프로젝트의 미해소(active 미무시) 충돌 합산
+             * @example 5
+             */
+            unresolvedConflictCount?: number;
+            /**
+             * Format: date-time
+             * @description 워크스페이스 내 모든 프로젝트 중 Notion 측 최근 변경 시각 max
+             */
+            lastNotionChangedAt?: string | null;
         };
         ProjectSummary: {
             /**
@@ -832,6 +861,29 @@ export interface components {
              * @example Q2 Planning
              */
             name?: string;
+            /**
+             * Format: int32
+             * @description 프로젝트에 배정된 멤버 수
+             * @example 5
+             */
+            memberCount?: number;
+            /**
+             * Format: int64
+             * @description 동기화된 문서 수
+             * @example 42
+             */
+            documentCount?: number;
+            /**
+             * Format: int64
+             * @description 미해소(active 미무시) 충돌 수
+             * @example 3
+             */
+            unresolvedConflictCount?: number;
+            /**
+             * Format: date-time
+             * @description 프로젝트 내 문서의 Notion 측 최근 변경 시각
+             */
+            lastNotionChangedAt?: string | null;
         };
         WorkspaceDetail: {
             /**
@@ -846,6 +898,35 @@ export interface components {
              */
             name?: string;
             members?: components["schemas"]["WorkspaceMemberSummary"][];
+            /**
+             * Format: int32
+             * @description 워크스페이스에 직접 초대된 멤버 수
+             * @example 7
+             */
+            memberCount?: number;
+            /**
+             * Format: int32
+             * @description 워크스페이스 내 프로젝트 수
+             * @example 3
+             */
+            projectCount?: number;
+            /**
+             * Format: int64
+             * @description 워크스페이스 내 모든 프로젝트의 동기화된 문서 합산
+             * @example 120
+             */
+            documentCount?: number;
+            /**
+             * Format: int64
+             * @description 워크스페이스 내 모든 프로젝트의 미해소(active 미무시) 충돌 합산
+             * @example 5
+             */
+            unresolvedConflictCount?: number;
+            /**
+             * Format: date-time
+             * @description 워크스페이스 내 모든 프로젝트 중 Notion 측 최근 변경 시각 max
+             */
+            lastNotionChangedAt?: string | null;
         };
         WorkspaceMemberSummary: {
             /**
@@ -888,6 +969,29 @@ export interface components {
              */
             notionRootPageId?: string;
             members?: components["schemas"]["ProjectMemberSummary"][];
+            /**
+             * Format: int32
+             * @description 프로젝트에 배정된 멤버 수
+             * @example 5
+             */
+            memberCount?: number;
+            /**
+             * Format: int64
+             * @description 동기화된 문서 수
+             * @example 42
+             */
+            documentCount?: number;
+            /**
+             * Format: int64
+             * @description 미해소(active 미무시) 충돌 수
+             * @example 3
+             */
+            unresolvedConflictCount?: number;
+            /**
+             * Format: date-time
+             * @description 프로젝트 내 문서의 Notion 측 최근 변경 시각
+             */
+            lastNotionChangedAt?: string | null;
         };
         ProjectMemberSummary: {
             /**

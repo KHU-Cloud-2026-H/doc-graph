@@ -85,6 +85,9 @@ class ProjectQueryControllerTest @Autowired constructor(
             jsonPath("$.length()") { value(2) }
             jsonPath("$[?(@.id == ${pA.id})].name") { value("A") }
             jsonPath("$[?(@.id == ${pB.id})].name") { value("B") }
+            jsonPath("$[?(@.id == ${pA.id})].memberCount") { value(1) }
+            jsonPath("$[?(@.id == ${pA.id})].documentCount") { value(0) }
+            jsonPath("$[?(@.id == ${pA.id})].unresolvedConflictCount") { value(0) }
         }
     }
 
@@ -112,6 +115,9 @@ class ProjectQueryControllerTest @Autowired constructor(
             jsonPath("$.members.length()") { value(1) }
             jsonPath("$.members[0].role") { value(ProjectMemberRole.ADMIN.name) }
             jsonPath("$.members[0].name") { value("User 1") }
+            jsonPath("$.memberCount") { value(1) }
+            jsonPath("$.documentCount") { value(0) }
+            jsonPath("$.unresolvedConflictCount") { value(0) }
         }
     }
 

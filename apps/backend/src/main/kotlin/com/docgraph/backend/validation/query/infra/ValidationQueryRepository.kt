@@ -142,6 +142,21 @@ class ValidationQueryRepository {
             .fetchOne()
     }
 
+    fun findActiveUnignoredEdgeIds(edgeIds: Collection<Long>): List<Long> {
+        if (edgeIds.isEmpty()) return emptyList()
+        val c = QConflict.conflict
+        return queryFactory
+            .select(c.edgeId)
+            .from(c)
+            .where(
+                c.edgeId.`in`(edgeIds),
+                c.resolvedAt.isNull,
+                c.ignoredAt.isNull,
+            )
+            .distinct()
+            .fetch()
+    }
+
     fun findValidationTasksByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ValidationTaskRow> {
         val t = QValidationTask.validationTask
 

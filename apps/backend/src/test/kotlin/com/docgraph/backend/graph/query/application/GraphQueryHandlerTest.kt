@@ -11,6 +11,7 @@ import com.docgraph.backend.graph.command.domain.EdgeProposal
 import com.docgraph.backend.graph.command.domain.EdgeProposalRepository
 import com.docgraph.backend.graph.command.domain.GraphRule
 import com.docgraph.backend.graph.command.domain.GraphRuleRepository
+import com.docgraph.backend.graph.query.infra.GraphQueryRepository
 import com.docgraph.backend.validation.query.application.ConflictStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +27,7 @@ class GraphQueryHandlerTest {
     private val proposalRepository = mockk<EdgeProposalRepository>()
     private val ruleRepository = mockk<GraphRuleRepository>()
     private val searchDocumentNodes = mockk<SearchDocumentNodesByProjectQuery>()
+    private val graphQueryRepository = mockk<GraphQueryRepository>()
 
     @Test
     fun `FindEdgeByIdQueryHandler — edge detail 반환`() {
@@ -93,6 +95,19 @@ class GraphQueryHandlerTest {
     }
 
     @Test
+    fun `SearchEdgeIdsByProjectIdsQueryHandler — Repository 결과를 그대로 반환`() {
+        every { graphQueryRepository.findEdgeIdsByProjectIdIn(listOf(1L, 2L)) } returns mapOf(
+            1L to listOf(100L, 101L),
+            2L to listOf(102L),
+        )
+
+        val result = SearchEdgeIdsByProjectIdsQueryHandler(graphQueryRepository).search(listOf(1L, 2L))
+
+        assertEquals(listOf(100L, 101L), result[1L])
+        assertEquals(listOf(102L), result[2L])
+    }
+
+    @Test
     fun `SearchEdgesByProjectQueryHandler — EdgeResponse 매핑 + conflictStatus 변환`() {
         val edgeNone = edge(id = 100L)
         val edgeConflict = edge(id = 101L).apply { markConflict() }
@@ -152,10 +167,10 @@ class GraphQueryHandlerTest {
         assertEquals(listOf(200L), result.proposals.map { it.id })
     }
 
-    private fun edge(id: Long): DependencyEdge =
+    private fun edge(id: Long, projectId: Long = 1L): DependencyEdge =
         DependencyEdge(
             id = id,
-            projectId = 1L,
+            projectId = projectId,
             sourceDocumentId = 10L,
             targetDocumentId = 20L,
             validationCriterion = "범위 일치 여부",

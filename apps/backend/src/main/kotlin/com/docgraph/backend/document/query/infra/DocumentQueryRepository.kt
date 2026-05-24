@@ -6,6 +6,7 @@ import com.docgraph.backend.document.query.application.Block
 import com.docgraph.backend.document.query.application.DocumentDetail
 import com.docgraph.backend.document.query.application.DocumentNodeData
 import com.docgraph.backend.document.query.application.DocumentReference
+import com.docgraph.backend.document.query.application.DocumentStats
 import com.docgraph.backend.document.query.application.DocumentSummary
 import com.docgraph.backend.project.query.application.AssignedDocumentType
 import com.querydsl.core.BooleanBuilder
@@ -159,5 +160,22 @@ class DocumentQueryRepository {
             .from(doc)
             .where(doc.projectId.eq(projectId).and(doc.assigneeMemberId.isNull))
             .fetch()
+    }
+
+    fun searchStatsByProjectIds(projectIds: Collection<Long>): Map<Long, DocumentStats> {
+        if (projectIds.isEmpty()) return emptyMap()
+        val doc = QDocument.document
+        return queryFactory
+            .select(doc.projectId, doc.count(), doc.notionLastEditedAt.max())
+            .from(doc)
+            .where(doc.projectId.`in`(projectIds))
+            .groupBy(doc.projectId)
+            .fetch()
+            .associate { tuple ->
+                val projectId = tuple.get(doc.projectId)!!
+                val count = tuple.get(doc.count())!!
+                val maxEditedAt = tuple.get(doc.notionLastEditedAt.max())
+                projectId to DocumentStats(documentCount = count, lastNotionChangedAt = maxEditedAt)
+            }
     }
 }

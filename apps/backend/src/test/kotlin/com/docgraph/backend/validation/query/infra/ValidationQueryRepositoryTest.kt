@@ -241,4 +241,37 @@ class ValidationQueryRepositoryTest @Autowired constructor(
         assertTrue(page.content.all { it.edgeId in listOf(1L, 2L) })
         assertTrue(page.content.all { it.status == OutboxStatus.PENDING })
     }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 활성 미무시 conflict가 있는 edgeId 반환`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        conflictRepository.save(
+            Conflict(edgeId = 2L, firstDetectedAt = now, lastDetectedAt = now, resolvedAt = now),
+        )
+        conflictRepository.save(
+            Conflict(edgeId = 3L, firstDetectedAt = now, lastDetectedAt = now, ignoredAt = now, ignoredBy = 99L),
+        )
+        conflictRepository.save(Conflict(edgeId = 4L, firstDetectedAt = now, lastDetectedAt = now))
+
+        val ids = queryRepository.findActiveUnignoredEdgeIds(listOf(1L, 2L, 3L, 4L)).toSet()
+
+        assertEquals(setOf(1L, 4L), ids)
+    }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 빈 입력이면 빈 리스트`() {
+        val ids = queryRepository.findActiveUnignoredEdgeIds(emptyList())
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 입력에 포함되지 않은 edge는 제외`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 99L, firstDetectedAt = now, lastDetectedAt = now))
+
+        val ids = queryRepository.findActiveUnignoredEdgeIds(listOf(1L, 2L))
+
+        assertTrue(ids.isEmpty())
+    }
 }

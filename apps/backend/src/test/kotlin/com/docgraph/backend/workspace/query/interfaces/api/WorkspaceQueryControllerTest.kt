@@ -70,6 +70,9 @@ class WorkspaceQueryControllerTest @Autowired constructor(
             jsonPath("$[?(@.id == ${owned.id})].name") { value("Test Workspace") }
             jsonPath("$[?(@.id == ${joined.id})].name") { value("Test Workspace") }
             jsonPath("$[?(@.id == ${notMine.id})]") { isEmpty() }
+            jsonPath("$[?(@.id == ${owned.id})].projectCount") { value(0) }
+            jsonPath("$[?(@.id == ${owned.id})].documentCount") { value(0) }
+            jsonPath("$[?(@.id == ${owned.id})].unresolvedConflictCount") { value(0) }
         }
     }
 
@@ -83,6 +86,10 @@ class WorkspaceQueryControllerTest @Autowired constructor(
             jsonPath("$.id") { value(workspace.id) }
             jsonPath("$.name") { value("Test Workspace") }
             jsonPath("$.members.length()") { value(0) }
+            jsonPath("$.memberCount") { value(0) }
+            jsonPath("$.projectCount") { value(0) }
+            jsonPath("$.documentCount") { value(0) }
+            jsonPath("$.unresolvedConflictCount") { value(0) }
         }
     }
 

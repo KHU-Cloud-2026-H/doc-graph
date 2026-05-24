@@ -9,7 +9,7 @@ import com.docgraph.backend.graph.query.application.SearchEdgeDetailsByIdsQuery
 import com.docgraph.backend.graph.query.application.SearchEdgeIdsByTargetDocumentIdsQuery
 import com.docgraph.backend.project.query.application.SearchAdminProjectIdsByUserIdQuery
 import com.docgraph.backend.project.query.application.SearchAssignedDocumentTypesByUserIdQuery
-import com.docgraph.backend.project.query.application.SearchProjectSummariesByIdsQuery
+import com.docgraph.backend.project.query.application.SearchProjectRefsByIdsQuery
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import com.docgraph.backend.web.PageResponse
 import com.docgraph.backend.workspace.query.application.SearchWorkspaceMemberIdsByUserIdQuery
@@ -28,7 +28,7 @@ class SearchMyConflictsQueryHandler(
     private val searchDocumentReferences: SearchDocumentReferencesByIdsQuery,
     private val searchEdgeIdsByTargetDocuments: SearchEdgeIdsByTargetDocumentIdsQuery,
     private val searchEdgeDetailsByIds: SearchEdgeDetailsByIdsQuery,
-    private val searchProjectSummaries: SearchProjectSummariesByIdsQuery,
+    private val searchProjectRefs: SearchProjectRefsByIdsQuery,
     private val validationQueryRepository: ValidationQueryRepository,
 ) : SearchMyConflictsQuery {
 
@@ -70,7 +70,7 @@ class SearchMyConflictsQueryHandler(
         val sourceRefs = searchDocumentReferences.search(edgesInPage.map { it.sourceDocumentId }.distinct())
             .associateBy { it.id }
         val targetRefById = targetRefs.associateBy { it.id }
-        val projectNameById = searchProjectSummaries.search(targetRefs.map { it.projectId }.distinct())
+        val projectNameById = searchProjectRefs.search(targetRefs.map { it.projectId }.distinct())
             .associate { it.id to it.name }
 
         val rows = conflictPage.content.mapNotNull { conflict ->
