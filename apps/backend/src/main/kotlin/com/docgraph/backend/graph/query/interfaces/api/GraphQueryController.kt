@@ -1,9 +1,14 @@
 package com.docgraph.backend.graph.query.interfaces.api
 
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.graph.query.application.EdgeProposalResponse
 import com.docgraph.backend.graph.query.application.EdgeResponse
+import com.docgraph.backend.graph.query.application.FindProjectGraphQuery
 import com.docgraph.backend.graph.query.application.ProjectGraphResponse
 import com.docgraph.backend.graph.query.application.RuleResponse
+import com.docgraph.backend.graph.query.application.SearchEdgeProposalsByProjectQuery
+import com.docgraph.backend.graph.query.application.SearchEdgesByProjectQuery
+import com.docgraph.backend.graph.query.application.SearchGraphRulesByProjectQuery
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -13,7 +18,13 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @Tag(name = "Graph")
-class GraphQueryController {
+class GraphQueryController(
+    private val findProjectGraph: FindProjectGraphQuery,
+    private val searchEdgesByProject: SearchEdgesByProjectQuery,
+    private val searchEdgeProposalsByProject: SearchEdgeProposalsByProjectQuery,
+    private val searchGraphRulesByProject: SearchGraphRulesByProjectQuery,
+    private val getCurrentUserId: GetCurrentUserIdQuery,
+) {
 
     @GetMapping("/projects/{id}/graph")
     @Operation(
@@ -25,7 +36,8 @@ class GraphQueryController {
         ApiResponse(responseCode = "404", description = "프로젝트 없음"),
     ])
     fun getGraph(@PathVariable id: Long): ResponseEntity<ProjectGraphResponse> {
-        TODO()
+        getCurrentUserId.get()
+        return ResponseEntity.ok(findProjectGraph.find(id))
     }
 
     @GetMapping("/projects/{id}/edges")
@@ -35,7 +47,8 @@ class GraphQueryController {
         ApiResponse(responseCode = "404", description = "프로젝트 없음"),
     ])
     fun listEdges(@PathVariable id: Long): ResponseEntity<List<EdgeResponse>> {
-        TODO()
+        getCurrentUserId.get()
+        return ResponseEntity.ok(searchEdgesByProject.search(id))
     }
 
     @GetMapping("/projects/{id}/proposals")
@@ -45,7 +58,8 @@ class GraphQueryController {
         ApiResponse(responseCode = "404", description = "프로젝트 없음"),
     ])
     fun listProposals(@PathVariable id: Long): ResponseEntity<List<EdgeProposalResponse>> {
-        TODO()
+        getCurrentUserId.get()
+        return ResponseEntity.ok(searchEdgeProposalsByProject.search(id))
     }
 
     @GetMapping("/projects/{id}/rules")
@@ -58,6 +72,7 @@ class GraphQueryController {
         ApiResponse(responseCode = "404", description = "프로젝트 없음"),
     ])
     fun listRules(@PathVariable id: Long): ResponseEntity<List<RuleResponse>> {
-        TODO()
+        getCurrentUserId.get()
+        return ResponseEntity.ok(searchGraphRulesByProject.search(id))
     }
 }

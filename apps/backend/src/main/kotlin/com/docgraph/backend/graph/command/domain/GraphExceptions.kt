@@ -15,3 +15,7 @@ class GraphRuleNotFoundException(ruleId: Long) : RuntimeException(
 class DefaultGraphRuleCannotBeRemovedException(ruleId: Long) : RuntimeException(
     "default graph rule cannot be removed: $ruleId",
 )
+
+class GraphRuleDuplicateException(sourceType: Any, targetType: Any) : RuntimeException(
+    "graph rule already exists for ($sourceType, $targetType)",
+)

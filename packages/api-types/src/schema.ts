@@ -1093,10 +1093,10 @@ export interface components {
              */
             title?: string;
             /**
-             * @description 문서 타입
-             * @enum {string}
+             * @description 문서 타입 (project type-mapping 미분류 시 null)
+             * @enum {string|null}
              */
-            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
             /**
              * Format: int64
              * @description 담당자 워크스페이스 멤버 ID (없으면 null)

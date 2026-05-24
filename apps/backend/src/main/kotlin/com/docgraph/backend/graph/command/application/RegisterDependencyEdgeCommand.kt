@@ -3,7 +3,7 @@ package com.docgraph.backend.graph.command.application
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
 import java.util.UUID
 
-data class CreateDependencyEdgeCommand(
+data class RegisterDependencyEdgeCommand(
     val projectId: Long,
     val sourceDocumentId: Long,
     val targetDocumentId: Long,
