@@ -445,10 +445,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Notion OAuth2 인증 시작
-         * @description Spring Security가 직접 처리하여 Notion authorization URL로 302 redirect한다. 본 핸들러는 spec 문서화용이며 실제 호출되지 않는다.
-         */
+        /** Notion OAuth2 인증 시작 */
         get: operations["oauthStart"];
         put?: never;
         post?: never;
@@ -470,6 +467,23 @@ export interface paths {
          * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)
          */
         get: operations["myInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/login/oauth2/code/notion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion OAuth2 콜백 */
+        get: operations["oauthCallback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2470,7 +2484,9 @@ export interface operations {
     };
     oauthStart: {
         parameters: {
-            query?: never;
+            query?: {
+                state?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2506,6 +2522,27 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["PageResponseConflictResponse"];
                 };
+            };
+        };
+    };
+    oauthCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 시 success redirect URI로, 실패 시 동 URI에 `?oauth=error` 부착 */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2555,7 +2592,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["UserResponse"];
                 };
             };
             /** @description 미인증 상태 (Spring Security) */
@@ -2564,7 +2601,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["UserResponse"];
                 };
             };
         };
@@ -2711,15 +2748,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 로그아웃 완료 — 세션 무효화 */
+            /** @description 로그아웃 완료 — 세션 무효화 및 쿠키 만료 */
             204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 미인증 상태 (Spring Security) */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };

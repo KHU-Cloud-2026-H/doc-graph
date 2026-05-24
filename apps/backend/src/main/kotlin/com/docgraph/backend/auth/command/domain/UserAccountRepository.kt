@@ -5,4 +5,5 @@ interface UserAccountRepository {
     fun findById(id: Long): UserAccount?
     fun findByEmail(email: String): UserAccount?
     fun findByNotionUserId(notionUserId: String): UserAccount?
+    fun findAllByIdIn(ids: Collection<Long>): List<UserAccount>
 }
