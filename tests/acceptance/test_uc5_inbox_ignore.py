@@ -27,13 +27,17 @@ def test_uc5_ignore_conflict_removes_from_inbox(
     target_doc_id = seeder.document(
         project_id, notion_page_id=TARGET_PAGE_ID, title="UC5 Target",
     )
-    edge_id = seeder.edge(source_document_id=source_doc_id, target_document_id=target_doc_id)
+    edge_id = seeder.edge(
+        project_id=project_id,
+        source_document_id=source_doc_id,
+        target_document_id=target_doc_id,
+    )
     conflict = seeder.conflict(
         edge_id=edge_id,
         findings=[
             {
                 "sourceBlockIds": ["uc5-source-block"],
-                "targetBlockIds": ["uc5-target-block"],
+                "targetBlockId": "uc5-target-block",
                 "rationale": "UC5 의미적 불일치",
             }
         ],

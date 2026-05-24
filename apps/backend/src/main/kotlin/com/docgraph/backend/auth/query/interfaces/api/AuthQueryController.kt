@@ -4,6 +4,8 @@ import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.auth.query.application.SearchUserAccountsByIdsQuery
 import com.docgraph.backend.auth.query.application.UserResponse
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -22,6 +24,10 @@ class AuthQueryController(
 
     @GetMapping("/me", produces = [MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8"])
     @Operation(summary = "현재 로그인 사용자 정보")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "사용자 정보"),
+        ApiResponse(responseCode = "401", description = "미인증 상태 (Spring Security)"),
+    ])
     fun me(): ResponseEntity<UserResponse> {
         val userId = try {
             getCurrentUserId.get()

@@ -5,7 +5,7 @@ import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.validation.command.domain.ConflictFindingNotFoundException
 import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
-import com.docgraph.backend.validation.command.domain.ProposalApproved
+import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
 import com.docgraph.backend.validation.command.domain.StaleProposalException
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -38,6 +38,6 @@ class ApproveProposalCommandHandler(
 
         val now = OffsetDateTime.now()
         finding.approve(by = command.approvedBy, at = now)
-        publisher.publishEvent(ProposalApproved(finding.id, command.approvedBy, now))
+        publisher.publishEvent(ProposalApprovedEvent(finding.id, command.approvedBy, now))
     }
 }

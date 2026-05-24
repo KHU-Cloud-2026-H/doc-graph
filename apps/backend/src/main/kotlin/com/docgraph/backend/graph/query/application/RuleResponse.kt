@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 data class RuleResponse(
     @Schema(description = "룰 ID", example = "1")
     val id: Long,
+    @Schema(description = "소속 프로젝트 ID (기본 제공 룰은 null)", example = "1")
+    val projectId: Long?,
     @Schema(description = "출발 문서 타입")
     val sourceType: DocumentType,
     @Schema(description = "도착 문서 타입")

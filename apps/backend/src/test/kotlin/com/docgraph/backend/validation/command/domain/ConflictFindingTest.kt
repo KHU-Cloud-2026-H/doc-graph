@@ -48,9 +48,9 @@ class ConflictFindingTest {
         conflictId = 1L,
         validationTaskId = 1L,
         sourceBlockIds = listOf("s"),
-        targetBlockIds = listOf("t"),
+        targetBlockId = "t",
         rationale = "r",
-        suggestion = "sug",
+        newText = "sug",
         detectedAt = OffsetDateTime.now(),
     )
 }

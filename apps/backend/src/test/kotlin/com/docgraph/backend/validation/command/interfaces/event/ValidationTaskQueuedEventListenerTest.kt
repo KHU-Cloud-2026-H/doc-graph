@@ -149,7 +149,7 @@ class ValidationTaskQueuedEventListenerTest {
             if (id == edgeId) EdgeDetail(edgeId, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, emptyList())
+            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, emptyList())
         }
 
         val task = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
@@ -158,6 +158,10 @@ class ValidationTaskQueuedEventListenerTest {
 
         val fired = probe.latch.await(5, TimeUnit.SECONDS)
         assertTrue(fired, "ValidationTaskPreparedEvent did not fire within 5s")
+
+        awaitCondition(Duration.ofSeconds(5)) {
+            findEdge.callCount.get() == 2 && findDocument.callCount.get() == 4
+        }
 
         assertEquals(task.id, probe.received?.validationTaskId)
         assertEquals(2, findEdge.callCount.get(), "FindEdge 2회 호출 기대 (Process handler + Prepared listener)")
@@ -181,7 +185,7 @@ class ValidationTaskQueuedEventListenerTest {
             }
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, null, emptyList())
+            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, null, null, null, emptyList())
         }
 
         val taskOk = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeIdOk))
@@ -208,5 +212,14 @@ class ValidationTaskQueuedEventListenerTest {
             Thread.sleep(50)
         }
         throw AssertionError("task $taskId did not reach status $expected within $timeout")
+    }
+
+    private fun awaitCondition(timeout: Duration, predicate: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeout.toMillis()
+        while (System.currentTimeMillis() < deadline) {
+            if (predicate()) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("condition not satisfied within $timeout")
     }
 }

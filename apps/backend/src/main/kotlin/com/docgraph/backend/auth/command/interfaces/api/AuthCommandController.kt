@@ -8,6 +8,8 @@ import com.docgraph.backend.auth.command.application.RevokeSessionCommandHandler
 import com.docgraph.backend.auth.command.application.StartNotionOAuthCommand
 import com.docgraph.backend.auth.command.application.StartNotionOAuthCommandHandler
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
@@ -34,6 +36,9 @@ class AuthCommandController(
 
     @GetMapping("/oauth2/authorization/notion")
     @Operation(summary = "Notion OAuth2 인증 시작")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "302", description = "Notion authorization URL로 redirect"),
+    ])
     fun oauthStart(@RequestParam(required = false) state: String?): ResponseEntity<Unit> {
         val authorizationUrl = startNotionOAuth.handle(StartNotionOAuthCommand(state))
         return ResponseEntity.status(HttpStatus.FOUND)
@@ -43,6 +48,9 @@ class AuthCommandController(
 
     @GetMapping("/login/oauth2/code/notion")
     @Operation(summary = "Notion OAuth2 콜백")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "302", description = "성공 시 success redirect URI로, 실패 시 동 URI에 `?oauth=error` 부착"),
+    ])
     fun oauthCallback(
         @RequestParam(required = false) code: String?,
         @RequestParam(required = false) error: String?,
@@ -65,6 +73,9 @@ class AuthCommandController(
 
     @DeleteMapping("/auth/sessions")
     @Operation(summary = "로그아웃")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "로그아웃 완료 — 세션 무효화 및 쿠키 만료"),
+    ])
     fun logout(request: HttpServletRequest): ResponseEntity<Unit> {
         request.cookies?.firstOrNull { it.name == sessionProperties.cookieName }?.value?.let { token ->
             revokeSession.handle(RevokeSessionCommand(token))

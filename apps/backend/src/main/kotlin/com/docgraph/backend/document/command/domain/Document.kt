@@ -28,6 +28,9 @@ class Document(
     @Column(name = "parent_notion_page_id", length = 100)
     var parentNotionPageId: String? = null,
 
+    @Column(name = "parent_document_id")
+    var parentDocumentId: Long? = null,
+
     @Column(nullable = false, length = 500)
     var title: String,
 

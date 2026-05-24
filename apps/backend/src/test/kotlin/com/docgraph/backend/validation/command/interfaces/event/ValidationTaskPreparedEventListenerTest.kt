@@ -118,7 +118,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
             targetBlocks = listOf(Block("t1", null, "paragraph", "target text", 0)),
         )
         detector.behavior = { _, _, _ ->
-            listOf(DetectedConflict(listOf("s1"), listOf("t1"), "불일치", "수정 제안"))
+            listOf(DetectedConflict(listOf("s1"), "t1", "불일치", "수정 제안"))
         }
 
         testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
@@ -165,8 +165,8 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         }
         findDocument.behavior = { id ->
             when (id) {
-                sourceDocId -> DocumentDetail(id, "p-$id", "src", DocumentType.MEETING_NOTES, null, null, sourceBlocks)
-                targetDocId -> DocumentDetail(id, "p-$id", "tgt", DocumentType.REQUIREMENTS, null, null, targetBlocks)
+                sourceDocId -> DocumentDetail(id, "p-$id", "src", DocumentType.MEETING_NOTES, null, null, null, null, sourceBlocks)
+                targetDocId -> DocumentDetail(id, "p-$id", "tgt", DocumentType.REQUIREMENTS, null, null, null, null, targetBlocks)
                 else -> null
             }
         }

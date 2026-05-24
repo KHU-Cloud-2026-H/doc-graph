@@ -46,13 +46,17 @@ def test_uc8_type_assignee_routes_conflict_to_inbox(
         project_id, notion_page_id=TARGET_PAGE_ID, title="UC8 Target",
         document_type=TARGET_TYPE,
     )
-    edge_id = seeder.edge(source_document_id=source_doc_id, target_document_id=target_doc_id)
+    edge_id = seeder.edge(
+        project_id=project_id,
+        source_document_id=source_doc_id,
+        target_document_id=target_doc_id,
+    )
     conflict = seeder.conflict(
         edge_id=edge_id,
         findings=[
             {
                 "sourceBlockIds": ["uc8-source-block"],
-                "targetBlockIds": ["uc8-target-block"],
+                "targetBlockId": "uc8-target-block",
                 "rationale": "UC8 라우팅 검증용 충돌",
             }
         ],

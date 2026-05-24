@@ -131,7 +131,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 룰 목록 */
+        /**
+         * 룰 목록
+         * @description 프로젝트에 적용 가능한 룰(기본 제공 + 커스텀)을 반환한다.
+         */
         get: operations["listRules"];
         put?: never;
         /** 커스텀 룰 추가 */
@@ -250,7 +253,7 @@ export interface paths {
         put?: never;
         /**
          * 충돌 finding 수정 제안 승인
-         * @description AI가 생성한 수정 제안을 사용자가 승인한다. target 문서가 조회 시점 이후 변경되었으면 stale 409. 승인 시 ProposalApproved 이벤트를 발행하여 document 도메인이 Notion 쓰기를 처리한다.
+         * @description AI가 생성한 수정 제안을 사용자가 승인한다. target 문서가 조회 시점 이후 변경되었으면 stale 409. 승인 시 ProposalApprovedEvent를 발행하여 document 도메인이 Notion 쓰기를 처리한다.
          */
         post: operations["approve"];
         delete?: never;
@@ -442,7 +445,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Notion OAuth2 인증 시작 (Spring Security가 처리 — 브라우저 redirect) */
+        /** Notion OAuth2 인증 시작 */
         get: operations["oauthStart"];
         put?: never;
         post?: never;
@@ -464,6 +467,23 @@ export interface paths {
          * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)
          */
         get: operations["myInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/login/oauth2/code/notion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion OAuth2 콜백 */
+        get: operations["oauthCallback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -966,6 +986,12 @@ export interface components {
              */
             id?: number;
             /**
+             * Format: int64
+             * @description 소속 프로젝트 ID (기본 제공 룰은 null)
+             * @example 1
+             */
+            projectId?: number | null;
+            /**
              * @description 출발 문서 타입
              * @enum {string}
              */
@@ -1007,6 +1033,11 @@ export interface components {
              * @example 0.87
              */
             similarityScore?: number;
+            /**
+             * @description 수락 시 적용될 검증 기준 (룰 기반 자동 매칭)
+             * @example 범위 일치 여부
+             */
+            validationCriterion?: string;
         };
         EdgeResponse: {
             /**
@@ -1037,6 +1068,17 @@ export interface components {
              * @enum {string}
              */
             conflictStatus?: "NONE" | "CONFLICT";
+            /**
+             * @description 엣지 생성 출처 (Notion 링크/멘션 기반, 제안 수락, 수동 추가)
+             * @enum {string}
+             */
+            source?: "NOTION_REFERENCE" | "PROPOSAL_ACCEPTED" | "CUSTOM";
+            /**
+             * Format: int64
+             * @description 엣지 생성에 사용된 룰 ID (수동 추가 엣지는 null)
+             * @example 1
+             */
+            ruleId?: number | null;
         };
         GraphNodeResponse: {
             /**
@@ -1089,6 +1131,25 @@ export interface components {
              * @enum {string|null}
              */
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
+            /**
+             * Format: int64
+             * @description 부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)
+             * @example 1
+             */
+            parentDocumentId?: number | null;
+            icon?: components["schemas"]["IconResponse"] | null;
+        };
+        IconResponse: {
+            /**
+             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
+             * @enum {string}
+             */
+            type?: "EMOJI" | "EXTERNAL" | "FILE";
+            /**
+             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
+             * @example 📄
+             */
+            value?: string;
         };
         PageResponseDocumentSummary: {
             content?: components["schemas"]["DocumentSummary"][];
@@ -1126,18 +1187,18 @@ export interface components {
             id?: number;
             /** @description source 측 충돌 블록 ID 목록 (Notion block id) */
             sourceBlockIds?: string[];
-            /** @description target 측 충돌 블록 ID 목록 (Notion block id) */
-            targetBlockIds?: string[];
+            /** @description target 측 충돌 블록 ID (Notion block id) */
+            targetBlockId?: string;
             /**
              * @description 충돌 근거 (AI 판정)
              * @example planning 3.2절 결정사항이 requirements에 반영되지 않음
              */
             rationale?: string;
             /**
-             * @description AI 수정 제안 — target 측에 적용 가능한 자연어 수정안
+             * @description target 블록을 교체할 새 텍스트 (replace patch)
              * @example requirements 3.2절을 'A 옵션 선택'으로 변경
              */
-            suggestion?: string;
+            newText?: string;
             /**
              * Format: date-time
              * @description 감지 시각
@@ -1259,6 +1320,13 @@ export interface components {
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
             /**
              * Format: int64
+             * @description 부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)
+             * @example 1
+             */
+            parentDocumentId?: number | null;
+            icon?: components["schemas"]["IconResponse"] | null;
+            /**
+             * Format: int64
              * @description 담당자 워크스페이스 멤버 ID (없으면 null)
              * @example 1
              */
@@ -1288,6 +1356,11 @@ export interface components {
              * @example 홍길동
              */
             name?: string;
+            /**
+             * @description 아바타 이미지 URL (Notion 프로필 사진, 없으면 null)
+             * @example https://example.com/avatar.png
+             */
+            avatarUrl?: string | null;
         };
     };
     responses: never;
@@ -1587,8 +1660,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 룰 목록 (기본 + 커스텀) */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleResponse"][];
+                };
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1613,7 +1695,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 룰 생성 완료 — graph_rule row id 반환 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1621,6 +1703,27 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+            /** @description source/target 타입 동일 등 요청 유효성 위반 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 동일 (source_type, target_type) 룰이 프로젝트에 이미 존재 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1636,7 +1739,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 수락 완료 — 생성된 dependency_edge row id 반환 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1644,6 +1747,13 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+            /** @description 제안 없음 또는 다른 프로젝트 소속 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1705,8 +1815,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 엣지 목록 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EdgeResponse"][];
+                };
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1731,7 +1850,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 엣지 생성 완료 — dependency_edge row id 반환 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1739,6 +1858,27 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["IdResponse"];
                 };
+            };
+            /** @description source/target 문서 동일 등 요청 유효성 위반 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 프로젝트 또는 문서 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 동일 방향 엣지가 이미 존재 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1906,7 +2046,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 승인 완료 + ProposalApproved 이벤트 발행 */
+            /** @description 승인 완료 + ProposalApprovedEvent 발행 */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -2241,8 +2381,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 연결 제안 목록 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EdgeProposalResponse"][];
+                };
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2263,8 +2412,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 그래프 데이터 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectGraphResponse"];
+                };
+            };
+            /** @description 프로젝트 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2326,15 +2484,17 @@ export interface operations {
     };
     oauthStart: {
         parameters: {
-            query?: never;
+            query?: {
+                state?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Notion authorization URL로 redirect */
+            302: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2362,6 +2522,27 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["PageResponseConflictResponse"];
                 };
+            };
+        };
+    };
+    oauthCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 시 success redirect URI로, 실패 시 동 URI에 `?oauth=error` 부착 */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2405,13 +2586,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 사용자 정보 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description 미인증 상태 (Spring Security) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["UserResponse"];
                 };
             };
         };
@@ -2470,8 +2660,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 삭제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 기본 제공 룰 삭제 시도 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 룰 없음 또는 다른 프로젝트 소속 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2491,8 +2695,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 거절 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 제안 없음 또는 다른 프로젝트 소속 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2512,8 +2723,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 삭제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 엣지 없음 또는 다른 프로젝트 소속 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2530,8 +2748,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 로그아웃 완료 — 세션 무효화 및 쿠키 만료 */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -22,6 +22,7 @@ class AcceptanceSearchUserAccountsByIdsQueryHandler : SearchUserAccountsByIdsQue
                 id = id,
                 email = "user-$id@example.com",
                 name = "User $id",
+                avatarUrl = null,
             )
         }
 }

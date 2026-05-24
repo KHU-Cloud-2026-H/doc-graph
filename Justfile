@@ -21,20 +21,20 @@ bootRun extra_profile="":
 
 # 백엔드 테스트 — bootRun과 동일하게 dotenvx로 .env + .env.local 주입.
 # fixture 결정성은 TestPropertySource가 env 위 precedence로 강제.
-test-unit:
-    cd apps/backend && {{dotenv-run}} sh ./gradlew unitTest
+test-unit *gradleArgs:
+    cd apps/backend && {{dotenv-run}} sh ./gradlew unitTest {{gradleArgs}}
 
-test-slice:
-    cd apps/backend && {{dotenv-run}} sh ./gradlew sliceTest
+test-slice *gradleArgs:
+    cd apps/backend && {{dotenv-run}} sh ./gradlew sliceTest {{gradleArgs}}
 
-test-component:
-    cd apps/backend && {{dotenv-run}} sh ./gradlew componentTest
+test-component *gradleArgs:
+    cd apps/backend && {{dotenv-run}} sh ./gradlew componentTest {{gradleArgs}}
 
-test-all:
-    cd apps/backend && {{dotenv-run}} sh ./gradlew test
+test-all *gradleArgs:
+    cd apps/backend && {{dotenv-run}} sh ./gradlew test {{gradleArgs}}
 
-test-class class:
-    cd apps/backend && {{dotenv-run}} sh ./gradlew test --tests {{class}}
+test-class class *gradleArgs:
+    cd apps/backend && {{dotenv-run}} sh ./gradlew test --tests {{class}} {{gradleArgs}}
 
 # 인수 stack — postgres + backend(acceptance profile) + 외부 시스템 stub.
 # mode: mock (default, wiremock) | live (실제 Notion·OpenAI + ngrok).
