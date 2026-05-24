@@ -1,21 +1,21 @@
 package com.docgraph.backend.graph.query.application
 
 import com.docgraph.backend.graph.command.domain.DependencyEdge
-import jakarta.persistence.EntityManager
-import jakarta.persistence.PersistenceContext
+import com.docgraph.backend.graph.command.domain.DependencyEdgeRepository
 import org.springframework.stereotype.Service
 
 @Service
 class FindEdgeByIdQueryHandler(
-    @PersistenceContext private val em: EntityManager,
+    private val edgeRepository: DependencyEdgeRepository,
 ) : FindEdgeByIdQuery {
-    override fun find(edgeId: Long): EdgeDetail? {
-        val edge = em.find(DependencyEdge::class.java, edgeId) ?: return null
-        return EdgeDetail(
-            id = edge.id,
-            sourceDocumentId = edge.sourceDocumentId,
-            targetDocumentId = edge.targetDocumentId,
-            validationCriterion = edge.validationCriterion,
-        )
-    }
+    override fun find(edgeId: Long): EdgeDetail? =
+        edgeRepository.findById(edgeId)?.toDetail()
 }
+
+fun DependencyEdge.toDetail(): EdgeDetail =
+    EdgeDetail(
+        id = id,
+        sourceDocumentId = sourceDocumentId,
+        targetDocumentId = targetDocumentId,
+        validationCriterion = validationCriterion,
+    )
