@@ -9,12 +9,12 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
 
 @Service
-class CreateDependencyEdgeCommandHandler(
+class RegisterDependencyEdgeCommandHandler(
     private val edgeRepository: DependencyEdgeRepository,
     private val publisher: ApplicationEventPublisher,
 ) {
     @Transactional
-    fun handle(command: CreateDependencyEdgeCommand): DependencyEdge {
+    fun handle(command: RegisterDependencyEdgeCommand): DependencyEdge {
         edgeRepository.findByProjectIdAndSourceDocumentIdAndTargetDocumentId(
             projectId = command.projectId,
             sourceDocumentId = command.sourceDocumentId,

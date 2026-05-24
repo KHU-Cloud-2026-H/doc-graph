@@ -15,11 +15,11 @@ import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 @Tag("unit")
-class CreateDependencyEdgeCommandHandlerTest {
+class RegisterDependencyEdgeCommandHandlerTest {
 
     private val edgeRepository = mockk<DependencyEdgeRepository>()
     private val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    private val handler = CreateDependencyEdgeCommandHandler(edgeRepository, publisher)
+    private val handler = RegisterDependencyEdgeCommandHandler(edgeRepository, publisher)
 
     @Test
     fun `handle — 새 edge 저장 후 ValidationPairCreatedEvent 발행`() {
@@ -35,7 +35,7 @@ class CreateDependencyEdgeCommandHandlerTest {
         every { publisher.publishEvent(capture(capturedEvent)) } returns Unit
 
         val edge = handler.handle(
-            CreateDependencyEdgeCommand(
+            RegisterDependencyEdgeCommand(
                 projectId = 1L,
                 sourceDocumentId = 10L,
                 targetDocumentId = 20L,
@@ -71,7 +71,7 @@ class CreateDependencyEdgeCommandHandlerTest {
         } returns existing
 
         val edge = handler.handle(
-            CreateDependencyEdgeCommand(
+            RegisterDependencyEdgeCommand(
                 projectId = 1L,
                 sourceDocumentId = 10L,
                 targetDocumentId = 20L,

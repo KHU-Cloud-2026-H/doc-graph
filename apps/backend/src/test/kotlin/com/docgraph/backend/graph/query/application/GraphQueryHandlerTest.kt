@@ -1,8 +1,17 @@
 package com.docgraph.backend.graph.query.application
 
+import com.docgraph.backend.document.query.application.DocumentNodeData
+import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.SearchDocumentNodesByProjectQuery
 import com.docgraph.backend.graph.command.domain.DependencyEdge
 import com.docgraph.backend.graph.command.domain.DependencyEdgeRepository
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
+import com.docgraph.backend.graph.command.domain.EdgeConflictStatus
+import com.docgraph.backend.graph.command.domain.EdgeProposal
+import com.docgraph.backend.graph.command.domain.EdgeProposalRepository
+import com.docgraph.backend.graph.command.domain.GraphRule
+import com.docgraph.backend.graph.command.domain.GraphRuleRepository
+import com.docgraph.backend.validation.query.application.ConflictStatus
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,6 +23,9 @@ import org.junit.jupiter.api.Test
 class GraphQueryHandlerTest {
 
     private val edgeRepository = mockk<DependencyEdgeRepository>()
+    private val proposalRepository = mockk<EdgeProposalRepository>()
+    private val ruleRepository = mockk<GraphRuleRepository>()
+    private val searchDocumentNodes = mockk<SearchDocumentNodesByProjectQuery>()
 
     @Test
     fun `FindEdgeByIdQueryHandler — edge detail 반환`() {
@@ -62,6 +74,66 @@ class GraphQueryHandlerTest {
         assertEquals(listOf(100L, 101L), result)
     }
 
+    @Test
+    fun `SearchEdgesByProjectQueryHandler — EdgeResponse 매핑 + conflictStatus 변환`() {
+        val edgeNone = edge(id = 100L)
+        val edgeConflict = edge(id = 101L).apply { markConflict() }
+        every { edgeRepository.findAllByProjectId(1L) } returns listOf(edgeNone, edgeConflict)
+
+        val result = SearchEdgesByProjectQueryHandler(edgeRepository).search(1L)
+
+        assertEquals(listOf(100L, 101L), result.map { it.id })
+        assertEquals(ConflictStatus.NONE, result[0].conflictStatus)
+        assertEquals(ConflictStatus.CONFLICT, result[1].conflictStatus)
+        assertEquals(DependencyEdgeSource.NOTION_REFERENCE, result[0].source)
+    }
+
+    @Test
+    fun `SearchEdgeProposalsByProjectQueryHandler — EdgeProposalResponse 매핑`() {
+        every { proposalRepository.findAllByProjectId(1L) } returns listOf(proposal(id = 200L), proposal(id = 201L))
+
+        val result = SearchEdgeProposalsByProjectQueryHandler(proposalRepository).search(1L)
+
+        assertEquals(listOf(200L, 201L), result.map { it.id })
+        assertEquals(0.87, result[0].similarityScore)
+        assertEquals("범위 일치 여부", result[0].validationCriterion)
+    }
+
+    @Test
+    fun `SearchGraphRulesByProjectQueryHandler — 기본 + 커스텀 룰 매핑`() {
+        val defaultRule = rule(id = 300L, isDefault = true, projectId = null)
+        val customRule = rule(id = 301L, isDefault = false, projectId = 1L)
+        every { ruleRepository.findAllApplicableToProject(1L) } returns listOf(defaultRule, customRule)
+
+        val result = SearchGraphRulesByProjectQueryHandler(ruleRepository).search(1L)
+
+        assertEquals(listOf(300L, 301L), result.map { it.id })
+        assertEquals(true, result[0].isDefault)
+        assertNull(result[0].projectId)
+        assertEquals(false, result[1].isDefault)
+        assertEquals(1L, result[1].projectId)
+    }
+
+    @Test
+    fun `FindProjectGraphQueryHandler — nodes·edges·proposals 묶음 반환`() {
+        every { searchDocumentNodes.search(1L) } returns listOf(
+            DocumentNodeData(id = 10L, title = "기획서", type = DocumentType.PLANNING, assigneeMemberId = 1L),
+            DocumentNodeData(id = 20L, title = "요구사항", type = DocumentType.REQUIREMENTS, assigneeMemberId = null),
+        )
+        every { edgeRepository.findAllByProjectId(1L) } returns listOf(edge(id = 100L))
+        every { proposalRepository.findAllByProjectId(1L) } returns listOf(proposal(id = 200L))
+
+        val result = FindProjectGraphQueryHandler(edgeRepository, proposalRepository, searchDocumentNodes).find(1L)
+
+        assertEquals(listOf(10L, 20L), result.nodes.map { it.id })
+        assertEquals("기획서", result.nodes[0].title)
+        assertEquals(DocumentType.PLANNING, result.nodes[0].type)
+        assertEquals(1L, result.nodes[0].assigneeMemberId)
+        assertNull(result.nodes[1].assigneeMemberId)
+        assertEquals(listOf(100L), result.edges.map { it.id })
+        assertEquals(listOf(200L), result.proposals.map { it.id })
+    }
+
     private fun edge(id: Long): DependencyEdge =
         DependencyEdge(
             id = id,
@@ -70,5 +142,25 @@ class GraphQueryHandlerTest {
             targetDocumentId = 20L,
             validationCriterion = "범위 일치 여부",
             source = DependencyEdgeSource.NOTION_REFERENCE,
+        )
+
+    private fun proposal(id: Long): EdgeProposal =
+        EdgeProposal(
+            id = id,
+            projectId = 1L,
+            sourceDocumentId = 10L,
+            targetDocumentId = 20L,
+            validationCriterion = "범위 일치 여부",
+            similarityScore = 0.87,
+        )
+
+    private fun rule(id: Long, isDefault: Boolean, projectId: Long?): GraphRule =
+        GraphRule(
+            id = id,
+            projectId = projectId,
+            sourceType = DocumentType.PLANNING,
+            targetType = DocumentType.REQUIREMENTS,
+            validationCriterion = "범위 일치 여부",
+            isDefault = isDefault,
         )
 }

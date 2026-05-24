@@ -4,6 +4,7 @@ import com.docgraph.backend.document.command.domain.QBlock
 import com.docgraph.backend.document.command.domain.QDocument
 import com.docgraph.backend.document.query.application.Block
 import com.docgraph.backend.document.query.application.DocumentDetail
+import com.docgraph.backend.document.query.application.DocumentNodeData
 import com.docgraph.backend.document.query.application.DocumentSummary
 import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.EntityManager
@@ -88,5 +89,39 @@ class DocumentQueryRepository {
             }
 
         return PageImpl(content, pageable, count)
+    }
+
+    fun searchNodesByProject(projectId: Long): List<DocumentNodeData> {
+        val doc = QDocument.document
+        return queryFactory
+            .selectFrom(doc)
+            .where(doc.projectId.eq(projectId))
+            .fetch()
+            .map { d ->
+                DocumentNodeData(
+                    id = d.id,
+                    title = d.title,
+                    type = d.type,
+                    assigneeMemberId = d.assigneeMemberId,
+                )
+            }
+    }
+
+    fun searchIdsByAssignee(memberId: Long): List<Long> {
+        val doc = QDocument.document
+        return queryFactory
+            .select(doc.id)
+            .from(doc)
+            .where(doc.assigneeMemberId.eq(memberId))
+            .fetch()
+    }
+
+    fun searchUnassignedIdsByProject(projectId: Long): List<Long> {
+        val doc = QDocument.document
+        return queryFactory
+            .select(doc.id)
+            .from(doc)
+            .where(doc.projectId.eq(projectId).and(doc.assigneeMemberId.isNull))
+            .fetch()
     }
 }

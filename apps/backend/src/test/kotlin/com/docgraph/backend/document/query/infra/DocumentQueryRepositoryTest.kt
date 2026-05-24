@@ -242,4 +242,106 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         assertNull(parentSummary.parentDocumentId)
         assertEquals(parent.id, childSummary.parentDocumentId)
     }
+
+    @Test
+    fun `searchNodesByProject — 프로젝트 내 document를 DocumentNodeData로 매핑`() {
+        val doc = documentRepository.save(
+            Document(
+                projectId = 1L,
+                notionPageId = "page-1",
+                title = "Node",
+                type = DocumentType.PLANNING,
+                assigneeMemberId = 7L,
+            ),
+        )
+
+        val result = queryRepository.searchNodesByProject(1L)
+
+        assertEquals(1, result.size)
+        val node = result.first()
+        assertEquals(doc.id, node.id)
+        assertEquals("Node", node.title)
+        assertEquals(DocumentType.PLANNING, node.type)
+        assertEquals(7L, node.assigneeMemberId)
+    }
+
+    @Test
+    fun `searchNodesByProject — type과 assigneeMemberId가 null인 document도 그대로 매핑`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "page-null", title = "Null"),
+        )
+
+        val result = queryRepository.searchNodesByProject(1L)
+
+        assertEquals(1, result.size)
+        assertNull(result.first().type)
+        assertNull(result.first().assigneeMemberId)
+    }
+
+    @Test
+    fun `searchNodesByProject — 다른 프로젝트 document는 제외, 빈 프로젝트는 빈 리스트`() {
+        documentRepository.save(Document(projectId = 1L, notionPageId = "p1-a", title = "A"))
+        documentRepository.save(Document(projectId = 2L, notionPageId = "p2-a", title = "Other"))
+
+        val p1 = queryRepository.searchNodesByProject(1L)
+        val empty = queryRepository.searchNodesByProject(999L)
+
+        assertEquals(1, p1.size)
+        assertEquals("A", p1.first().title)
+        assertTrue(empty.isEmpty())
+    }
+
+    @Test
+    fun `searchIdsByAssignee — 담당자가 일치하는 document id 목록 반환`() {
+        val a = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+        )
+        val b = documentRepository.save(
+            Document(projectId = 2L, notionPageId = "b", title = "B", assigneeMemberId = 7L),
+        )
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "c", title = "C", assigneeMemberId = 99L),
+        )
+        documentRepository.save(Document(projectId = 1L, notionPageId = "d", title = "D"))
+
+        val ids = queryRepository.searchIdsByAssignee(7L).toSet()
+
+        assertEquals(setOf(a.id, b.id), ids)
+    }
+
+    @Test
+    fun `searchIdsByAssignee — 매칭 없으면 빈 리스트`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+        )
+
+        val ids = queryRepository.searchIdsByAssignee(999L)
+
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `searchUnassignedIdsByProject — 프로젝트 내 담당자가 null인 document id 목록 반환`() {
+        val a = documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        val b = documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B"))
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "c", title = "C", assigneeMemberId = 7L),
+        )
+        documentRepository.save(Document(projectId = 2L, notionPageId = "d", title = "D"))
+
+        val ids = queryRepository.searchUnassignedIdsByProject(1L).toSet()
+
+        assertEquals(setOf(a.id, b.id), ids)
+    }
+
+    @Test
+    fun `searchUnassignedIdsByProject — 매칭 없으면 빈 리스트`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+        )
+
+        val ids = queryRepository.searchUnassignedIdsByProject(1L)
+
+        assertTrue(ids.isEmpty())
+    }
 }

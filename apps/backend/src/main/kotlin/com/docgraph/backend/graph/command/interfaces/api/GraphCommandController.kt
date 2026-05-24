@@ -1,9 +1,24 @@
 package com.docgraph.backend.graph.command.interfaces.api
 
+import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.graph.command.application.AcceptEdgeProposalCommand
+import com.docgraph.backend.graph.command.application.AcceptEdgeProposalCommandHandler
+import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommand
+import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommandHandler
+import com.docgraph.backend.graph.command.application.RegisterGraphRuleCommand
+import com.docgraph.backend.graph.command.application.RegisterGraphRuleCommandHandler
+import com.docgraph.backend.graph.command.application.RejectEdgeProposalCommand
+import com.docgraph.backend.graph.command.application.RejectEdgeProposalCommandHandler
+import com.docgraph.backend.graph.command.application.RemoveDependencyEdgeCommand
+import com.docgraph.backend.graph.command.application.RemoveDependencyEdgeCommandHandler
+import com.docgraph.backend.graph.command.application.RemoveGraphRuleCommand
+import com.docgraph.backend.graph.command.application.RemoveGraphRuleCommandHandler
 import com.docgraph.backend.graph.command.domain.DefaultGraphRuleCannotBeRemovedException
 import com.docgraph.backend.graph.command.domain.DependencyEdgeNotFoundException
+import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
 import com.docgraph.backend.graph.command.domain.EdgeProposalNotFoundException
+import com.docgraph.backend.graph.command.domain.GraphRuleDuplicateException
 import com.docgraph.backend.graph.command.domain.GraphRuleNotFoundException
 import com.docgraph.backend.web.IdResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -18,7 +33,15 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @Tag(name = "Graph")
-class GraphCommandController {
+class GraphCommandController(
+    private val registerEdgeHandler: RegisterDependencyEdgeCommandHandler,
+    private val removeEdgeHandler: RemoveDependencyEdgeCommandHandler,
+    private val acceptProposalHandler: AcceptEdgeProposalCommandHandler,
+    private val rejectProposalHandler: RejectEdgeProposalCommandHandler,
+    private val registerRuleHandler: RegisterGraphRuleCommandHandler,
+    private val removeRuleHandler: RemoveGraphRuleCommandHandler,
+    private val getCurrentUserId: GetCurrentUserIdQuery,
+) {
 
     @PostMapping("/projects/{id}/edges")
     @Operation(summary = "커스텀 엣지 추가")
@@ -32,7 +55,18 @@ class GraphCommandController {
         @PathVariable id: Long,
         @RequestBody request: CreateEdgeRequest,
     ): ResponseEntity<IdResponse> {
-        TODO()
+        getCurrentUserId.get()
+        val edge = registerEdgeHandler.handle(
+            RegisterDependencyEdgeCommand(
+                projectId = id,
+                sourceDocumentId = request.sourceDocumentId,
+                targetDocumentId = request.targetDocumentId,
+                ruleId = null,
+                validationCriterion = request.validationCriterion,
+                source = DependencyEdgeSource.CUSTOM,
+            ),
+        )
+        return ResponseEntity.ok(IdResponse(edge.id))
     }
 
     @DeleteMapping("/projects/{id}/edges/{edgeId}")
@@ -45,7 +79,9 @@ class GraphCommandController {
         @PathVariable id: Long,
         @PathVariable edgeId: Long,
     ): ResponseEntity<Unit> {
-        TODO()
+        getCurrentUserId.get()
+        removeEdgeHandler.handle(RemoveDependencyEdgeCommand(projectId = id, edgeId = edgeId))
+        return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/projects/{id}/proposals/{proposalId}/accept")
@@ -61,7 +97,14 @@ class GraphCommandController {
         @PathVariable id: Long,
         @PathVariable proposalId: Long,
     ): ResponseEntity<IdResponse> {
-        TODO()
+        getCurrentUserId.get()
+        val edge = acceptProposalHandler.handle(
+            AcceptEdgeProposalCommand(
+                projectId = id,
+                proposalId = proposalId,
+            ),
+        )
+        return ResponseEntity.ok(IdResponse(edge.id))
     }
 
     @DeleteMapping("/projects/{id}/proposals/{proposalId}")
@@ -74,7 +117,9 @@ class GraphCommandController {
         @PathVariable id: Long,
         @PathVariable proposalId: Long,
     ): ResponseEntity<Unit> {
-        TODO()
+        getCurrentUserId.get()
+        rejectProposalHandler.handle(RejectEdgeProposalCommand(projectId = id, proposalId = proposalId))
+        return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/projects/{id}/rules")
@@ -89,7 +134,16 @@ class GraphCommandController {
         @PathVariable id: Long,
         @RequestBody request: CreateRuleRequest,
     ): ResponseEntity<IdResponse> {
-        TODO()
+        getCurrentUserId.get()
+        val ruleId = registerRuleHandler.handle(
+            RegisterGraphRuleCommand(
+                projectId = id,
+                sourceType = request.sourceType,
+                targetType = request.targetType,
+                validationCriterion = request.validationCriterion,
+            ),
+        )
+        return ResponseEntity.ok(IdResponse(ruleId))
     }
 
     @DeleteMapping("/projects/{id}/rules/{ruleId}")
@@ -103,7 +157,9 @@ class GraphCommandController {
         @PathVariable id: Long,
         @PathVariable ruleId: Long,
     ): ResponseEntity<Unit> {
-        TODO()
+        getCurrentUserId.get()
+        removeRuleHandler.handle(RemoveGraphRuleCommand(projectId = id, ruleId = ruleId))
+        return ResponseEntity.noContent().build()
     }
 
     @ExceptionHandler(
@@ -114,9 +170,13 @@ class GraphCommandController {
     fun handleNotFound(): ResponseEntity<Unit> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).build()
 
-    @ExceptionHandler(DefaultGraphRuleCannotBeRemovedException::class)
+    @ExceptionHandler(DefaultGraphRuleCannotBeRemovedException::class, IllegalArgumentException::class)
     fun handleBadRequest(): ResponseEntity<Unit> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).build()
+
+    @ExceptionHandler(GraphRuleDuplicateException::class)
+    fun handleConflict(): ResponseEntity<Unit> =
+        ResponseEntity.status(HttpStatus.CONFLICT).build()
 }
 
 data class CreateEdgeRequest(

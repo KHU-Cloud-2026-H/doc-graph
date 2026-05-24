@@ -4,9 +4,9 @@ import com.docgraph.backend.document.query.infra.DocumentQueryRepository
 import org.springframework.stereotype.Service
 
 @Service
-class SearchDocumentIdsByAssigneeQueryHandler(
+class SearchDocumentNodesByProjectQueryHandler(
     private val repository: DocumentQueryRepository,
-) : SearchDocumentIdsByAssigneeQuery {
-    override fun search(memberId: Long): List<Long> =
-        repository.searchIdsByAssignee(memberId)
+) : SearchDocumentNodesByProjectQuery {
+    override fun search(projectId: Long): List<DocumentNodeData> =
+        repository.searchNodesByProject(projectId)
 }
