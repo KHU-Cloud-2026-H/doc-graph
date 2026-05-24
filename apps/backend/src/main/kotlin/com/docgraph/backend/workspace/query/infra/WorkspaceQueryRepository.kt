@@ -58,6 +58,15 @@ class WorkspaceQueryRepository {
             .fetchFirst()
     }
 
+    fun findMemberIdsByUserId(userId: Long): List<Long> {
+        val wm = QWorkspaceMember.workspaceMember
+        return queryFactory
+            .select(wm.id)
+            .from(wm)
+            .where(wm.userId.eq(userId))
+            .fetch()
+    }
+
     fun findMembersByWorkspaceId(workspaceId: Long): List<WorkspaceMembershipRow> {
         val wm = QWorkspaceMember.workspaceMember
         return queryFactory

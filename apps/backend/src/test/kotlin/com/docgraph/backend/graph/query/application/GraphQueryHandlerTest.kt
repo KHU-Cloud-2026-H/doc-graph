@@ -65,6 +65,24 @@ class GraphQueryHandlerTest {
     }
 
     @Test
+    fun `SearchEdgeDetailsByIdsQueryHandler — id 묶음 기준 edge details 반환`() {
+        every { edgeRepository.findAllByIds(listOf(100L, 101L)) } returns listOf(edge(id = 100L), edge(id = 101L))
+
+        val result = SearchEdgeDetailsByIdsQueryHandler(edgeRepository).search(listOf(100L, 101L))
+
+        assertEquals(listOf(100L, 101L), result.map { it.id })
+        assertEquals(10L, result[0].sourceDocumentId)
+        assertEquals(20L, result[0].targetDocumentId)
+    }
+
+    @Test
+    fun `SearchEdgeDetailsByIdsQueryHandler — 빈 입력이면 빈 리스트`() {
+        every { edgeRepository.findAllByIds(emptyList()) } returns emptyList()
+        val result = SearchEdgeDetailsByIdsQueryHandler(edgeRepository).search(emptyList())
+        assertEquals(0, result.size)
+    }
+
+    @Test
     fun `SearchEdgeIdsByTargetDocumentIdsQueryHandler — target 문서 기준 edge ids 반환`() {
         every { edgeRepository.findAllByProjectIdAndTargetDocumentIdIn(1L, listOf(20L, 21L)) } returns
             listOf(edge(id = 100L), edge(id = 101L))

@@ -5,6 +5,7 @@ import com.docgraph.backend.project.command.domain.QCategory
 import com.docgraph.backend.project.command.domain.QProject
 import com.docgraph.backend.project.command.domain.QProjectMember
 import com.docgraph.backend.project.command.domain.QTypeAssigneeDefault
+import com.docgraph.backend.project.query.application.AssignedDocumentType
 import com.docgraph.backend.project.query.application.CategoryProjection
 import com.docgraph.backend.project.query.application.CategoryResponse
 import com.docgraph.backend.project.query.application.ProjectMembershipRow
@@ -99,6 +100,33 @@ class ProjectQueryRepository {
             .join(wm).on(wm.id.eq(pm.workspaceMemberId))
             .where(wm.userId.eq(userId), pm.role.eq(ProjectMemberRole.ADMIN))
             .distinct()
+            .fetch()
+    }
+
+    fun findSummariesByIds(projectIds: List<Long>): List<ProjectSummary> {
+        if (projectIds.isEmpty()) return emptyList()
+        val p = QProject.project
+        return queryFactory
+            .select(Projections.constructor(ProjectSummary::class.java, p.id, p.name))
+            .from(p)
+            .where(p.id.`in`(projectIds))
+            .fetch()
+    }
+
+    fun findAssignedDocumentTypesByUserId(userId: Long): List<AssignedDocumentType> {
+        val ta = QTypeAssigneeDefault.typeAssigneeDefault
+        val wm = QWorkspaceMember.workspaceMember
+        return queryFactory
+            .select(
+                Projections.constructor(
+                    AssignedDocumentType::class.java,
+                    ta.projectId,
+                    ta.documentType,
+                ),
+            )
+            .from(ta)
+            .join(wm).on(wm.id.eq(ta.assigneeWorkspaceMemberId))
+            .where(wm.userId.eq(userId))
             .fetch()
     }
 

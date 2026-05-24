@@ -464,7 +464,7 @@ export interface paths {
         };
         /**
          * 내 인박스
-         * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)
+         * @description 내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 라우팅: (1) 직접 담당 (Document.assigneeMemberId), (2) type 매핑 (TypeAssigneeDefault), (3) Admin 프로젝트의 미할당 문서. status=ACTIVE(default)|IGNORED|ALL.
          */
         get: operations["myInbox"];
         put?: never;
@@ -1287,6 +1287,57 @@ export interface components {
              * @enum {string}
              */
             documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+        };
+        InboxDocumentRef: {
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            /** @enum {string|null} */
+            type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
+        };
+        MyConflictRow: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            edgeId?: number;
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
+            sourceDocument?: components["schemas"]["InboxDocumentRef"];
+            targetDocument?: components["schemas"]["InboxDocumentRef"];
+            /** @enum {string} */
+            status?: "ACTIVE" | "IGNORED";
+            /** Format: date-time */
+            firstDetectedAt?: string;
+            /** Format: date-time */
+            ignoredAt?: string | null;
+        };
+        PageResponseMyConflictRow: {
+            content?: components["schemas"]["MyConflictRow"][];
+            /**
+             * Format: int64
+             * @description 전체 항목 수
+             * @example 100
+             */
+            totalElements?: number;
+            /**
+             * Format: int32
+             * @description 전체 페이지 수
+             * @example 5
+             */
+            totalPages?: number;
+            /**
+             * Format: int32
+             * @description 현재 페이지 (0-based)
+             * @example 0
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description 페이지 크기
+             * @example 20
+             */
+            size?: number;
         };
         Block: {
             blockId?: string;
@@ -2505,6 +2556,7 @@ export interface operations {
     myInbox: {
         parameters: {
             query?: {
+                status?: "ACTIVE" | "IGNORED" | "ALL";
                 page?: number;
                 size?: number;
             };
@@ -2514,13 +2566,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 인박스 목록 (없으면 빈 page) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseConflictResponse"];
+                    "*/*": components["schemas"]["PageResponseMyConflictRow"];
                 };
             };
         };

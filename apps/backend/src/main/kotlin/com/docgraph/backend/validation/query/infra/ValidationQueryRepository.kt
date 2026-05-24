@@ -6,6 +6,8 @@ import com.docgraph.backend.validation.command.domain.QValidationTask
 import com.docgraph.backend.validation.query.application.ConflictFindingDetailRow
 import com.docgraph.backend.validation.query.application.ConflictFindingRow
 import com.docgraph.backend.validation.query.application.ConflictRow
+import com.docgraph.backend.validation.query.application.InboxConflictRow
+import com.docgraph.backend.validation.query.application.MyConflictStatusFilter
 import com.docgraph.backend.validation.query.application.ValidationTaskRow
 import com.querydsl.core.types.Projections
 import com.querydsl.jpa.impl.JPAQueryFactory
@@ -52,6 +54,44 @@ class ValidationQueryRepository {
                 c.edgeId.`in`(edgeIds),
                 c.resolvedAt.isNull,
             )
+            .offset(pageable.offset)
+            .limit(pageable.pageSize.toLong())
+            .fetch()
+
+        return PageImpl(content, pageable, count)
+    }
+
+    fun findInboxConflictsByEdgeIds(
+        edgeIds: List<Long>,
+        filter: MyConflictStatusFilter,
+        pageable: Pageable,
+    ): Page<InboxConflictRow> {
+        if (edgeIds.isEmpty()) return PageImpl(emptyList(), pageable, 0L)
+        val c = QConflict.conflict
+        val filterPredicate = when (filter) {
+            MyConflictStatusFilter.ACTIVE -> c.ignoredAt.isNull
+            MyConflictStatusFilter.IGNORED -> c.ignoredAt.isNotNull
+            MyConflictStatusFilter.ALL -> null
+        }
+
+        val count = queryFactory
+            .select(c.count())
+            .from(c)
+            .where(c.edgeId.`in`(edgeIds), c.resolvedAt.isNull, filterPredicate)
+            .fetchOne() ?: 0L
+
+        val content = queryFactory
+            .select(
+                Projections.constructor(
+                    InboxConflictRow::class.java,
+                    c.id,
+                    c.edgeId,
+                    c.firstDetectedAt,
+                    c.ignoredAt,
+                ),
+            )
+            .from(c)
+            .where(c.edgeId.`in`(edgeIds), c.resolvedAt.isNull, filterPredicate)
             .offset(pageable.offset)
             .limit(pageable.pageSize.toLong())
             .fetch()

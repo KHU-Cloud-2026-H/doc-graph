@@ -172,11 +172,14 @@ class Seeder:
         assert response.status_code in (200, 201)
         return response.json()
 
-    def workspace_member(self, *, workspace_id: int) -> int:
+    def workspace_member(self, *, workspace_id: int, user_id: int | None = None) -> int:
+        body: dict = {"workspaceId": workspace_id}
+        if user_id is not None:
+            body["userId"] = user_id
         response = self.client.post(
             "/test/workspace-members",
             headers=self.headers,
-            json={"workspaceId": workspace_id},
+            json=body,
         )
         assert response.status_code in (200, 201)
         return response.json()["memberId"]

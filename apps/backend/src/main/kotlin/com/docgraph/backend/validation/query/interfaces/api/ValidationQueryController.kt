@@ -2,7 +2,10 @@ package com.docgraph.backend.validation.query.interfaces.api
 
 import com.docgraph.backend.web.PageResponse
 import com.docgraph.backend.validation.query.application.ConflictResponse
+import com.docgraph.backend.validation.query.application.MyConflictRow
+import com.docgraph.backend.validation.query.application.MyConflictStatusFilter
 import com.docgraph.backend.validation.query.application.SearchConflictsByProjectQuery
+import com.docgraph.backend.validation.query.application.SearchMyConflictsQuery
 import com.docgraph.backend.validation.query.application.SearchValidationTasksByProjectQuery
 import com.docgraph.backend.validation.query.application.ValidationTaskResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*
 class ValidationQueryController(
     private val searchConflictsByProject: SearchConflictsByProjectQuery,
     private val searchValidationTasksByProject: SearchValidationTasksByProjectQuery,
+    private val searchMyConflicts: SearchMyConflictsQuery,
 ) {
 
     @GetMapping("/projects/{id}/conflicts")
@@ -37,13 +41,20 @@ class ValidationQueryController(
     @GetMapping("/me/conflicts")
     @Operation(
         summary = "내 인박스",
-        description = "내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. 미해소(CONFLICT) 상태가 기본이며, 무시 포함 전체 조회는 status 파라미터로 확장 예정(Post-MVP). (현재 미구현 — auth 영속 + 담당자 라우팅 Query API 완료 후)",
+        description = "내가 담당자인 문서가 target인 충돌 목록을 배정된 모든 프로젝트에 걸쳐 반환한다. " +
+            "라우팅: (1) 직접 담당 (Document.assigneeMemberId), (2) type 매핑 (TypeAssigneeDefault), " +
+            "(3) Admin 프로젝트의 미할당 문서. status=ACTIVE(default)|IGNORED|ALL.",
     )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "인박스 목록 (없으면 빈 page)"),
+    ])
     fun myInbox(
+        @RequestParam(defaultValue = "ACTIVE") status: MyConflictStatusFilter,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
-    ): ResponseEntity<PageResponse<ConflictResponse>> {
-        TODO()
+    ): ResponseEntity<PageResponse<MyConflictRow>> {
+        val result = searchMyConflicts.search(status, PageRequest.of(page, size))
+        return ResponseEntity.ok(result)
     }
 
     @GetMapping("/projects/{id}/validation-tasks")

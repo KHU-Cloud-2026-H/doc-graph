@@ -4,8 +4,10 @@ import com.docgraph.backend.document.command.domain.Block
 import com.docgraph.backend.document.command.domain.BlockRepository
 import com.docgraph.backend.document.command.domain.Document
 import com.docgraph.backend.document.command.domain.DocumentRepository
+import com.docgraph.backend.document.query.application.DocumentReference
 import com.docgraph.backend.document.query.application.DocumentType
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.project.query.application.AssignedDocumentType
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -316,6 +318,140 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         )
 
         val ids = queryRepository.searchIdsByAssignee(999L)
+
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `findReferencesByIds — 매칭되는 document를 id projectId title type으로 반환`() {
+        val a = documentRepository.save(
+            Document(projectId = 7L, notionPageId = "a", title = "Alpha", type = DocumentType.REQUIREMENTS),
+        )
+        val b = documentRepository.save(
+            Document(projectId = 8L, notionPageId = "b", title = "Beta", type = null),
+        )
+
+        val refs = queryRepository.findReferencesByIds(listOf(a.id, b.id)).toSet()
+
+        assertEquals(
+            setOf(
+                DocumentReference(a.id, 7L, "Alpha", DocumentType.REQUIREMENTS),
+                DocumentReference(b.id, 8L, "Beta", null),
+            ),
+            refs,
+        )
+    }
+
+    @Test
+    fun `findReferencesByIds — 일부 id만 매칭되면 매칭된 것만 반환`() {
+        val a = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "a", title = "Only", type = DocumentType.PLANNING),
+        )
+
+        val refs = queryRepository.findReferencesByIds(listOf(a.id, 99999L))
+
+        assertEquals(listOf(DocumentReference(a.id, 1L, "Only", DocumentType.PLANNING)), refs)
+    }
+
+    @Test
+    fun `findReferencesByIds — 입력 빈 리스트면 빈 리스트`() {
+        val refs = queryRepository.findReferencesByIds(emptyList())
+        assertTrue(refs.isEmpty())
+    }
+
+    @Test
+    fun `findReferencesByIds — 매칭 없으면 빈 리스트`() {
+        val refs = queryRepository.findReferencesByIds(listOf(99999L, 88888L))
+        assertTrue(refs.isEmpty())
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — 단일 매핑에 해당하는 document id 반환`() {
+        val match = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "m", title = "M", type = DocumentType.REQUIREMENTS),
+        )
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "other", title = "O", type = DocumentType.PLANNING),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(
+            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+        )
+
+        assertEquals(listOf(match.id), ids)
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — 여러 (projectId,type) 묶음 매칭을 union으로 반환`() {
+        val p1Req = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "p1-req", title = "A", type = DocumentType.REQUIREMENTS),
+        )
+        val p2Plan = documentRepository.save(
+            Document(projectId = 2L, notionPageId = "p2-plan", title = "B", type = DocumentType.PLANNING),
+        )
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "p1-plan", title = "C", type = DocumentType.PLANNING),
+        )
+        documentRepository.save(
+            Document(projectId = 2L, notionPageId = "p2-req", title = "D", type = DocumentType.REQUIREMENTS),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(
+            listOf(
+                AssignedDocumentType(1L, DocumentType.REQUIREMENTS),
+                AssignedDocumentType(2L, DocumentType.PLANNING),
+            ),
+        ).toSet()
+
+        assertEquals(setOf(p1Req.id, p2Plan.id), ids)
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — type이 일치 안 하면 제외`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "x", title = "X", type = DocumentType.PLANNING),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(
+            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+        )
+
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — projectId가 일치 안 하면 제외`() {
+        documentRepository.save(
+            Document(projectId = 2L, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(
+            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+        )
+
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — type이 null인 document는 매핑 매칭 안 됨`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "untyped", title = "U", type = null),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(
+            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+        )
+
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `searchIdsByProjectAndTypes — 입력이 빈 리스트면 빈 리스트 반환`() {
+        documentRepository.save(
+            Document(projectId = 1L, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
+        )
+
+        val ids = queryRepository.searchIdsByProjectAndTypes(emptyList())
 
         assertTrue(ids.isEmpty())
     }

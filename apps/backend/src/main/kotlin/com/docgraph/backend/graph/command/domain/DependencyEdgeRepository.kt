@@ -14,6 +14,7 @@ interface DependencyEdgeRepository {
         projectId: Long,
         targetDocumentIds: List<Long>,
     ): List<DependencyEdge>
+    fun findAllByIds(ids: List<Long>): List<DependencyEdge>
     fun delete(edge: DependencyEdge)
     fun deleteAllByProjectId(projectId: Long)
 }

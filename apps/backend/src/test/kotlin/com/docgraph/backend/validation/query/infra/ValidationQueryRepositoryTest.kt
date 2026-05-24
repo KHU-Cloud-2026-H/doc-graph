@@ -11,6 +11,7 @@ import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import com.docgraph.backend.validation.command.infra.ConflictFindingRepositoryImpl
 import com.docgraph.backend.validation.command.infra.ConflictRepositoryImpl
 import com.docgraph.backend.validation.command.infra.ValidationTaskRepositoryImpl
+import com.docgraph.backend.validation.query.application.MyConflictStatusFilter
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -123,6 +124,109 @@ class ValidationQueryRepositoryTest @Autowired constructor(
 
         assertEquals(2, grouped[conflict1.id]?.size)
         assertEquals(1, grouped[conflict2.id]?.size)
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — ACTIVE filter는 무시되지 않은 미해소 conflict만`() {
+        val now = OffsetDateTime.now()
+        val active = conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        conflictRepository.save(
+            Conflict(edgeId = 2L, firstDetectedAt = now, lastDetectedAt = now, ignoredAt = now, ignoredBy = 1L),
+        )
+
+        val page = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L, 2L), MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 10),
+        )
+
+        assertEquals(1L, page.totalElements)
+        assertEquals(active.id, page.content[0].id)
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — IGNORED filter는 무시된 미해소 conflict만`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        val ignored = conflictRepository.save(
+            Conflict(edgeId = 2L, firstDetectedAt = now, lastDetectedAt = now, ignoredAt = now, ignoredBy = 1L),
+        )
+
+        val page = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L, 2L), MyConflictStatusFilter.IGNORED, PageRequest.of(0, 10),
+        )
+
+        assertEquals(1L, page.totalElements)
+        assertEquals(ignored.id, page.content[0].id)
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — ALL filter는 active와 ignored 모두`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        conflictRepository.save(
+            Conflict(edgeId = 2L, firstDetectedAt = now, lastDetectedAt = now, ignoredAt = now, ignoredBy = 1L),
+        )
+
+        val page = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L, 2L), MyConflictStatusFilter.ALL, PageRequest.of(0, 10),
+        )
+
+        assertEquals(2L, page.totalElements)
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — resolved는 모든 filter에서 제외`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(
+            Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now, resolvedAt = now),
+        )
+
+        listOf(MyConflictStatusFilter.ACTIVE, MyConflictStatusFilter.IGNORED, MyConflictStatusFilter.ALL).forEach { f ->
+            val page = queryRepository.findInboxConflictsByEdgeIds(listOf(1L), f, PageRequest.of(0, 10))
+            assertEquals(0L, page.totalElements, "filter=$f should exclude resolved")
+        }
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — firstDetectedAt와 ignoredAt 매핑`() {
+        val detectedAt = OffsetDateTime.parse("2026-05-01T00:00:00Z")
+        val ignoredAt = OffsetDateTime.parse("2026-05-10T00:00:00Z")
+        conflictRepository.save(
+            Conflict(
+                edgeId = 1L,
+                firstDetectedAt = detectedAt,
+                lastDetectedAt = detectedAt,
+                ignoredAt = ignoredAt,
+                ignoredBy = 1L,
+            ),
+        )
+
+        val page = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L), MyConflictStatusFilter.IGNORED, PageRequest.of(0, 10),
+        )
+
+        val row = page.content.single()
+        assertEquals(detectedAt, row.firstDetectedAt)
+        assertEquals(ignoredAt, row.ignoredAt)
+    }
+
+    @Test
+    fun `findInboxConflictsByEdgeIds — 페이지네이션 적용`() {
+        val now = OffsetDateTime.now()
+        listOf(1L, 2L, 3L).forEach { edgeId ->
+            conflictRepository.save(Conflict(edgeId = edgeId, firstDetectedAt = now, lastDetectedAt = now))
+        }
+
+        val page0 = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L, 2L, 3L), MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 2),
+        )
+        val page1 = queryRepository.findInboxConflictsByEdgeIds(
+            listOf(1L, 2L, 3L), MyConflictStatusFilter.ACTIVE, PageRequest.of(1, 2),
+        )
+
+        assertEquals(3L, page0.totalElements)
+        assertEquals(2, page0.totalPages)
+        assertEquals(2, page0.content.size)
+        assertEquals(1, page1.content.size)
     }
 
     @Test
