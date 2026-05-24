@@ -54,6 +54,7 @@ class DocumentQueryRepository {
             title = document.title,
             type = document.type,
             parentDocumentId = document.parentDocumentId,
+            icon = null,
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
             blocks = blocks,
@@ -82,6 +83,7 @@ class DocumentQueryRepository {
                     title = d.title,
                     type = d.type,
                     parentDocumentId = d.parentDocumentId,
+                    icon = null,
                 )
             }
 

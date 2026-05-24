@@ -13,4 +13,6 @@ data class DocumentSummary(
     val type: DocumentType?,
     @Schema(description = "부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)", example = "1")
     val parentDocumentId: Long?,
+    @Schema(description = "Notion page 아이콘 (없으면 null)")
+    val icon: IconResponse?,
 )

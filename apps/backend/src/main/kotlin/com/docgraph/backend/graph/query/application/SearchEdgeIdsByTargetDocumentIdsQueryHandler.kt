@@ -7,6 +7,6 @@ import org.springframework.stereotype.Service
 class SearchEdgeIdsByTargetDocumentIdsQueryHandler(
     private val edgeRepository: DependencyEdgeRepository,
 ) : SearchEdgeIdsByTargetDocumentIdsQuery {
-    override fun search(targetDocumentIds: List<Long>): List<Long> =
-        edgeRepository.findAllByTargetDocumentIdIn(targetDocumentIds).map { it.id }
+    override fun search(projectId: Long, targetDocumentIds: List<Long>): List<Long> =
+        edgeRepository.findAllByProjectIdAndTargetDocumentIdIn(projectId, targetDocumentIds).map { it.id }
 }

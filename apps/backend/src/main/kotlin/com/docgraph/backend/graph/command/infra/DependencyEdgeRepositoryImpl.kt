@@ -20,8 +20,12 @@ class DependencyEdgeRepositoryImpl(
         jpa.findByProjectIdAndSourceDocumentIdAndTargetDocumentId(projectId, sourceDocumentId, targetDocumentId)
     override fun findAllByProjectId(projectId: Long): List<DependencyEdge> =
         jpa.findAllByProjectId(projectId)
-    override fun findAllByTargetDocumentIdIn(targetDocumentIds: List<Long>): List<DependencyEdge> =
-        if (targetDocumentIds.isEmpty()) emptyList() else jpa.findAllByTargetDocumentIdIn(targetDocumentIds)
+    override fun findAllByProjectIdAndTargetDocumentIdIn(
+        projectId: Long,
+        targetDocumentIds: List<Long>,
+    ): List<DependencyEdge> =
+        if (targetDocumentIds.isEmpty()) emptyList()
+        else jpa.findAllByProjectIdAndTargetDocumentIdIn(projectId, targetDocumentIds)
     override fun delete(edge: DependencyEdge) = jpa.delete(edge)
     override fun deleteAllByProjectId(projectId: Long) = jpa.deleteAllByProjectId(projectId)
 }

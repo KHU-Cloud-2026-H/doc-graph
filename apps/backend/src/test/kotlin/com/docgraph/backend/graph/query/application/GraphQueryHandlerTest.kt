@@ -54,10 +54,10 @@ class GraphQueryHandlerTest {
 
     @Test
     fun `SearchEdgeIdsByTargetDocumentIdsQueryHandler — target 문서 기준 edge ids 반환`() {
-        every { edgeRepository.findAllByTargetDocumentIdIn(listOf(20L, 21L)) } returns
+        every { edgeRepository.findAllByProjectIdAndTargetDocumentIdIn(1L, listOf(20L, 21L)) } returns
             listOf(edge(id = 100L), edge(id = 101L))
 
-        val result = SearchEdgeIdsByTargetDocumentIdsQueryHandler(edgeRepository).search(listOf(20L, 21L))
+        val result = SearchEdgeIdsByTargetDocumentIdsQueryHandler(edgeRepository).search(1L, listOf(20L, 21L))
 
         assertEquals(listOf(100L, 101L), result)
     }

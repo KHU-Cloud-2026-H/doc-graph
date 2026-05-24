@@ -106,27 +106,47 @@ class Seeder:
             "title": title,
         }
         if document_type is not None:
-            body["documentType"] = document_type
+            body["type"] = document_type
         if block_ids is not None:
-            body["blockIds"] = block_ids
+            body["blocks"] = [
+                {"notionBlockId": bid, "type": "paragraph", "sortOrder": i}
+                for i, bid in enumerate(block_ids)
+            ]
         response = self.client.post("/test/documents", headers=self.headers, json=body)
         assert response.status_code in (200, 201)
         return response.json()["id"]
 
-    def edge(self, *, source_document_id: int, target_document_id: int) -> int:
+    def edge(
+        self,
+        *,
+        project_id: int,
+        source_document_id: int,
+        target_document_id: int,
+        validation_criterion: str = "fixture-default",
+        source: str = "CUSTOM",
+    ) -> int:
         response = self.client.post(
             "/test/edges",
             headers=self.headers,
             json={
+                "projectId": project_id,
                 "sourceDocumentId": source_document_id,
                 "targetDocumentId": target_document_id,
+                "validationCriterion": validation_criterion,
+                "source": source,
             },
         )
         assert response.status_code in (200, 201)
         return response.json()["id"]
 
     def proposal(
-        self, *, project_id: int, source_document_id: int, target_document_id: int
+        self,
+        *,
+        project_id: int,
+        source_document_id: int,
+        target_document_id: int,
+        validation_criterion: str = "fixture-default",
+        similarity_score: float = 0.5,
     ) -> int:
         response = self.client.post(
             "/test/proposals",
@@ -135,6 +155,8 @@ class Seeder:
                 "projectId": project_id,
                 "sourceDocumentId": source_document_id,
                 "targetDocumentId": target_document_id,
+                "validationCriterion": validation_criterion,
+                "similarityScore": similarity_score,
             },
         )
         assert response.status_code in (200, 201)

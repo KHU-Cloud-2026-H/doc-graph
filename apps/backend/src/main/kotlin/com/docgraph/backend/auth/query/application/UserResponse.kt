@@ -9,4 +9,6 @@ data class UserResponse(
     val email: String,
     @Schema(description = "이름", example = "홍길동")
     val name: String,
+    @Schema(description = "아바타 이미지 URL (Notion 프로필 사진, 없으면 null)", example = "https://example.com/avatar.png")
+    val avatarUrl: String?,
 )

@@ -32,15 +32,19 @@ def test_uc4_approve_finding_reflects_to_notion_and_resolves_conflict(
         project_id, notion_page_id=TARGET_PAGE_ID, title="UC4 Target",
         block_ids=[TARGET_BLOCK_ID],
     )
-    edge_id = seeder.edge(source_document_id=source_doc_id, target_document_id=target_doc_id)
+    edge_id = seeder.edge(
+        project_id=project_id,
+        source_document_id=source_doc_id,
+        target_document_id=target_doc_id,
+    )
     conflict = seeder.conflict(
         edge_id=edge_id,
         findings=[
             {
                 "sourceBlockIds": [SOURCE_BLOCK_ID],
-                "targetBlockIds": [TARGET_BLOCK_ID],
+                "targetBlockId": TARGET_BLOCK_ID,
                 "rationale": "UC4 출시일 불일치",
-                "suggestion": SUGGESTION_TEXT,
+                "newText": SUGGESTION_TEXT,
             }
         ],
     )
@@ -61,6 +65,7 @@ def test_uc4_approve_finding_reflects_to_notion_and_resolves_conflict(
     approve = client.post(
         f"/conflicts/{conflict_id}/findings/{finding_id}/approve",
         headers=auth_headers,
+        json={"expectedTargetNotionLastEditedAt": None},
     )
     assert approve.status_code in (200, 202, 204)
 

@@ -52,20 +52,31 @@ class GraphRule(
     fun appliesTo(sourceType: DocumentType?, targetType: DocumentType?): Boolean =
         this.sourceType == sourceType && this.targetType == targetType
 
+    fun ensureRemovable() {
+        if (isDefault) {
+            throw DefaultGraphRuleCannotBeRemovedException(id)
+        }
+    }
+
     fun toEdge(
         projectId: Long,
         sourceDocumentId: Long,
         targetDocumentId: Long,
         source: DependencyEdgeSource,
         at: OffsetDateTime = OffsetDateTime.now(),
-    ): DependencyEdge = DependencyEdge(
-        projectId = projectId,
-        sourceDocumentId = sourceDocumentId,
-        targetDocumentId = targetDocumentId,
-        ruleId = id.takeIf { it != 0L },
-        validationCriterion = validationCriterion,
-        source = source,
-        createdAt = at,
-        updatedAt = at,
-    )
+    ): DependencyEdge {
+        require(isDefault || this.projectId == projectId) {
+            "custom rule can only create edges in its project"
+        }
+        return DependencyEdge(
+            projectId = projectId,
+            sourceDocumentId = sourceDocumentId,
+            targetDocumentId = targetDocumentId,
+            ruleId = id.takeIf { it != 0L },
+            validationCriterion = validationCriterion,
+            source = source,
+            createdAt = at,
+            updatedAt = at,
+        )
+    }
 }
