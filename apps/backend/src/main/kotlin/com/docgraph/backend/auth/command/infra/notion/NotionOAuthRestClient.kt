@@ -22,6 +22,7 @@ class NotionOAuthRestClient(
         val response = restClient.post()
             .uri(registration.tokenUri)
             .header(HttpHeaders.AUTHORIZATION, basicAuthorization())
+            .header("Notion-Version", NOTION_VERSION)
             .contentType(MediaType.APPLICATION_JSON)
             .body(NotionTokenRequest(code = code, redirectUri = registration.redirectUri))
             .retrieve()
@@ -33,6 +34,10 @@ class NotionOAuthRestClient(
     private fun basicAuthorization(): String {
         val credential = "${registration.clientId}:${registration.clientSecret}"
         return "Basic " + Base64.getEncoder().encodeToString(credential.toByteArray(Charsets.UTF_8))
+    }
+
+    companion object {
+        private const val NOTION_VERSION = "2026-03-11"
     }
 }
 

@@ -1,6 +1,11 @@
 server:
   servlet:
     context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -25,6 +30,7 @@ spring:
             client-secret: ${NOTION_CLIENT_SECRET}
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_basic
             scope: []
         provider:
           notion:
@@ -48,3 +54,7 @@ ai:
     timeout-ms: 30000
     api-key: ${AI_OPENAI_API_KEY}
     model: ${AI_OPENAI_MODEL}
+
+auth:
+  oauth:
+    success-redirect-uri: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI:/api/auth/me}
