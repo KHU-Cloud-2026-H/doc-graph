@@ -1,11 +1,11 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppStore } from "../store";
-import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Settings, Layout, Home, AlertCircle, Bell, CheckCircle, Plus } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Settings, Layout, Home, Plus } from "lucide-react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { InboxPopup } from "./InboxPopup";
+import { inboxNotifications } from "./InboxList";
+import { TopAppBar } from "./TopAppBar";
 
-// TODO(@floating-ui/react): Inbox 오버레이 위치·오프셋은 @floating-ui/react(useFloating 등)로 이전하세요.
-// react-popper는 팀 정책상 사용하지 않으며, 아래 usePopper 호출은 임시 비활성화했습니다.
-// import { usePopper } from "react-popper";
 
 const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) => {
   const location = useLocation();
@@ -84,7 +84,7 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
 };
 
 export const Sidebar = () => {
-  const { documents, projects, workspaces, setCurrentProject, isSidebarOpen } = useAppStore();
+  const { documents, projects, workspaces, setCurrentProject, isSidebarOpen, toggleSidebar } = useAppStore();
   const location = useLocation();
   const navigate = useNavigate();
   const { workspaceId, projectId } = useParams();
@@ -93,75 +93,44 @@ export const Sidebar = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isInboxOpen, setIsInboxOpen] = useState(false);
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // const { styles, attributes } = usePopper(referenceElement, popperElement, {
-  //   placement: 'right-start',
-  //   modifiers: [{ name: 'offset', options: { offset: [0, 8] } }],
-  // });
+  const inboxButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarClosedByRoute = useRef(false);
 
-  const inboxNotifications = [
-    {
-      id: 1,
-      type: "issue",
-      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
-      target: "📄 제품 요구사항 명세서 (PRD)",
-      time: "2시간 전",
-      read: false,
-      docId: 2,
-    },
-    {
-      id: 3,
-      type: "issue",
-      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
-      target: "📄 API 명세서 (User & Auth 도메인)",
-      time: "5시간 전",
-      read: true,
-      docId: 13,
-    },
-    {
-      id: 4,
-      type: "issue",
-      title: '"WorkSync 도입 프로젝트"에 정합성 충돌이 의심되는 문서가 있습니다.',
-      target: "📄 데이터베이스 스키마 설계서 (ERD 물리 모델)",
-      time: "12시간 전",
-      read: true,
-      docId: 15,
-    },
-    {
-      id: 2,
-      type: "invite",
-      title: '"WorkSync 도입 프로젝트" 프로젝트에 초대되었습니다.',
-      target: "엔터프라이즈 근태관리 B2B SaaS 프로젝트",
-      time: "1일 전",
-      read: false,
-    }
-  ];
+  const isFullPageRoute = /\/w\/[^/]+\/(settings|new-project)$/.test(location.pathname);
 
-  const handleNotificationClick = (notif: any) => {
-    if (notif.type === 'issue' && notif.docId && workspaceId && projectId) {
-      navigate(`/w/${workspaceId}/p/${projectId}/docs/${notif.docId}?openIssues=true`);
-      setIsInboxOpen(false);
+  // 페인트 전에 동기적으로 사이드바 상태를 조정 — Layout의 md:ml-[288px] 제거/복원
+  useLayoutEffect(() => {
+    if (isFullPageRoute && isSidebarOpen) {
+      toggleSidebar();
+      sidebarClosedByRoute.current = true;
     }
-  };
+    return () => {
+      if (sidebarClosedByRoute.current) {
+        toggleSidebar();
+        sidebarClosedByRoute.current = false;
+      }
+    };
+  }, [isFullPageRoute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsProjectDropdownOpen(false);
       }
-      if (
-        isInboxOpen &&
-        popperElement && !popperElement.contains(event.target as Node) &&
-        referenceElement && !referenceElement.contains(event.target as Node)
-      ) {
-        setIsInboxOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isInboxOpen, popperElement, referenceElement]);
+  }, []);
 
+  // full-page route: flex flow 밖에 fixed로 TopAppBar 렌더링
+  if (isFullPageRoute) {
+    const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? '워크스페이스';
+    return (
+      <div className="fixed inset-x-0 top-0 z-50">
+        <TopAppBar centerLabel={workspaceName} />
+      </div>
+    );
+  }
 
   if (!isSidebarOpen) return null;
 
@@ -295,7 +264,7 @@ export const Sidebar = () => {
       {/* Footer + Inbox/Settings */}
       <div className="mt-auto border-t border-slate-200 space-y-0.5 mx-2 pt-2 pb-6">
         <button
-          ref={setReferenceElement}
+          ref={inboxButtonRef}
           onClick={() => setIsInboxOpen(!isInboxOpen)}
           className={`flex w-full items-center justify-between px-2 py-1.5 rounded-sm transition-colors ${isInboxOpen ? 'bg-slate-100 text-slate-900' : 'hover:bg-slate-100 text-slate-700'} group`}
         >
@@ -303,50 +272,16 @@ export const Sidebar = () => {
             <Inbox className={`w-4 h-4 ${isInboxOpen ? 'text-slate-700' : 'text-slate-500'}`} />
             <span className="text-[13px] font-medium">Inbox</span>
           </div>
-          <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">{inboxNotifications.filter((n) => !n.read).length}</span>
+          <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">
+            {inboxNotifications.length}
+          </span>
         </button>
-        {isInboxOpen && (
-          <div
-            ref={setPopperElement}
-            className="absolute left-full bottom-0 mb-10 z-[100] w-80 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden flex flex-col"
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-slate-700" />
-                <span className="font-semibold text-sm text-slate-900">Inbox</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>모두 읽음 표시</span>
-              </div>
-            </div>
-            <div className="max-h-[400px] overflow-y-auto">
-              {inboxNotifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${notif.type === 'issue' ? 'cursor-pointer' : 'cursor-default'} ${!notif.read ? "bg-blue-50/30" : ""}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${notif.type === 'issue' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                      {notif.type === 'issue' ? <AlertCircle className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1 gap-2">
-                        <p className={`text-[13px] font-medium leading-snug ${!notif.read ? "text-slate-900" : "text-slate-700"}`}>
-                          {notif.title}
-                        </p>
-                      </div>
-                      <p className="text-[12px] text-slate-500 truncate mb-1">{notif.target}</p>
-                      <span className="text-[11px] text-slate-400 whitespace-nowrap block mt-1">{notif.time}</span>
-                    </div>
-                    {!notif.read && <div className="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-1.5" />}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <InboxPopup
+          isOpen={isInboxOpen}
+          onClose={() => setIsInboxOpen(false)}
+          anchorRef={inboxButtonRef}
+          placement="right"
+        />
         <button className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors text-[13px] font-medium mt-2">
           <Settings className="w-4 h-4 text-slate-500" />
           <span>Workspace Settings</span>
