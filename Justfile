@@ -45,6 +45,10 @@ compose-up mode="mock":
 compose-down:
     {{dotenv-run}} docker compose down
 
+# Backend 직접 호출용 임시 fixture seed (OAuth/frontend 부재 한정) — acceptance profile boot 전제, idempotent (POST /test/reset 선행).
+seed-fixture backend="http://localhost:8080/api":
+    cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run python "{{justfile_directory()}}/scripts/seed-fixture.py" --backend {{backend}}
+
 # 시스템 테스트 — application alive·부팅·env wiring. 로컬 compose 자동 띄움.
 test-system:
     #!/usr/bin/env sh
