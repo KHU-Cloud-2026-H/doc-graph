@@ -1,6 +1,7 @@
 package com.docgraph.backend.validation.command.infra.openai
 
 import com.docgraph.backend.document.query.application.Block
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.fixtures.OpenAiTestFixture
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -53,9 +54,11 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val result = detector.detect(
-            changedBlocks = listOf(block("s1", "변경 본문")),
-            counterpartBlocks = listOf(block("t1", "반대 본문")),
-            criterion = "결정사항 반영 여부",
+            FirstValidationInput(
+                sourceBlocks = listOf(block("s1", "변경 본문")),
+                targetBlocks = listOf(block("t1", "반대 본문")),
+                criterion = "결정사항 반영 여부",
+            ),
         )
 
         assertEquals(1, result.size)
@@ -88,7 +91,7 @@ class OpenAiConflictDetectorContractTest {
                 )
         )
 
-        val result = detector.detect(emptyList(), emptyList(), "c")
+        val result = detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         assertTrue(result.isEmpty())
     }
 
@@ -100,7 +103,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpClientErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(429, ex.statusCode.value())
     }
@@ -113,7 +116,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpServerErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(503, ex.statusCode.value())
     }
@@ -126,7 +129,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpClientErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(401, ex.statusCode.value())
     }
