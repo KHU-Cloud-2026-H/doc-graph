@@ -1,7 +1,8 @@
-import { X, AlertTriangle, FileText, Lightbulb, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { X, AlertTriangle, FileText, Lightbulb, ExternalLink, ShieldCheck } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 
 export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
+  const { workspaceId, projectId } = useParams();
   return (
     <aside className="w-[420px] h-full bg-white border-l border-slate-200 shadow-2xl flex flex-col shrink-0 z-50 font-sans absolute right-0 top-0">
       <div className="border-b border-slate-200 flex items-center justify-between h-14 px-4 shrink-0 bg-white">
@@ -18,6 +19,19 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-5">
+        {/* Section 0: 검증 기준 */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <h4 className="text-sm font-semibold text-slate-900">검증 기준</h4>
+            <ShieldCheck className="w-4 h-4 text-slate-600" />
+          </div>
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <p className="text-sm text-slate-700 leading-relaxed">
+              PG사 선택 기준이 모든 관련 문서에서 일치해야 합니다.
+            </p>
+          </div>
+        </div>
+
         {/* Section 1: AI 충돌 원인 파악 */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
@@ -43,13 +57,13 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
                   <FileText className="w-3.5 h-3.5 text-red-600" />
                   <span className="text-xs font-bold text-red-900">[PRD] v2.0 결제 시스템 요구사항</span>
                 </div>
-                <Link to="/w/sample-workspace/docs/prd" className="text-[10px] font-bold text-red-600 hover:underline flex items-center gap-0.5">
+                <Link to={`/w/${workspaceId}/p/${projectId}/docs/prd`} className="text-[10px] font-bold text-red-600 hover:underline flex items-center gap-0.5">
                   바로가기 <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>
               <div className="bg-white p-3">
                 <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  "PG사 연동 시 기존 인프라와의 호환성을 고려하여 <span className="bg-red-100 text-red-700 font-bold px-1 rounded mx-0.5">KCP</span>를 최우선으로 적용하여 개발을 진행한다."
+                  "PG사 연동 시 기존 인프라와의 호환성을 고려하여 KCP를 최우선으로 적용하여 개발을 진행한다."
                 </p>
               </div>
             </div>
@@ -61,13 +75,13 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
                   <FileText className="w-3.5 h-3.5 text-amber-600" />
                   <span className="text-xs font-bold text-amber-900">[주간회의록] 4월 4주차 백엔드 싱크</span>
                 </div>
-                <Link to="/w/sample-workspace/docs/meet-urgent" className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-0.5">
+                <Link to={`/w/${workspaceId}/p/${projectId}/docs/meet-urgent`} className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-0.5">
                   바로가기 <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>
               <div className="bg-white p-3">
                 <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  "...백엔드 연동 관련하여 수수료 최적화 및 빠른 정산 주기를 확보하기 위해 <span className="bg-amber-100 text-amber-800 font-bold px-1 rounded mx-0.5">Toss Payments</span>를 우선적으로 연동하기로 결정함."
+                  "...백엔드 연동 관련하여 수수료 최적화 및 빠른 정산 주기를 확보하기 위해 Toss Payments를 우선적으로 연동하기로 결정함."
                 </p>
               </div>
             </div>
@@ -85,11 +99,11 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
           <div className="rounded-lg border border-slate-200 overflow-hidden text-xs font-mono shadow-sm">
             <div className="bg-red-50 text-red-800 px-3 py-2.5 flex gap-3 items-start">
               <span className="text-red-400 select-none font-bold mt-0.5">-</span>
-              <span className="leading-relaxed">PG사 연동 시 기존 인프라와의 호환성을 고려하여 <span className="bg-red-200 px-0.5 rounded">KCP</span>를 최우선으로 적용하여 개발을 진행한다.</span>
+              <span className="leading-relaxed">PG사 연동 시 기존 인프라와의 호환성을 고려하여 KCP를 최우선으로 적용하여 개발을 진행한다.</span>
             </div>
             <div className="bg-green-50 text-green-800 px-3 py-2.5 flex gap-3 items-start border-t border-slate-200">
               <span className="text-green-500 select-none font-bold mt-0.5">+</span>
-              <span className="leading-relaxed">PG사 연동 시 수수료 최적화 및 정산 주기를 고려하여 <span className="bg-green-200 px-0.5 rounded">Toss Payments</span>를 최우선으로 적용하여 개발을 진행한다.</span>
+              <span className="leading-relaxed">PG사 연동 시 수수료 최적화 및 정산 주기를 고려하여 Toss Payments를 최우선으로 적용하여 개발을 진행한다.</span>
             </div>
           </div>
         </div>
@@ -102,7 +116,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
           제안 적용하기
         </button>
         <Link 
-          to="/w/sample-workspace/docs/prd"
+          to={`/w/${workspaceId}/p/${projectId}/docs/prd`}
           className="w-full py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-md transition-colors flex items-center justify-center"
         >
           원본 문서 열기
