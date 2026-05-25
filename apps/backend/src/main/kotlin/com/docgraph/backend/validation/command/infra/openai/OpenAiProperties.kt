@@ -8,4 +8,6 @@ data class OpenAiProperties(
     val model: String,
     val baseUrl: String,
     val timeoutMs: Long,
+    val chatCompletionsPath: String = "/v1/chat/completions",
+    val responseFormatEnabled: Boolean = true,
 )
