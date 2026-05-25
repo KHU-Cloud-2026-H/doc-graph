@@ -11,4 +11,8 @@ data class DocumentSummary(
     val title: String,
     @Schema(description = "문서 타입 (project type-mapping 미분류 시 null)")
     val type: DocumentType?,
+    @Schema(description = "부모 Document ID (루트 또는 프로젝트 경계 밖이면 null)", example = "1")
+    val parentDocumentId: Long?,
+    @Schema(description = "Notion page 아이콘 (없으면 null)")
+    val icon: IconResponse?,
 )

@@ -11,4 +11,6 @@ data class EdgeProposalResponse(
     val targetDocumentId: Long,
     @Schema(description = "유사도 점수 (0.0 ~ 1.0)", example = "0.87")
     val similarityScore: Double,
+    @Schema(description = "수락 시 적용될 검증 기준 (룰 기반 자동 매칭)", example = "범위 일치 여부")
+    val validationCriterion: String,
 )

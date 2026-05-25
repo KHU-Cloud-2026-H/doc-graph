@@ -26,16 +26,16 @@ class SearchValidationTasksByProjectQueryHandler(
         }
 
         val taskPage = validationQueryRepository.findValidationTasksByEdgeIds(edgeIds, pageable)
-        val responses = taskPage.content.map { task ->
+        val responses = taskPage.content.map { row ->
             ValidationTaskResponse(
-                id = task.id,
-                edgeId = task.edgeId,
-                status = when (task.status) {
+                id = row.id,
+                edgeId = row.edgeId,
+                status = when (row.status) {
                     OutboxStatus.PENDING -> ValidationStatus.PENDING
                     OutboxStatus.SUCCESS -> ValidationStatus.SUCCESS
                     OutboxStatus.FAILED -> ValidationStatus.FAILED
                 },
-                createdAt = task.createdAt,
+                createdAt = row.createdAt,
             )
         }
 

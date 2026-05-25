@@ -11,13 +11,13 @@ class ValidationTaskTransitionService(
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun recordAttempt(taskId: Long) {
-        val task = repository.findById(taskId).orElseThrow()
+        val task = repository.findById(taskId) ?: error("validation task not found: $taskId")
         task.recordAttempt()
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun markFailed(taskId: Long, reason: String?) {
-        val task = repository.findById(taskId).orElseThrow()
+        val task = repository.findById(taskId) ?: error("validation task not found: $taskId")
         task.markFailed(reason)
     }
 }

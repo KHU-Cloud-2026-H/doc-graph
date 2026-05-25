@@ -5,19 +5,3 @@ services:
     volumes: !override []
     tmpfs:
       - /var/lib/postgresql/data
-
-  backend:
-    environment:
-      SPRING_PROFILES_ACTIVE: acceptance
-
-  wiremock:
-    profiles:
-      - mock
-    image: wiremock/wiremock:3.10.0
-    ports:
-      - "${WIREMOCK_HOST_PORT:?}:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10

@@ -1,2 +1,3 @@
-# Acceptance profile — POST /test/reset endpoint 활성.
-# 향후 acceptance 전용 설정(test fixture endpoint, test user injection 등)을 여기에 추가.
+# Acceptance profile — 인수 절차/테스트를 위한 조건부 기능 활성 슬롯.
+# 활성 빈: TestResetController (DB reset), AcceptanceGetCurrentMemberQueryHandler (인증 우회 헤더).
+# 향후 acceptance 전용 설정·fixture endpoint를 여기에 추가.

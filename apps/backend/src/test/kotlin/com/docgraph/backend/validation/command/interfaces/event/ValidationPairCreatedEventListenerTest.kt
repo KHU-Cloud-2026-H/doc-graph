@@ -4,10 +4,13 @@ import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.graph.command.domain.ValidationPairCreatedEvent
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.validation.command.application.ProcessValidationTaskCommandHandler
+import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskQueuedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import com.ninjasquad.springmockk.MockkBean
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -65,13 +68,19 @@ class ValidationPairCreatedEventListenerTest {
 
     @Autowired lateinit var repository: ValidationTaskRepository
 
+    @Autowired lateinit var em: EntityManager
+
+    @Autowired lateinit var txTemplate: TransactionTemplate
+
     // phase 3 listener가 ValidationTaskQueuedEvent를 async 처리해 race를 만드므로,
     // phase 1 단위 검증에선 처리 단계를 mock으로 봉인.
     @MockkBean lateinit var processHandler: ProcessValidationTaskCommandHandler
 
     @BeforeEach
     fun resetState() {
-        repository.deleteAll()
+        txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM ValidationTask").executeUpdate()
+        }
         probe.latch = CountDownLatch(1)
     }
 
@@ -85,7 +94,7 @@ class ValidationPairCreatedEventListenerTest {
         val ready = probe.latch.await(5, TimeUnit.SECONDS)
         assertTrue(ready, "ValidationTaskQueuedEvent did not fire within 5s — listener가 내부 이벤트를 발행하지 않음")
 
-        val tasks = repository.findAll()
+        val tasks = em.createQuery("SELECT t FROM ValidationTask t", ValidationTask::class.java).resultList
         assertEquals(1, tasks.size, "expected exactly 1 ValidationTask")
         val task = tasks.single()
         assertEquals(pairId, task.validationPairId)
@@ -109,6 +118,7 @@ class ValidationPairCreatedEventListenerTest {
         testPublisher.publish(event)
         Thread.sleep(1500)
 
-        assertEquals(1L, repository.count(), "duplicate publish가 row 1건을 더 만들었음 — idempotency 미적용")
+        val count = em.createQuery("SELECT COUNT(t) FROM ValidationTask t", Long::class.javaObjectType).singleResult
+        assertEquals(1L, count, "duplicate publish가 row 1건을 더 만들었음 — idempotency 미적용")
     }
 }

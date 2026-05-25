@@ -25,7 +25,6 @@ class SecurityConfig {
                     .anyRequest().permitAll()
             }
             .csrf { it.disable() }
-            .oauth2Login { }
 
         return http.build()
     }
