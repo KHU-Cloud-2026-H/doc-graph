@@ -279,7 +279,7 @@ class ValidationCommandControllerTest @Autowired constructor(
             ),
         )
         findEdge.behavior = { id ->
-            if (id == edgeId) EdgeDetail(edgeId, 100L, targetDocumentId, "c") else null
+            if (id == edgeId) EdgeDetail(edgeId, 1L, 100L, targetDocumentId, "c") else null
         }
         findDocument.behavior = { id ->
             if (id == targetDocumentId) {

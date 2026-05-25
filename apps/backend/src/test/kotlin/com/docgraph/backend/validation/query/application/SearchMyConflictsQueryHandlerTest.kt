@@ -101,8 +101,8 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // edge details (source/target mapping)
         every { searchEdgeDetailsByIds.search(listOf(30L, 31L)) } returns listOf(
-            EdgeDetail(id = 30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
-            EdgeDetail(id = 31L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
+            EdgeDetail(id = 30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
+            EdgeDetail(id = 31L, projectId = 1L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
         )
         // source doc refs
         every { searchDocumentReferences.search(match { it.toSet() == setOf(40L, 41L) }) } returns listOf(
@@ -160,7 +160,7 @@ class SearchMyConflictsQueryHandlerTest {
             1L,
         )
         every { searchEdgeDetailsByIds.search(listOf(30L)) } returns listOf(
-            EdgeDetail(30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
+            EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
         )
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),

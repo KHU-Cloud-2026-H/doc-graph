@@ -161,7 +161,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         val sourceDocId = 1000L + edgeId
         val targetDocId = 2000L + edgeId
         findEdge.behavior = { id ->
-            if (id == edgeId) EdgeDetail(edgeId, sourceDocId, targetDocId, "criterion") else null
+            if (id == edgeId) EdgeDetail(edgeId, 1L, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
             when (id) {

@@ -36,6 +36,7 @@ class GraphQueryHandlerTest {
         val result = FindEdgeByIdQueryHandler(edgeRepository).find(100L)
 
         assertEquals(100L, result!!.id)
+        assertEquals(1L, result.projectId)
         assertEquals(10L, result.sourceDocumentId)
         assertEquals(20L, result.targetDocumentId)
         assertEquals("범위 일치 여부", result.validationCriterion)
