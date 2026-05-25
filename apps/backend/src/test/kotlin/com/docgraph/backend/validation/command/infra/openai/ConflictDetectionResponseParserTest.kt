@@ -14,21 +14,22 @@ class ConflictDetectionResponseParserTest {
 
     @Test
     fun `정상 — 1건 반환, snake_case → camelCase 매핑`() {
-        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_id":"b","rationale":"r","new_text":"s"}]}"""
+        val json = """{"conflicts":[{"source_block_ids":["a"],"target_block_id":"b","rationale":"r","new_text":"s","title":"t"}]}"""
         val result = parser.parse(json)
         assertEquals(1, result.size)
         assertEquals(listOf("a"), result[0].sourceBlockIds)
         assertEquals("b", result[0].targetBlockId)
         assertEquals("r", result[0].rationale)
         assertEquals("s", result[0].newText)
+        assertEquals("t", result[0].title)
     }
 
     @Test
     fun `정상 — 여러 건 + 다중 source_block_ids 보존`() {
         val json = """
             {"conflicts":[
-              {"source_block_ids":["a","b"],"target_block_id":"c","rationale":"r1","new_text":"s1"},
-              {"source_block_ids":["d"],"target_block_id":"e","rationale":"r2","new_text":"s2"}
+              {"source_block_ids":["a","b"],"target_block_id":"c","rationale":"r1","new_text":"s1","title":"t1"},
+              {"source_block_ids":["d"],"target_block_id":"e","rationale":"r2","new_text":"s2","title":"t2"}
             ]}
         """.trimIndent()
         val result = parser.parse(json)
@@ -38,6 +39,8 @@ class ConflictDetectionResponseParserTest {
         assertEquals("r2", result[1].rationale)
         assertEquals("s1", result[0].newText)
         assertEquals("s2", result[1].newText)
+        assertEquals("t1", result[0].title)
+        assertEquals("t2", result[1].title)
     }
 
     @Test

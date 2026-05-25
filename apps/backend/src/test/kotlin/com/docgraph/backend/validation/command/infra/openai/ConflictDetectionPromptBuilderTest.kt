@@ -33,6 +33,12 @@ class ConflictDetectionPromptBuilderTest {
     }
 
     @Test
+    fun `system content — title 한 줄 요약 작성 지시`() {
+        val system = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "c")[0].content
+        assertTrue(system.contains("title"), "title 필드 작성 안내")
+    }
+
+    @Test
     fun `system content — target block 단위 + 같은 block 합침 안내`() {
         val system = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "c")[0].content
         assertTrue(system.contains("target") && system.contains("block"), "target block 단위 안내")

@@ -1,0 +1,1 @@
+ALTER TABLE conflict_finding ADD COLUMN title TEXT NOT NULL DEFAULT '';

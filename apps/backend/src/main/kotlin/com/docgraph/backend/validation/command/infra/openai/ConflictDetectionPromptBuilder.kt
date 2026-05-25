@@ -33,6 +33,7 @@ conflicts 각 항목 작성 규칙:
 - new_text: 그 target block을 통째로 교체해 정합성을 회복시킬 새 본문이다. block 전체에 들어갈 최종 텍스트이며, 부분 수정 지시·diff·주석·"~로 변경하세요" 같은 메타 안내가 아니다. 그대로 Notion block 본문이 된다.
 - source_block_ids: 그 target block과의 충돌 근거가 되는 source 측 block id 목록. 한 source block만 근거이면 1개, 여러 source block의 변경이 같은 target block에 영향을 주면 모두 나열한다.
 - rationale: 왜 정합성이 깨졌는지를 target 담당자가 이해할 수 있도록 자연어로 설명한다. source의 어떤 정보가 target에 어떻게 반영되어 있지 않은지를 구체적으로 기술한다.
+- title: 이 충돌 사안을 한 문장으로 요약한 제목이다. rationale보다 짧게, 충돌의 본질을 한눈에 식별할 수 있도록 자연어 한 줄로 작성한다.
 - 같은 target_block_id에 대한 충돌 사안이 여러 측면에서 동시에 발생하더라도 하나의 항목으로 합친다. 즉 target block 1개당 항목은 최대 1건이다.
 """
 
