@@ -8,6 +8,7 @@ import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
+import com.docgraph.backend.validation.command.domain.ConflictDetectionInput
 import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
@@ -46,17 +47,12 @@ class ListenerFakeFindDocumentByIdQuery : FindDocumentByIdQuery {
 }
 
 class FakeConflictDetector : ConflictDetector {
-    @Volatile var behavior: (List<Block>, List<Block>, String) -> List<DetectedConflict> =
-        { _, _, _ -> emptyList() }
+    @Volatile var behavior: (ConflictDetectionInput) -> List<DetectedConflict> = { emptyList() }
     val invocations = AtomicInteger(0)
 
-    override fun detect(
-        changedBlocks: List<Block>,
-        counterpartBlocks: List<Block>,
-        criterion: String,
-    ): List<DetectedConflict> {
+    override fun detect(input: ConflictDetectionInput): List<DetectedConflict> {
         invocations.incrementAndGet()
-        return behavior(changedBlocks, counterpartBlocks, criterion)
+        return behavior(input)
     }
 }
 
@@ -106,7 +102,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
             em.createQuery("DELETE FROM ValidationTask").executeUpdate()
         }
         detector.invocations.set(0)
-        detector.behavior = { _, _, _ -> emptyList() }
+        detector.behavior = { _ -> emptyList() }
     }
 
     @Test
@@ -117,7 +113,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
             sourceBlocks = listOf(Block("s1", null, "paragraph", "source text", 0)),
             targetBlocks = listOf(Block("t1", null, "paragraph", "target text", 0)),
         )
-        detector.behavior = { _, _, _ ->
+        detector.behavior = { _ ->
             listOf(DetectedConflict(listOf("s1"), "t1", "불일치", "수정 제안", "제목"))
         }
 
@@ -137,7 +133,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
             sourceBlocks = listOf(Block("s", null, "paragraph", "s", 0)),
             targetBlocks = listOf(Block("t", null, "paragraph", "t", 0)),
         )
-        detector.behavior = { _, _, _ -> throw RuntimeException("AI failure") }
+        detector.behavior = { _ -> throw RuntimeException("AI failure") }
 
         testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
 
