@@ -1543,7 +1543,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 완료 — 미설정 시 url null */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1551,6 +1551,13 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["WebhookResponse"];
                 };
+            };
+            /** @description 프로젝트 없음 또는 호출자가 Project Admin 아님 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1569,8 +1576,15 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 설정 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
