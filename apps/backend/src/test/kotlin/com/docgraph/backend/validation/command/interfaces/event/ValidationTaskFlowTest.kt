@@ -108,7 +108,7 @@ class ValidationTaskFlowTest {
         val targetDocId = 300L
 
         findEdge.behavior = { id ->
-            if (id == edgeId) EdgeDetail(edgeId, sourceDocId, targetDocId, "criterion") else null
+            if (id == edgeId) EdgeDetail(edgeId, 1L, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
             DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, emptyList())

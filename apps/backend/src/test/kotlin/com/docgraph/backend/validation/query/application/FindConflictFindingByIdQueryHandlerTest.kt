@@ -33,6 +33,7 @@ class FindConflictFindingByIdQueryHandlerTest {
         every { validationQueryRepository.findFindingDetailById(50L) } returns row
         every { findEdgeById.find(70L) } returns EdgeDetail(
             id = 70L,
+            projectId = 1L,
             sourceDocumentId = 100L,
             targetDocumentId = 200L,
             validationCriterion = "c",

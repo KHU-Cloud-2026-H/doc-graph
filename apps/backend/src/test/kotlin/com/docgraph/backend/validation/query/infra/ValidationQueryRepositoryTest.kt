@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Tag("slice")
@@ -128,6 +129,47 @@ class ValidationQueryRepositoryTest @Autowired constructor(
         assertEquals(2, grouped[conflict1.id]?.size)
         assertEquals(1, grouped[conflict2.id]?.size)
         assertEquals("tt3", grouped[conflict2.id]?.single()?.title)
+    }
+
+    @Test
+    fun `findLatestFindingTitleByConflictId — 최신 detectedAt finding의 title`() {
+        val now = OffsetDateTime.now()
+        val conflict = conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        val task = taskRepository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 1L))
+        findingRepository.save(
+            ConflictFinding(
+                conflictId = conflict.id,
+                validationTaskId = task.id,
+                sourceBlockIds = listOf("b1"),
+                targetBlockId = "t1",
+                rationale = "r1",
+                newText = "n1",
+                title = "오래된 충돌",
+                detectedAt = now.minusHours(1),
+            ),
+        )
+        findingRepository.save(
+            ConflictFinding(
+                conflictId = conflict.id,
+                validationTaskId = task.id,
+                sourceBlockIds = listOf("b2"),
+                targetBlockId = "t2",
+                rationale = "r2",
+                newText = "n2",
+                title = "최신 충돌",
+                detectedAt = now,
+            ),
+        )
+
+        assertEquals("최신 충돌", queryRepository.findLatestFindingTitleByConflictId(conflict.id))
+    }
+
+    @Test
+    fun `findLatestFindingTitleByConflictId — finding 없으면 null`() {
+        val now = OffsetDateTime.now()
+        val conflict = conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+
+        assertNull(queryRepository.findLatestFindingTitleByConflictId(conflict.id))
     }
 
     @Test

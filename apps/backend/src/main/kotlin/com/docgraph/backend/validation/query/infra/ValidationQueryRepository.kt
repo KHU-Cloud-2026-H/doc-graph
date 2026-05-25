@@ -123,6 +123,16 @@ class ValidationQueryRepository {
             .fetch()
     }
 
+    fun findLatestFindingTitleByConflictId(conflictId: Long): String? {
+        val f = QConflictFinding.conflictFinding
+        return queryFactory
+            .select(f.title)
+            .from(f)
+            .where(f.conflictId.eq(conflictId))
+            .orderBy(f.detectedAt.desc(), f.id.desc())
+            .fetchFirst()
+    }
+
     fun findFindingDetailById(findingId: Long): ConflictFindingDetailRow? {
         val f = QConflictFinding.conflictFinding
         val c = QConflict.conflict
