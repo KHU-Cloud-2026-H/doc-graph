@@ -5,6 +5,10 @@ import LoginPage from '../features/auth/LoginPage'
 export default function AuthGuard() {
   const { isLoading, isLoggedIn } = useAuth()
 
+  if (import.meta.env.VITE_BYPASS_AUTH === 'true') {
+  return <Outlet />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
