@@ -5,109 +5,10 @@ import com.docgraph.backend.document.query.application.Block
 object ConflictDetectionPromptBuilder {
 
     private const val SYSTEM_PROMPT = """
-You are a senior software architect and consistency verification expert.
-
-Your task is to compare two software project documents and detect all logical, semantic, policy, schema, workflow, naming, authorization, and implementation inconsistencies between them.
-
-You must carefully analyze both documents and identify:
-- conflicting requirements
-- outdated decisions not propagated
-- API/schema mismatches
-- data type inconsistencies
-- naming convention inconsistencies
-- workflow/state conflicts
-- RBAC/security conflicts
-- frontend/backend inconsistencies
-- business rule contradictions
-- validation policy mismatches
-- deprecated features still referenced
-- incompatible assumptions
-- ambiguous terminology conflicts
-
-The comparison must be semantic, not keyword-based.
-Even if the wording differs, detect inconsistencies if the actual meaning conflicts.
-
------------------------------------
-OUTPUT FORMAT RULES
------------------------------------
-
-Return ONLY valid JSON.
-
-The output format must be:
-
-{
-"summary": {
-"total_inconsistencies": <number>,
-"critical_count": <number>,
-"warning_count": <number>
-},
-"inconsistencies": [
-{
-"id": "INC-001",
-"severity": "CRITICAL | WARNING",
-"category": "Policy Conflict | Schema Mismatch | Workflow Conflict | Naming Inconsistency | Security Conflict | Data Type Conflict | Requirement Drift | Deprecated Feature Reference | Other",
-
-"title": "<short inconsistency title>",
-
-"document_1": {
-"reference": "<section or title if identifiable>",
-"text": "<relevant excerpt>"
-},
-
-"document_2": {
-"reference": "<section or title if identifiable>",
-"text": "<relevant excerpt>"
-},
-
-"reason": "<detailed explanation of why they conflict>",
-
-"impact": "<possible runtime, business, security, or implementation impact>",
-
-"fix_suggestion": "<specific recommendation to resolve inconsistency>"
-}
-]
-}
-
------------------------------------
-IMPORTANT RULES
------------------------------------
-
-1. Detect semantic inconsistencies even if terminology differs.
-
-2. Do NOT hallucinate inconsistencies.
-Only report conflicts strongly supported by the documents.
-
-3. If two documents are compatible, do not force a conflict.
-
-4. Prefer precision over recall.
-
-5. Ignore stylistic writing differences unless they create implementation ambiguity.
-
-6. Focus on implementation-level consistency.
-
-7. Treat:
-- meetings
-- PRDs
-- APIs
-- DB schemas
-- QA docs
-- frontend specs
-- architecture docs
-as equally authoritative unless one explicitly overrides another.
-
-8. If one document changes or deprecates a feature but another still references it, classify it as:
-"Requirement Drift" or "Deprecated Feature Reference".
-
-9. If no inconsistency exists, return:
-
-{
-"summary": {
-"total_inconsistencies": 0,
-"critical_count": 0,
-"warning_count": 0
-},
-"inconsistencies": []
-}
+너는 두 문서 사이의 정합성 충돌을 검출하는 어시스턴트다.
+입력으로 (1) source 측 변경 블록, (2) target 측 문서 전체 블록, (3) 검증 기준이 주어진다.
+각 블록은 "[block_id: <id>] <text>" 형식으로 라벨링되어 있다. 결과는 반드시 제공된 JSON 스키마에 strict하게 맞춰 응답한다.
+충돌이 없으면 conflicts는 빈 배열로 응답한다.
 """
 
     fun build(
@@ -124,13 +25,11 @@ as equally authoritative unless one explicitly overrides another.
         counterpartBlocks: List<Block>,
         criterion: String,
     ): String = buildString {
-        append("-----------------------------------\n")
-        append("DOCUMENT 1\n")
-        append("-----------------------------------\n\n")
+        append("## 검증 기준\n")
+        append(criterion)
+        append("\n\n## 변경된 블록 (source 측)\n")
         append(serialize(changedBlocks))
-        append("\n\n-----------------------------------\n")
-        append("DOCUMENT 2\n")
-        append("-----------------------------------\n\n")
+        append("\n\n## 반대편 문서 블록 (target 측)\n")
         append(serialize(counterpartBlocks))
     }
 

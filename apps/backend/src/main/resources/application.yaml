@@ -42,8 +42,6 @@ management:
 ai:
   openai:
     base-url: ${AI_OPENAI_BASE_URL}
-    chat-completions-path: ${AI_OPENAI_CHAT_COMPLETIONS_PATH:/v1/gateway/chat/completions/}
-    response-format-enabled: ${AI_OPENAI_RESPONSE_FORMAT_ENABLED:true}
     timeout-ms: 30000
     api-key: ${AI_OPENAI_API_KEY}
     model: ${AI_OPENAI_MODEL}

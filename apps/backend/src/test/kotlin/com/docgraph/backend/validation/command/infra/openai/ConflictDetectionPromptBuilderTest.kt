@@ -41,10 +41,9 @@ class ConflictDetectionPromptBuilderTest {
     }
 
     @Test
-    fun `user content — DOCUMENT 1 and DOCUMENT 2 sections`() {
-        val user = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "c")[1].content
-        assertTrue(user.contains("-----------------------------------\nDOCUMENT 1\n-----------------------------------"))
-        assertTrue(user.contains("-----------------------------------\nDOCUMENT 2\n-----------------------------------"))
+    fun `user content — criterion 포함`() {
+        val user = ConflictDetectionPromptBuilder.build(emptyList(), emptyList(), "결정사항 반영 여부")[1].content
+        assertTrue(user.contains("결정사항 반영 여부"))
     }
 
     @Test

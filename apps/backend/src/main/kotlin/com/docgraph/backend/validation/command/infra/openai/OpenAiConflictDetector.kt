@@ -23,14 +23,10 @@ class OpenAiConflictDetector(
         val request = OpenAiChatCompletionRequest(
             model = props.model,
             messages = ConflictDetectionPromptBuilder.build(changedBlocks, counterpartBlocks, criterion),
-            responseFormat = if (props.responseFormatEnabled) {
-                ConflictDetectionResponseSchema.responseFormat()
-            } else {
-                null
-            },
+            responseFormat = ConflictDetectionResponseSchema.responseFormat(),
         )
         val response = restClient.post()
-            .uri(props.chatCompletionsPath)
+            .uri("/v1/chat/completions")
             .contentType(MediaType.APPLICATION_JSON)
             .body(request)
             .retrieve()
