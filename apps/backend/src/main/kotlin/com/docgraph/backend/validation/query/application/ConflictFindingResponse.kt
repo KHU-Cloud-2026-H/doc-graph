@@ -14,6 +14,8 @@ data class ConflictFindingResponse(
     val rationale: String,
     @Schema(description = "target 블록을 교체할 새 텍스트 (replace patch)", example = "requirements 3.2절을 'A 옵션 선택'으로 변경")
     val newText: String,
+    @Schema(description = "충돌 사안 한 줄 요약 제목", example = "결정사항 미반영")
+    val title: String,
     @Schema(description = "감지 시각")
     val detectedAt: OffsetDateTime,
 )

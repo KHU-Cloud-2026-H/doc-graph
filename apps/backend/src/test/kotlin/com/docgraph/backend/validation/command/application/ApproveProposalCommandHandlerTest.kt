@@ -137,6 +137,7 @@ class ApproveProposalCommandHandlerTest {
         targetBlockId = "t",
         rationale = "r",
         newText = "sug",
+        title = "tt",
         detectedAt = OffsetDateTime.now(),
     )
 

@@ -48,7 +48,7 @@ class OpenAiConflictDetectorContractTest {
                     aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(chatResponseBody("""{"conflicts":[{"source_block_ids":["s1"],"target_block_id":"t1","rationale":"reason","new_text":"fix"}]}"""))
+                        .withBody(chatResponseBody("""{"conflicts":[{"source_block_ids":["s1"],"target_block_id":"t1","rationale":"reason","new_text":"fix","title":"제목"}]}"""))
                 )
         )
 
@@ -63,6 +63,7 @@ class OpenAiConflictDetectorContractTest {
         assertEquals("t1", result[0].targetBlockId)
         assertEquals("reason", result[0].rationale)
         assertEquals("fix", result[0].newText)
+        assertEquals("제목", result[0].title)
 
         wireMock.verify(
             postRequestedFor(urlEqualTo("/v1/chat/completions"))

@@ -1304,6 +1304,11 @@ export interface components {
              */
             newText?: string;
             /**
+             * @description 충돌 사안 한 줄 요약 제목
+             * @example 결정사항 미반영
+             */
+            title?: string;
+            /**
              * Format: date-time
              * @description 감지 시각
              */
@@ -1409,6 +1414,7 @@ export interface components {
             projectName?: string;
             sourceDocument?: components["schemas"]["InboxDocumentRef"];
             targetDocument?: components["schemas"]["InboxDocumentRef"];
+            title?: string;
             /** @enum {string} */
             status?: "ACTIVE" | "IGNORED";
             /** Format: date-time */

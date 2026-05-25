@@ -35,6 +35,9 @@ class ConflictFinding(
     @Column(name = "new_text", nullable = false, columnDefinition = "text")
     val newText: String,
 
+    @Column(name = "title", nullable = false, columnDefinition = "text")
+    val title: String,
+
     @Column(name = "detected_at", nullable = false, updatable = false)
     val detectedAt: OffsetDateTime,
 

@@ -17,6 +17,7 @@ class ConflictDetectionResponseParser(private val mapper: ObjectMapper) {
                 targetBlockId = it.targetBlockId,
                 rationale = it.rationale,
                 newText = it.newText,
+                title = it.title,
             )
         }
     }
@@ -28,5 +29,6 @@ class ConflictDetectionResponseParser(private val mapper: ObjectMapper) {
         @JsonProperty("target_block_id") val targetBlockId: String,
         val rationale: String,
         @JsonProperty("new_text") val newText: String,
+        val title: String,
     )
 }

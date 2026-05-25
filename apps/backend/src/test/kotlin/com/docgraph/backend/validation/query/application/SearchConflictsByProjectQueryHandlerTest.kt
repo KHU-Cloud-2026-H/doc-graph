@@ -62,12 +62,12 @@ class SearchConflictsByProjectQueryHandlerTest {
         val finding1 = ConflictFindingRow(
             id = 11L, conflictId = 1L,
             sourceBlockIds = listOf("a"), targetBlockId = "b",
-            rationale = "rationale1", newText = "suggestion1", detectedAt = now,
+            rationale = "rationale1", newText = "suggestion1", title = "ttl1", detectedAt = now,
         )
         val finding2 = ConflictFindingRow(
             id = 12L, conflictId = 1L,
             sourceBlockIds = listOf("c"), targetBlockId = "d",
-            rationale = "rationale2", newText = "suggestion2", detectedAt = now,
+            rationale = "rationale2", newText = "suggestion2", title = "ttl2", detectedAt = now,
         )
 
         every { searchEdgeDetailsByProject.search(1L) } returns listOf(edgeDetail)
@@ -83,6 +83,8 @@ class SearchConflictsByProjectQueryHandlerTest {
         assertEquals("rationale2", result.content[0].findings[1].rationale)
         assertEquals("suggestion1", result.content[0].findings[0].newText)
         assertEquals("suggestion2", result.content[0].findings[1].newText)
+        assertEquals("ttl1", result.content[0].findings[0].title)
+        assertEquals("ttl2", result.content[0].findings[1].title)
     }
 
     @Test

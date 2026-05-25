@@ -114,6 +114,7 @@ class ValidationQueryRepository {
                     f.targetBlockId,
                     f.rationale,
                     f.newText,
+                    f.title,
                     f.detectedAt,
                 ),
             )

@@ -114,6 +114,10 @@ class SearchMyConflictsQueryHandlerTest {
             ProjectRef(1L, "P1"),
             ProjectRef(2L, "P2"),
         )
+        every { validationQueryRepository.findFindingsByConflictIds(match { it.toSet() == setOf(500L, 501L) }) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "T500", now),
+            ConflictFindingRow(2L, 501L, listOf("x"), "y", "r", "n", "T501", now),
+        )
 
         val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
 
@@ -126,11 +130,13 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS), row1.targetDocument)
         assertEquals(MyConflictStatus.ACTIVE, row1.status)
         assertEquals(now, row1.firstDetectedAt)
+        assertEquals("T500", row1.title)
 
         val row2 = result.content.first { it.id == 501L }
         assertEquals(2L, row2.projectId)
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
+        assertEquals("T501", row2.title)
     }
 
     @Test
@@ -160,6 +166,9 @@ class SearchMyConflictsQueryHandlerTest {
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
         every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, "P"))
+        every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "TI", now),
+        )
 
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 

@@ -93,6 +93,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b2",
                 rationale = "first",
                 newText = "sug1",
+                title = "tt1",
                 detectedAt = now,
             ),
         )
@@ -104,6 +105,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b4",
                 rationale = "second",
                 newText = "sug2",
+                title = "tt2",
                 detectedAt = now,
             ),
         )
@@ -115,6 +117,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b6",
                 rationale = "third",
                 newText = "sug3",
+                title = "tt3",
                 detectedAt = now,
             ),
         )
@@ -124,6 +127,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
 
         assertEquals(2, grouped[conflict1.id]?.size)
         assertEquals(1, grouped[conflict2.id]?.size)
+        assertEquals("tt3", grouped[conflict2.id]?.single()?.title)
     }
 
     @Test

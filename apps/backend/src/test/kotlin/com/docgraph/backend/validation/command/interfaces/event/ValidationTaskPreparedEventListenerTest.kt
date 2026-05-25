@@ -118,7 +118,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
             targetBlocks = listOf(Block("t1", null, "paragraph", "target text", 0)),
         )
         detector.behavior = { _, _, _ ->
-            listOf(DetectedConflict(listOf("s1"), "t1", "불일치", "수정 제안"))
+            listOf(DetectedConflict(listOf("s1"), "t1", "불일치", "수정 제안", "제목"))
         }
 
         testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))

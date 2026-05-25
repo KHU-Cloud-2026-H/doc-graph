@@ -274,6 +274,7 @@ class ValidationCommandControllerTest @Autowired constructor(
                 targetBlockId = "t",
                 rationale = "r",
                 newText = "sug",
+                title = "tt",
                 detectedAt = OffsetDateTime.now(),
             ),
         )
