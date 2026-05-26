@@ -889,6 +889,18 @@ export interface components {
              */
             lastNotionChangedAt?: string | null;
         };
+        IconResponse: {
+            /**
+             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
+             * @enum {string}
+             */
+            type?: "EMOJI" | "EXTERNAL" | "FILE";
+            /**
+             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
+             * @example 📄
+             */
+            value?: string;
+        };
         ProjectSummary: {
             /**
              * Format: int64
@@ -924,18 +936,9 @@ export interface components {
              * @description 프로젝트 내 문서의 Notion 측 최근 변경 시각
              */
             lastNotionChangedAt?: string | null;
-        };
-        IconResponse: {
-            /**
-             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
-             * @enum {string}
-             */
-            type?: "EMOJI" | "EXTERNAL" | "FILE";
-            /**
-             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
-             * @example 📄
-             */
-            value?: string;
+            /** @description 루트 Notion 페이지 제목 (미동기화 시 null) */
+            rootPageTitle?: string | null;
+            rootPageIcon?: components["schemas"]["IconResponse"] | null;
         };
         NotionPageRef: {
             /**

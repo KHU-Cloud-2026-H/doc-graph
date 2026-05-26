@@ -1,6 +1,7 @@
 package com.docgraph.backend.document.command.domain
 
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -37,6 +38,13 @@ class Document(
     @Enumerated(EnumType.STRING)
     @Column(length = 40)
     var type: DocumentType? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "icon_type", length = 20)
+    var iconType: IconType? = null,
+
+    @Column(name = "icon_value", columnDefinition = "text")
+    var iconValue: String? = null,
 
     @Column(name = "assignee_member_id")
     var assigneeMemberId: Long? = null,

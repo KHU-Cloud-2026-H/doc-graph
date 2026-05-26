@@ -1,5 +1,6 @@
 package com.docgraph.backend.project.query.application
 
+import com.docgraph.backend.document.query.application.IconResponse
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.OffsetDateTime
 
@@ -16,4 +17,8 @@ data class ProjectSummary(
     val unresolvedConflictCount: Long,
     @Schema(description = "프로젝트 내 문서의 Notion 측 최근 변경 시각", nullable = true)
     val lastNotionChangedAt: OffsetDateTime?,
+    @Schema(description = "루트 Notion 페이지 제목 (미동기화 시 null)", nullable = true)
+    val rootPageTitle: String?,
+    @Schema(description = "루트 Notion 페이지 아이콘 (없거나 미동기화 시 null)")
+    val rootPageIcon: IconResponse?,
 )
