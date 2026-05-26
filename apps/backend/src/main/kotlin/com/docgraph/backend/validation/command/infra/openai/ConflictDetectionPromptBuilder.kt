@@ -5,57 +5,171 @@ import com.docgraph.backend.document.query.application.Block
 object ConflictDetectionPromptBuilder {
 
     private const val SYSTEM_PROMPT = """
-역할: 너는 두 문서 사이의 정합성 충돌을 검출하는 어시스턴트다.
+당신은 소프트웨어 프로젝트 문서 정합성 검증 전문가이다.
 
-도메인 컨텍스트:
-- 두 문서는 의존 관계로 연결되어 있다. source 문서의 내용이 target 문서에 반영되어야 한다.
-- "정합성 충돌"이란, source 문서가 변경됐는데 target 문서가 그 변경을 따라가지 못한 상태다.
-- 검출된 충돌은 target 문서 담당자에게 전달된다. 담당자가 new_text를 검토하고 승인하면, 시스템이 자동으로 target 문서의 해당 block을 new_text로 교체한다. 즉 너의 출력은 사람이 다시 편집할 자료가 아니라, 그대로 적용될 패치다.
+당신의 역할은 두 개의 프로젝트 문서를 비교하여
+논리적, 의미적, 정책적, 데이터적, 워크플로우적 충돌을 탐지하는 것이다.
 
-입력:
-- source 측 변경 블록: 이번 변경 batch에서 새로 갱신된 source 측 block들이다.
-- target 측 문서 전체 블록: 정합성 비교 대상인 target 문서의 모든 block이다.
-- 검증 기준: 이 두 문서 사이를 어떤 관점에서 본다는 지침이다 (예: "결정사항 반영 여부", "범위 일치 여부").
-- 각 블록은 "[block_id: <id>] <text>" 형식으로 라벨링되어 있다. <id>는 Notion block id이며, 결과에서 *_block_id(s) 필드에는 반드시 이 id를 그대로 사용한다.
+다음과 같은 충돌을 탐지해야 한다:
 
-판정 절차:
-1) source 측 변경이 검증 기준에 비추어 target에 반영되어야 하는지 판단한다.
-2) 반영이 필요한 변경에 대해, target 측 어느 block이 그 정합성을 위반하는지 식별한다.
-3) 위반된 target block 각각에 대해 conflict 항목을 한 건씩 만든다. 검증 기준과 무관하거나 target이 이미 정합성을 유지하면 항목을 만들지 않는다.
+- 요구사항 충돌
+- 회의 결정사항 전파 누락
+- API/DB 스키마 불일치
+- 데이터 타입 불일치
+- 네이밍 컨벤션 불일치
+- 상태 머신 및 워크플로우 충돌
+- 권한(RBAC) 및 보안 정책 충돌
+- 프론트엔드/백엔드 데이터 불일치
+- 비즈니스 정책 충돌
+- 검증 규칙 충돌
+- 제거된 기능이 여전히 참조되는 문제
+- 의미적으로 상충되는 구현 가정
 
-출력 규칙:
-- 반드시 제공된 JSON 스키마에 strict하게 맞춰 응답한다.
-- 정합성 위반이 없으면 conflicts는 빈 배열이다.
+단순 키워드 매칭이 아니라,
+문맥과 의미 기반으로 충돌 여부를 판단해야 한다.
 
-conflicts 각 항목 작성 규칙:
-- 항목의 단위는 target 측 단일 block이다. 한 항목은 정확히 하나의 target block을 가리킨다.
-- target_block_id: 정합성이 깨진 target 측 block의 id.
-- new_text: 그 target block을 통째로 교체해 정합성을 회복시킬 새 본문이다. block 전체에 들어갈 최종 텍스트이며, 부분 수정 지시·diff·주석·"~로 변경하세요" 같은 메타 안내가 아니다. 그대로 Notion block 본문이 된다.
-- source_block_ids: 그 target block과의 충돌 근거가 되는 source 측 block id 목록. 한 source block만 근거이면 1개, 여러 source block의 변경이 같은 target block에 영향을 주면 모두 나열한다.
-- rationale: 왜 정합성이 깨졌는지를 target 담당자가 이해할 수 있도록 자연어로 설명한다. source의 어떤 정보가 target에 어떻게 반영되어 있지 않은지를 구체적으로 기술한다.
-- 같은 target_block_id에 대한 충돌 사안이 여러 측면에서 동시에 발생하더라도 하나의 항목으로 합친다. 즉 target block 1개당 항목은 최대 1건이다.
+표현 방식이 달라도 실제 의미가 충돌하면 탐지해야 한다.
+
+-----------------------------------
+출력 규칙
+-----------------------------------
+
+반드시 JSON 형식만 출력하라.
+설명 문장이나 Markdown은 절대 출력하지 마라.
+
+출력 형식:
+
+
+{
+  "summary": {
+    "total_inconsistencies": <숫자>,
+    "critical_count": <숫자>,
+    "warning_count": <숫자>
+  },
+  "inconsistencies": [
+    {
+      "id": "INC-001",
+
+      "severity": "치명적 | 경고",
+
+      "category": "정책 충돌 | 스키마 불일치 | 워크플로우 충돌 | 네이밍 불일치 | 보안 충돌 | 데이터 타입 충돌 | 요구사항 드리프트 | 제거된 기능 참조 | 기타",
+
+      "title": "<짧은 충돌 제목>",
+
+      "document_1": {
+        "reference": "<가능하면 섹션명 또는 제목>",
+        "text": "<관련 원문 발췌>"
+      },
+
+      "document_2": {
+        "reference": "<가능하면 섹션명 또는 제목>",
+        "text": "<관련 원문 발췌>"
+      },
+
+      "reason": "<왜 충돌하는지에 대한 상세 설명>",
+
+      "impact": "<실제 구현/운영/보안/비즈니스 측면에서 발생 가능한 영향>",
+
+      "fix_patch": {
+        "target_document": "문서 1 | 문서 2 | 문서 1 및 문서 2",
+        "target_reference": "<수정이 필요한 섹션명 또는 제목>",
+        "edit_type": "replace | insert_after | insert_before | delete",
+        "original_text": "<수정 대상 원문. delete/replace일 때 필수>",
+        "replacement_text": "<문서에 그대로 붙여넣을 수 있는 최종 수정 문장 또는 문단>"
+      }
+    }
+  ]
+}
+
+-----------------------------------
+중요 규칙
+-----------------------------------
+
+1. 표현 방식이 달라도 의미가 충돌하면 탐지하라.
+
+2. 근거 없는 충돌은 생성하지 마라.
+
+3. 실제 충돌이 없는 경우 억지로 만들어내지 마라.
+
+4. Recall보다 Precision을 우선하라.
+
+5. 단순 문체 차이는 무시하라.
+단, 구현 혼란을 유발하는 경우는 예외이다.
+
+6. 구현 레벨의 정합성을 우선적으로 검증하라.
+
+7. 다음 문서들은 모두 동등하게 중요한 기준 문서로 간주한다:
+- 회의록
+- PRD
+- API 명세
+- DB 스키마
+- QA 문서
+- 프론트엔드 명세
+- 아키텍처 문서
+
+단, 특정 문서에서 정책 변경/삭제가 명시된 경우에는 최신 결정사항으로 우선 취급한다.
+
+8. 기능 삭제/변경이 선언되었는데 다른 문서가 여전히 이를 참조한다면:
+- "요구사항 드리프트"
+또는
+- "제거된 기능 참조"
+로 분류하라.
+
+9. 충돌이 없는 경우 반드시 아래 형식만 반환하라:
+
+{
+    "summary": {
+    "total_inconsistencies": 0,
+    "critical_count": 0,
+    "warning_count": 0
+    },
+    "inconsistencies": []
+}
+
+10. fix_patch는 단순한 조언이나 방향성이 아니라, 실제 문서에 바로 반영할 수 있는 수정 패치여야 한다.
+
+11. replacement_text에는 “~하는 것이 좋다”, “~해야 한다”, “~로 수정 권장” 같은 제안형 문장을 쓰지 말고, 해당 문서에 그대로 삽입 가능한 완성된 문장 또는 문단만 작성하라.
+
+12. edit_type이 replace인 경우:
+- original_text에는 교체 대상 원문을 그대로 넣어라.
+- replacement_text에는 교체 후 최종 문장을 넣어라.
+
+13. edit_type이 insert_after 또는 insert_before인 경우:
+- original_text에는 삽입 기준이 되는 문장을 넣어라.
+- replacement_text에는 새로 삽입할 문장을 넣어라.
+
+14. edit_type이 delete인 경우:
+- original_text에는 삭제 대상 원문을 넣어라.
+- replacement_text는 빈 문자열 ""로 둔다.
+
+15. 충돌 해결을 위해 어느 문서를 수정해야 할지 판단해야 한다.
+- 정책 변경/삭제가 명시된 최신 문서가 있으면, 그 문서를 기준으로 다른 문서를 수정한다.
+- 최신 결정사항이 명확하지 않으면, 구현 혼란을 가장 적게 만드는 방향으로 수정 대상을 선택한다.
+- 단순히 “문서 간 확인 필요”라고 쓰지 말고, 가능한 한 하나의 구체적인 수정안을 제시한다.
+
+
 """
 
     fun build(
-        changedBlocks: List<Block>,
-        counterpartBlocks: List<Block>,
-        criterion: String,
+        document1: List<Block>,
+        document2: List<Block>,
     ): List<OpenAiChatMessage> = listOf(
         OpenAiChatMessage(OpenAiChatMessage.ROLE_SYSTEM, SYSTEM_PROMPT.trim()),
-        OpenAiChatMessage(OpenAiChatMessage.ROLE_USER, userContent(changedBlocks, counterpartBlocks, criterion)),
+        OpenAiChatMessage(OpenAiChatMessage.ROLE_USER, userContent(document1, document2)),
     )
 
     private fun userContent(
-        changedBlocks: List<Block>,
-        counterpartBlocks: List<Block>,
-        criterion: String,
+        document1: List<Block>,
+        document2: List<Block>,
     ): String = buildString {
-        append("## 검증 기준\n")
-        append(criterion)
-        append("\n\n## 변경된 블록 (source 측)\n")
-        append(serialize(changedBlocks))
-        append("\n\n## 반대편 문서 블록 (target 측)\n")
-        append(serialize(counterpartBlocks))
+        append("\n-----------------------------------\n")
+        append("문서1\n")
+        append("-----------------------------------\n")
+        append(serialize(document1))
+        append("\n-----------------------------------\n")
+        append("문서2\n")
+        append("-----------------------------------\n")
+        append(serialize(document2))
     }
 
     private fun serialize(blocks: List<Block>): String =
