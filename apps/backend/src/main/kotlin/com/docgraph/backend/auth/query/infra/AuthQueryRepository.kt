@@ -52,6 +52,7 @@ class AuthQueryRepository {
                     user.id,
                     user.email,
                     user.name,
+                    user.avatarUrl,
                 ),
             )
             .from(user)

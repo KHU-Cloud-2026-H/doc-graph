@@ -62,6 +62,7 @@ class DocumentQueryRepository {
             icon = null,
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
+            flatText = document.flatText,
             blocks = blocks,
         )
     }

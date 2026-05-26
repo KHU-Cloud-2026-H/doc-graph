@@ -32,7 +32,7 @@ services:
     build:
       context: ./apps/backend
     environment:
-      SPRING_PROFILES_ACTIVE: acceptance
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-acceptance}
       DB_URL: jdbc:postgresql://postgres:5432/docgraph
       DB_USERNAME: ${DB_USERNAME:?}
       DB_PASSWORD: ${DB_PASSWORD:?}
@@ -41,8 +41,11 @@ services:
       AI_OPENAI_MODEL: ${AI_OPENAI_MODEL:?}
       NOTION_AUTHORIZATION_URI: ${NOTION_AUTHORIZATION_URI:?}
       NOTION_TOKEN_URI: ${NOTION_TOKEN_URI:?}
+      NOTION_API_BASE_URL: ${NOTION_API_BASE_URL:?}
+      NOTION_API_KEY: ${NOTION_API_KEY:-}
       NOTION_CLIENT_ID: ${NOTION_CLIENT_ID:?}
       NOTION_CLIENT_SECRET: ${NOTION_CLIENT_SECRET:?}
+      AUTH_OAUTH_SUCCESS_REDIRECT_URI: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI:-/api/auth/me}
     ports:
       - "${BACKEND_HOST_PORT:?}:8080"
     depends_on:

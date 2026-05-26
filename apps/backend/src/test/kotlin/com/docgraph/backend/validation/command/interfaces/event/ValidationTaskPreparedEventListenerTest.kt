@@ -165,8 +165,8 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         }
         findDocument.behavior = { id ->
             when (id) {
-                sourceDocId -> DocumentDetail(id, "p-$id", "src", DocumentType.MEETING_NOTES, null, null, null, null, sourceBlocks)
-                targetDocId -> DocumentDetail(id, "p-$id", "tgt", DocumentType.REQUIREMENTS, null, null, null, null, targetBlocks)
+                sourceDocId -> DocumentDetail(id, "p-$id", "src", DocumentType.MEETING_NOTES, null, null, null, null, null, sourceBlocks)
+                targetDocId -> DocumentDetail(id, "p-$id", "tgt", DocumentType.REQUIREMENTS, null, null, null, null, null, targetBlocks)
                 else -> null
             }
         }
