@@ -20,7 +20,7 @@ services:
     image: ngrok/ngrok:latest
     command: http --domain=${NGROK_STATIC_DOMAIN} host.docker.internal:8080
     environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?}
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
     ports:
       - "${NGROK_HOST_PORT:?}:4040"
     extra_hosts:
