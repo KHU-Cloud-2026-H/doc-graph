@@ -1,33 +1,37 @@
 package com.docgraph.backend.acceptance
 
+import com.docgraph.backend.auth.command.application.AuthSessionProperties
+import com.docgraph.backend.auth.command.domain.SessionTokenService
 import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
+import com.docgraph.backend.auth.query.infra.AuthQueryRepository
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 /**
- * acceptance profile 한정 [GetCurrentUserIdQuery] override — OAuth2/auth 영속 미구현 동안의 우회.
+ * acceptance profile 한정 [GetCurrentUserIdQuery] — 운영 세션 쿠키 인증을 acceptance에서 재현.
  *
- * `X-Test-User-Id` 헤더의 Long 값을 그대로 반환. 헤더 누락·parse 실패는 fixture 작성 오류로 간주하여 throw.
+ * `GET /test/login`이 심은 세션 쿠키([AuthSessionProperties.cookieName])를 운영과 동일하게 해시 →
+ * [AuthQueryRepository.findActiveSessionUserIdByTokenHash]로 user id 매핑. 쿠키 부재·만료·revoke 세션은
+ * 미인증으로 throw (`/auth/me`가 401 변환).
  *
- * 교체 조건: auth User entity 영속화 + OAuth2 통합 완성 시 본 빈 제거 → `POST /test/users` row endpoint
- * + SecurityContext 주입 filter 조합으로 전환. 그래야 운영 매핑 코드가 acceptance에서도 동일하게
- * 검증된다 (docs/testing.md: "같은 코드가 양쪽에서 동작").
+ * 운영 `GetCurrentUserIdQueryHandler`·`CookieCurrentSessionTokenProvider`는 `@Profile("!acceptance")`
+ * (팀원 auth 도메인). 본 빈은 동일 published 컴포넌트(repository·tokenService)를 재사용하되 쿠키 읽기만
+ * 인라인 — provider가 acceptance에서 비활성이므로.
  */
 @Component
 @Profile("acceptance")
 class AcceptanceGetCurrentUserIdQueryHandler(
     private val request: HttpServletRequest,
+    private val sessionProperties: AuthSessionProperties,
+    private val sessionTokenService: SessionTokenService,
+    private val authQueryRepository: AuthQueryRepository,
 ) : GetCurrentUserIdQuery {
 
     override fun get(): Long {
-        val header = request.getHeader(HEADER_NAME)
-            ?: throw IllegalStateException("acceptance 환경: $HEADER_NAME 헤더 누락")
-        return header.toLongOrNull()
-            ?: throw IllegalStateException("acceptance 환경: $HEADER_NAME 헤더 값이 Long 아님 ($header)")
-    }
-
-    companion object {
-        const val HEADER_NAME = "X-Test-User-Id"
+        val rawToken = request.cookies?.firstOrNull { it.name == sessionProperties.cookieName }?.value
+            ?: throw IllegalStateException("acceptance 환경: 세션 쿠키(${sessionProperties.cookieName}) 누락")
+        return authQueryRepository.findActiveSessionUserIdByTokenHash(sessionTokenService.hash(rawToken))
+            ?: throw IllegalStateException("acceptance 환경: 활성 세션 없음 (쿠키는 있으나 매칭 세션 부재·만료·revoke)")
     }
 }

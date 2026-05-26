@@ -1,4 +1,4 @@
-"""인수 테스트 conftest — 조건부 wiremock·DB reset·auth headers·fixture seed helper.
+"""인수 테스트 conftest — 조건부 wiremock·DB reset·세션 쿠키 로그인·fixture seed helper.
 
 local-mock 모드: WireMockHelper가 실제 stub·reset 수행.
 local-live·remote-live 모드: NoopWireMock — stub·reset이 no-op이고 실제
@@ -56,9 +56,31 @@ def _isolate(client, wiremock):
     yield
 
 
+def _login(client, key: str) -> dict:
+    """acceptance 세션 쿠키 로그인 — 운영 인증 경로(세션 쿠키) 재현. `Cookie` 헤더 dict 반환.
+
+    `GET /test/login`은 302 + Set-Cookie. 토큰만 추출해 client jar를 비우고(요청별 명시 전달), 인증은
+    `headers={"Cookie": ...}`로 싣는다 (httpx per-request `cookies=`는 deprecated).
+    """
+    response = client.get("/test/login", params={"key": key})
+    assert response.status_code in (200, 302), f"login 실패 ({key}): {response.status_code}"
+    token = response.cookies["DG_SESSION"]
+    client.cookies.clear()
+    return {"Cookie": f"DG_SESSION={token}"}
+
+
 @pytest.fixture
-def auth_headers():
-    return {"X-Test-User-Id": "1"}
+def login(client, _isolate):
+    """key별 세션 쿠키 로그인 (reset 후 실행 보장). 같은 key=같은 user, 다른 key=다른 user."""
+    def _do(key: str = "default") -> dict:
+        return _login(client, key)
+
+    return _do
+
+
+@pytest.fixture
+def auth_headers(login):
+    return login("default")
 
 
 class Seeder:

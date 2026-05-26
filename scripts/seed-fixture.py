@@ -7,8 +7,9 @@ backend는 acceptance profile로 띄워져 있어야 한다 (`just bootRun accep
 SPRING_PROFILES_ACTIVE=acceptance). re-seed 시 `POST /test/reset`으로 비-Flyway
 테이블 비운 후 재박음 (idempotent).
 
-인증: 모든 호출에 `X-Test-User-Id: 1` 헤더 사용 (`AcceptanceGetCurrentUserIdQueryHandler`가
-헤더 값을 그대로 user id로 변환).
+인증: 운영과 동일한 세션 쿠키. `POST /test/reset` 후 `GET /test/login`으로 정규 acceptance 유저
+세션을 발급받아 httpx 쿠키 jar에 보관 — 이후 호출에 자동 첨부. 브라우저도 `/api/test/login` 진입 시
+동일 유저로 로그인되어 본 스크립트가 박은 데이터를 본다.
 """
 
 import argparse
@@ -16,18 +17,21 @@ import sys
 
 import httpx
 
-HEADERS = {"X-Test-User-Id": "1"}
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", default="http://localhost:8080/api")
     args = parser.parse_args()
 
-    client = httpx.Client(base_url=args.backend, headers=HEADERS, timeout=10.0)
+    client = httpx.Client(base_url=args.backend, timeout=10.0)
 
     print("→ reset")
     client.post("/test/reset").raise_for_status()
+
+    print("→ login (세션 쿠키)")
+    login = client.get("/test/login")
+    assert login.status_code in (200, 302), f"login 실패: {login.status_code}"
+    # 302 Set-Cookie의 DG_SESSION이 client.cookies jar에 저장되어 이후 호출에 자동 첨부됨.
 
     print("→ workspace")
     ws_id = _post(client, "/test/workspaces", {
@@ -75,6 +79,7 @@ def main() -> None:
         "findings": [{
             "sourceBlockIds": ["planning-block-1"],
             "targetBlockId": "requirements-block-1",
+            "title": "기획서·요구사항 명세 간 출시일 불일치",
             "rationale": "기획서의 출시일과 요구사항 문서가 어긋남",
             "newText": "출시일을 2주 미룬다 (요구사항 반영)",
         }],
@@ -84,8 +89,8 @@ def main() -> None:
     print(f"✓ seeded. backend: {args.backend}")
     print(f"  workspace_id: {ws_id}")
     print(f"  project_id: {project_id}")
-    print("  X-Test-User-Id 헤더: 1")
-    print("  인박스 조회: GET /me/conflicts (헤더 포함)")
+    print("  브라우저 로그인: GET /api/test/login (동일 정규 유저 세션 쿠키)")
+    print("  인박스 조회: GET /me/conflicts")
     print("  그래프 조회: GET /projects/{}/graph".format(project_id))
 
 

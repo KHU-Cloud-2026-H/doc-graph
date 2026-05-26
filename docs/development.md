@@ -93,3 +93,13 @@ mock 모드는 외부 API(Notion·OpenAI)를 wiremock으로 stub한다. live 모
 처음 실행 시 백엔드 이미지를 빌드하므로 시간이 소요된다.
 
 백엔드가 뜨면 Swagger UI(`http://localhost:8080/api/swagger-ui.html`)에서 API 명세를 확인할 수 있다.
+
+### OAuth2 우회 · fixture 데이터
+
+Notion 연동 없이 API를 동작을 확인하려면 fixture로 데이터를 채우고 세션 쿠키 우회 로그인을 사용한다.
+
+```bash
+just seed-fixture   # 워크스페이스·프로젝트·문서·그래프·충돌 fixture 주입 
+```
+
+`GET /api/test/login` 접속 시 세션 쿠키가 발급되어(OAuth2 우회) 이후 모든 API를 로그인 상태로 호출할 수 있다. 프론트엔드 작업 시에는 dev 서버(Vite proxy) 경유로 접속한다 — `http://localhost:5173/api/test/login`. (앱의 "Notion으로 로그인" 버튼은 실제 OAuth라 dev에선 이 경로를 쓴다.)

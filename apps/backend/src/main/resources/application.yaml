@@ -61,4 +61,7 @@ notification:
 
 auth:
   oauth:
-    success-redirect-uri: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI:/api/auth/me}
+    success-redirect-uri: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI}
+
+cors:
+  allowed-origin: ${CORS_ALLOWED_ORIGIN}
