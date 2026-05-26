@@ -68,7 +68,7 @@ test-acceptance env="local-mock":
       local-mock)
         export COMPOSE_PROFILES=backend,mock
         trap '{{dotenv-run}} docker compose {{test-compose-files}} down -v' EXIT
-        {{dotenv-run}} sh -c 'AI_OPENAI_BASE_URL=$MOCK_AI_OPENAI_BASE_URL NOTION_AUTHORIZATION_URI=$MOCK_NOTION_AUTHORIZATION_URI NOTION_TOKEN_URI=$MOCK_NOTION_TOKEN_URI docker compose {{test-compose-files}} up -d --build --wait'
+        {{dotenv-run}} sh -c 'AI_OPENAI_BASE_URL=$MOCK_AI_OPENAI_BASE_URL NOTION_AUTHORIZATION_URI=$MOCK_NOTION_AUTHORIZATION_URI NOTION_TOKEN_URI=$MOCK_NOTION_TOKEN_URI NOTION_API_BASE_URL=$MOCK_NOTION_API_BASE_URL docker compose {{test-compose-files}} up -d --build --wait'
         ;;
       local-live)
         export COMPOSE_PROFILES=backend,live
@@ -79,6 +79,20 @@ test-acceptance env="local-mock":
       *) echo "unknown env: {{env}}" >&2; exit 1 ;;
     esac
     cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run pytest acceptance --env={{env}}
+
+# Notion OAuth live E2E — 브라우저에서 인증 후 workspace/page 조회 확인 페이지 제공.
+notion-live-e2e:
+    #!/usr/bin/env sh
+    set -e
+    export COMPOSE_PROJECT_NAME=doc-graph-notion-live
+    export COMPOSE_PROFILES=backend
+    export SPRING_PROFILES_ACTIVE=notion-live-e2e
+    export AUTH_OAUTH_SUCCESS_REDIRECT_URI=/api/notion-live-e2e
+    export AI_OPENAI_BASE_URL=${AI_OPENAI_BASE_URL:-https://api.openai.com}
+    export AI_OPENAI_API_KEY=${AI_OPENAI_API_KEY:-notion-live-e2e-dummy}
+    export AI_OPENAI_MODEL=${AI_OPENAI_MODEL:-test-model}
+    {{dotenv-run}} docker compose {{test-compose-files}} up -d --build --wait
+    echo "Open: http://localhost:${BACKEND_HOST_PORT}/api/notion-live-e2e"
 
 # OpenAPI JSON dump — bootRun으로 backend 띄운 후 /v3/api-docs endpoint curl로 spec 캡쳐.
 # springdoc-openapi-gradle-plugin 1.9.0이 spec fetch 시 4xx response 누락하는 bug 회피

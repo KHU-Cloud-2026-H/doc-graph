@@ -50,7 +50,7 @@ def _wait_for(check, timeout: int = 60, interval: int = 2):
 
 
 def test_uc2_create_project_and_sync(client, wiremock, auth_headers, seeder):
-    """프로젝트 생성 → 카테고리 등록 → 동기화 → 그래프에 노드 표시."""
+    """프로젝트 생성 → Notion 초기 동기화 → 문서 저장 → edge 생성 → validation enqueue."""
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc2", name="UC2 Workspace")
 
     # Notion API stub: 루트 페이지 + 자식 2개 (planning, requirements)
@@ -73,9 +73,52 @@ def test_uc2_create_project_and_sync(client, wiremock, auth_headers, seeder):
             },
         ],
     )
-    # 자식 페이지의 children은 비어 있음 (depth 1로 충분)
-    _stub_notion_page(wiremock, page_id="planning_page", title="Planning", children=[])
-    _stub_notion_page(wiremock, page_id="requirements_page", title="Requirements", children=[])
+    _stub_notion_page(
+        wiremock,
+        page_id="planning_page",
+        title="Planning",
+        children=[
+            {
+                "object": "block",
+                "type": "paragraph",
+                "id": "planning_block_1",
+                "has_children": False,
+                "paragraph": {
+                    "rich_text": [
+                        {"type": "text", "plain_text": "Requirements must reflect this plan. "},
+                        {
+                            "type": "mention",
+                            "plain_text": "Requirements",
+                            "mention": {
+                                "type": "page",
+                                "page": {"id": "requirements_page"},
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+    )
+    _stub_notion_page(
+        wiremock,
+        page_id="requirements_page",
+        title="Requirements",
+        children=[
+            {
+                "object": "block",
+                "type": "paragraph",
+                "id": "requirements_block_1",
+                "has_children": False,
+                "paragraph": {
+                    "rich_text": [{"type": "text", "plain_text": "Initial requirement text"}],
+                },
+            },
+        ],
+    )
+    wiremock.stub(
+        request={"method": "POST", "urlPattern": "/.*/(chat/completions|messages)"},
+        response={"status": 200, "jsonBody": {"conflicts": []}},
+    )
 
     # 1. 프로젝트 생성
     create_project = client.post(
@@ -108,22 +151,68 @@ def test_uc2_create_project_and_sync(client, wiremock, auth_headers, seeder):
     )
     assert sync.status_code in (200, 202, 204)
 
-    # 4. 동기화 완료 → 그래프에 문서 노드 표시
-    def _graph_has_nodes():
+    # 4. 동기화 완료 → 문서 목록에 root + child pages 저장
+    def _documents_synced():
+        response = client.get(
+            f"/projects/{project_id}/documents?size=20",
+            headers=auth_headers,
+        )
+        if response.status_code != 200:
+            return None
+        docs = response.json().get("content", [])
+        page_ids = {doc.get("notionPageId") for doc in docs}
+        if {"root_page_uc2", "planning_page", "requirements_page"}.issubset(page_ids):
+            return docs
+        return None
+
+    docs = _wait_for(_documents_synced, timeout=60)
+    planning_doc = next(doc for doc in docs if doc["notionPageId"] == "planning_page")
+    requirements_doc = next(doc for doc in docs if doc["notionPageId"] == "requirements_page")
+
+    detail = client.get(f"/documents/{planning_doc['id']}", headers=auth_headers)
+    assert detail.status_code == 200
+    assert any(block["blockId"] == "planning_block_1" for block in detail.json()["blocks"])
+
+    # 5. mention 기반 edge 생성 → graph에 표시
+    def _graph_has_edge():
         response = client.get(
             f"/projects/{project_id}/graph",
             headers=auth_headers,
         )
         if response.status_code != 200:
             return None
-        nodes = response.json().get("nodes", [])
-        return nodes if nodes else None
+        body = response.json()
+        edges = body.get("edges", [])
+        edge = next(
+            (
+                item for item in edges
+                if item.get("sourceDocumentId") == planning_doc["id"]
+                and item.get("targetDocumentId") == requirements_doc["id"]
+                and item.get("source") == "NOTION_REFERENCE"
+            ),
+            None,
+        )
+        return {"graph": body, "edge": edge} if edge else None
 
-    nodes = _wait_for(_graph_has_nodes, timeout=60)
-    # 매핑된 두 타입의 문서 노드가 등록됨
-    assert len(nodes) >= 2
+    graph_result = _wait_for(_graph_has_edge, timeout=60)
+    assert len(graph_result["graph"]["nodes"]) >= 3
 
-    # 5. Notion API가 실제로 호출됐는지 확인
+    # 6. edge 생성이 validation task enqueue까지 연결됨
+    edge_id = graph_result["edge"]["id"]
+
+    def _validation_task_created():
+        response = client.get(
+            f"/projects/{project_id}/validation-tasks",
+            headers=auth_headers,
+        )
+        if response.status_code != 200:
+            return None
+        tasks = response.json().get("content", [])
+        return tasks if any(task.get("edgeId") == edge_id for task in tasks) else None
+
+    _wait_for(_validation_task_created, timeout=60)
+
+    # 7. Notion API가 실제로 호출됐는지 확인
     notion_calls = wiremock.calls()
     called_paths = [
         call.get("request", {}).get("url", "") for call in notion_calls
