@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Plus, Users, Layers, FileText, Clock, AlertTriangle } from "lucide-react";
 import { TopAppBar } from '../components/TopAppBar';
-import { InboxList, inboxNotifications } from '../components/InboxList';
+import { InboxList, inboxActiveCount, type InboxFilter } from '../components/InboxList';
 import { formatRelativeTime } from '../lib/timeAgo';
 
 // ── WorkspaceSummaryMock ──────────────────────────────────────────────────────
@@ -32,6 +33,7 @@ const MOCK_WORKSPACE_SUMMARIES: WorkspaceSummaryMock[] = [
 
 export const WorkspaceSelection = () => {
   const navigate = useNavigate();
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('ACTIVE');
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
@@ -106,18 +108,45 @@ export const WorkspaceSelection = () => {
 
           {/* Right: Inbox */}
           <div className="w-[400px] shrink-0">
-            <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
-              <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                {inboxNotifications.length}
-              </span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
+                <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {inboxActiveCount}
+                </span>
+              </div>
+              {/* 필터 pills */}
+              <div className="flex items-center gap-1.5">
+                {(
+                  [
+                    { value: 'ACTIVE', label: '미해소' },
+                    { value: 'IGNORED', label: '무시됨' },
+                    { value: 'ALL', label: '전체' },
+                  ] as const
+                ).map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setInboxFilter(f.value)}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${inboxFilter === f.value
+                        ? f.value === 'ACTIVE'
+                          ? 'bg-red-100 text-red-700'
+                          : f.value === 'IGNORED'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-700'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <p className="text-sm text-slate-500 mb-4">
               내가 담당하는 모든 프로젝트에서 발생한<br />
               정합성 충돌 알림입니다.
             </p>
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <InboxList />
+              <InboxList filter={inboxFilter} />
             </div>
           </div>
         </div>

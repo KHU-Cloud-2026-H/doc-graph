@@ -42,15 +42,17 @@ export const DocumentView = () => {
   const activeDoc = allDocs.find((d) => d.id === Number(id)) || allDocs[0];
   const parentPage = id ? findParentPage(documents, id) : null;
   
-  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  // lazy initialization: 마운트 시점의 URL을 직접 읽어 초기 상태 결정.
+  // useState(() => ...) 형태는 StrictMode의 이중 실행에도 항상 같은 URL을 읽으므로 안전.
+  const [showRightSidebar, setShowRightSidebar] = useState(
+    () => new URLSearchParams(window.location.search).get("openIssues") === "true"
+  );
   // 슬라이드 애니메이션용. showRightSidebar는 마운트/언마운트, isPanelOpen은 visual open/close.
   // 둘을 분리해 슬라이드 아웃이 끝난 다음에 언마운트되도록 한다.
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("openIssues") === "true"
+  );
   const SLIDE_DURATION_MS = 225;
-
-  // openIssues=true 쿼리 파라미터로 panel을 연 직후, 같은 useEffect가
-  // setSearchParams로 인해 다시 실행되면서 else 분기(즉시 닫기)로 들어가는 것을 방지하는 플래그.
-  const wasOpenedByQueryRef = useRef(false);
 
   // 알약 버튼 클릭 / 본문 issue-target 클릭 시 호출
   const openPanel = () => {
@@ -66,30 +68,33 @@ export const DocumentView = () => {
     setTimeout(() => setShowRightSidebar(false), SLIDE_DURATION_MS);
   };
 
+  // openIssues 쿼리 파라미터 감지 → 패널 열기 + 파라미터 제거.
+  // searchParams를 deps로 두어 같은 페이지에서 Inbox 클릭 시(remount 없이 searchParams만 변경)도 동작.
+  // StrictMode 이중 실행: 2번째 실행 시 이미 파라미터가 제거돼 있으므로 no-op.
   useEffect(() => {
-    window.scrollTo(0, 0);
-
-    // 1) openIssues=true로 진입한 경우 (Inbox 알림 클릭 등): 즉시 열고 파라미터 제거.
     if (searchParams.get("openIssues") === "true") {
       setShowRightSidebar(true);
       setIsPanelOpen(true);
-      wasOpenedByQueryRef.current = true;
-      searchParams.delete("openIssues");
-      setSearchParams(searchParams, { replace: true });
-      return;
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete("openIssues");
+        return next;
+      }, { replace: true });
     }
+  }, [searchParams, setSearchParams]);
 
-    // 2) 위의 setSearchParams 호출 때문에 effect가 곧장 한 번 더 실행되는데,
-    //    이때는 panel을 그대로 열어둬야 한다 (닫지 않음).
-    if (wasOpenedByQueryRef.current) {
-      wasOpenedByQueryRef.current = false;
-      return;
+  // 문서 전환 시 패널 닫기 + 스크롤 초기화.
+  // lastDocIdRef로 실제 docId 변경 여부를 판별 →
+  // 마운트 직후와 StrictMode 이중 실행에서는 닫지 않고, 진짜 전환 시에만 닫음.
+  const lastDocIdRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (lastDocIdRef.current !== undefined && lastDocIdRef.current !== activeDoc?.id) {
+      setShowRightSidebar(false);
+      setIsPanelOpen(false);
     }
-
-    // 3) 일반적인 doc 전환: panel 즉시 닫기 (의도된 동작).
-    setShowRightSidebar(false);
-    setIsPanelOpen(false);
-  }, [activeDoc?.id, searchParams, setSearchParams]);
+    lastDocIdRef.current = activeDoc?.id;
+  }, [activeDoc?.id]);
 
   let processedHtml = activeDoc?.contentHtml || '';
 

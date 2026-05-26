@@ -386,7 +386,7 @@ const NewProjectWizard: React.FC = () => {
      * 외부: flex-1로 부모 채우기, relative로 absolute 기준점 생성
      * min-h-0: flex 자식의 기본 min-height:auto 제거
      */
-    <div className="flex-1 flex flex-col relative min-h-0 bg-gray-50">
+    <div className="flex-1 flex flex-col relative min-h-0 bg-slate-50">
 
       {/*
        * StepIndicator: absolute 좌측 고정
