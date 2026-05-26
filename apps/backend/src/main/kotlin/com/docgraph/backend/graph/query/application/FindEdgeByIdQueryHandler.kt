@@ -15,6 +15,7 @@ class FindEdgeByIdQueryHandler(
 fun DependencyEdge.toDetail(): EdgeDetail =
     EdgeDetail(
         id = id,
+        projectId = projectId,
         sourceDocumentId = sourceDocumentId,
         targetDocumentId = targetDocumentId,
         validationCriterion = validationCriterion,

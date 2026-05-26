@@ -101,8 +101,8 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // edge details (source/target mapping)
         every { searchEdgeDetailsByIds.search(listOf(30L, 31L)) } returns listOf(
-            EdgeDetail(id = 30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
-            EdgeDetail(id = 31L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
+            EdgeDetail(id = 30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
+            EdgeDetail(id = 31L, projectId = 1L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
         )
         // source doc refs
         every { searchDocumentReferences.search(match { it.toSet() == setOf(40L, 41L) }) } returns listOf(
@@ -113,6 +113,10 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
             ProjectRef(1L, "P1"),
             ProjectRef(2L, "P2"),
+        )
+        every { validationQueryRepository.findFindingsByConflictIds(match { it.toSet() == setOf(500L, 501L) }) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "T500", now),
+            ConflictFindingRow(2L, 501L, listOf("x"), "y", "r", "n", "T501", now),
         )
 
         val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
@@ -126,11 +130,13 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS), row1.targetDocument)
         assertEquals(MyConflictStatus.ACTIVE, row1.status)
         assertEquals(now, row1.firstDetectedAt)
+        assertEquals("T500", row1.title)
 
         val row2 = result.content.first { it.id == 501L }
         assertEquals(2L, row2.projectId)
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
+        assertEquals("T501", row2.title)
     }
 
     @Test
@@ -154,12 +160,15 @@ class SearchMyConflictsQueryHandlerTest {
             1L,
         )
         every { searchEdgeDetailsByIds.search(listOf(30L)) } returns listOf(
-            EdgeDetail(30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
+            EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
         )
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
         every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, "P"))
+        every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "TI", now),
+        )
 
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 

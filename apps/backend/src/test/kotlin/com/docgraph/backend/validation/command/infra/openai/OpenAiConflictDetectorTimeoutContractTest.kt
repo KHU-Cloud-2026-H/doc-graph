@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestPropertySource
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import org.springframework.web.client.ResourceAccessException
 
 @Tag("component")
@@ -42,7 +43,7 @@ class OpenAiConflictDetectorTimeoutContractTest {
         )
 
         assertThrows(ResourceAccessException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
     }
 

@@ -100,5 +100,6 @@ class ConflictReconcilerTest {
         targetBlockId = "t1",
         rationale = "rationale",
         newText = "suggestion",
+        title = "title",
     )
 }

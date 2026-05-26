@@ -7,6 +7,7 @@ import com.docgraph.backend.validation.command.application.CompleteValidationTas
 import com.docgraph.backend.validation.command.application.CompleteValidationTaskCommandHandler
 import com.docgraph.backend.validation.command.application.ValidationTaskTransitionService
 import com.docgraph.backend.validation.command.domain.ConflictDetector
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import org.springframework.retry.annotation.Backoff
@@ -50,9 +51,11 @@ class ValidationTaskPreparedEventListener(
             ?: error("target document not found: ${edge.targetDocumentId}")
 
         val findings = detector.detect(
-            changedBlocks = source.blocks,
-            counterpartBlocks = target.blocks,
-            criterion = edge.validationCriterion,
+            FirstValidationInput(
+                sourceBlocks = source.blocks,
+                targetBlocks = target.blocks,
+                criterion = edge.validationCriterion,
+            ),
         )
         completeHandler.handle(CompleteValidationTaskCommand(task.id, findings))
     }

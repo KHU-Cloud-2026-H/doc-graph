@@ -38,7 +38,7 @@ class SearchConflictsByProjectQueryHandlerTest {
 
     @Test
     fun `edgeDetail의 sourceDocumentId, targetDocumentId가 ConflictResponse에 정확히 매핑`() {
-        val edgeDetail = EdgeDetail(id = 10L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
+        val edgeDetail = EdgeDetail(id = 10L, projectId = 1L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
         val conflictRow = ConflictRow(id = 1L, edgeId = 10L, ignoredAt = null, ignoreReason = null)
 
         every { searchEdgeDetailsByProject.search(1L) } returns listOf(edgeDetail)
@@ -57,17 +57,17 @@ class SearchConflictsByProjectQueryHandlerTest {
 
     @Test
     fun `findings가 conflictId별로 정확히 grouped되어 매핑`() {
-        val edgeDetail = EdgeDetail(id = 10L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
+        val edgeDetail = EdgeDetail(id = 10L, projectId = 1L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
         val conflictRow = ConflictRow(id = 1L, edgeId = 10L, ignoredAt = null, ignoreReason = null)
         val finding1 = ConflictFindingRow(
             id = 11L, conflictId = 1L,
             sourceBlockIds = listOf("a"), targetBlockId = "b",
-            rationale = "rationale1", newText = "suggestion1", detectedAt = now,
+            rationale = "rationale1", newText = "suggestion1", title = "ttl1", detectedAt = now,
         )
         val finding2 = ConflictFindingRow(
             id = 12L, conflictId = 1L,
             sourceBlockIds = listOf("c"), targetBlockId = "d",
-            rationale = "rationale2", newText = "suggestion2", detectedAt = now,
+            rationale = "rationale2", newText = "suggestion2", title = "ttl2", detectedAt = now,
         )
 
         every { searchEdgeDetailsByProject.search(1L) } returns listOf(edgeDetail)
@@ -83,11 +83,13 @@ class SearchConflictsByProjectQueryHandlerTest {
         assertEquals("rationale2", result.content[0].findings[1].rationale)
         assertEquals("suggestion1", result.content[0].findings[0].newText)
         assertEquals("suggestion2", result.content[0].findings[1].newText)
+        assertEquals("ttl1", result.content[0].findings[0].title)
+        assertEquals("ttl2", result.content[0].findings[1].title)
     }
 
     @Test
     fun `ignoredAt, ignoreReason이 ConflictResponse에 정확히 매핑`() {
-        val edgeDetail = EdgeDetail(id = 10L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
+        val edgeDetail = EdgeDetail(id = 10L, projectId = 1L, sourceDocumentId = 100L, targetDocumentId = 200L, validationCriterion = "criterion")
         val ignoredRow = ConflictRow(id = 1L, edgeId = 10L, ignoredAt = now, ignoreReason = "의도된 차이")
         val activeRow = ConflictRow(id = 2L, edgeId = 10L, ignoredAt = null, ignoreReason = null)
 

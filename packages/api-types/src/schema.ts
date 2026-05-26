@@ -1304,6 +1304,11 @@ export interface components {
              */
             newText?: string;
             /**
+             * @description 충돌 사안 한 줄 요약 제목
+             * @example 결정사항 미반영
+             */
+            title?: string;
+            /**
              * Format: date-time
              * @description 감지 시각
              */
@@ -1409,6 +1414,7 @@ export interface components {
             projectName?: string;
             sourceDocument?: components["schemas"]["InboxDocumentRef"];
             targetDocument?: components["schemas"]["InboxDocumentRef"];
+            title?: string;
             /** @enum {string} */
             status?: "ACTIVE" | "IGNORED";
             /** Format: date-time */
@@ -1537,7 +1543,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 완료 — 미설정 시 url null */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1545,6 +1551,13 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["WebhookResponse"];
                 };
+            };
+            /** @description 프로젝트 없음 또는 호출자가 Project Admin 아님 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1563,8 +1576,15 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 설정 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

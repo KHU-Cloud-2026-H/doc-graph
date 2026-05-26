@@ -1,6 +1,7 @@
 package com.docgraph.backend.validation.command.infra.openai
 
 import com.docgraph.backend.document.query.application.Block
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.fixtures.OpenAiTestFixture
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -48,14 +49,16 @@ class OpenAiConflictDetectorContractTest {
                     aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(chatResponseBody("""{"conflicts":[{"source_block_ids":["s1"],"target_block_id":"t1","rationale":"reason","new_text":"fix"}]}"""))
+                        .withBody(chatResponseBody("""{"conflicts":[{"source_block_ids":["s1"],"target_block_id":"t1","rationale":"reason","new_text":"fix","title":"제목"}]}"""))
                 )
         )
 
         val result = detector.detect(
-            changedBlocks = listOf(block("s1", "변경 본문")),
-            counterpartBlocks = listOf(block("t1", "반대 본문")),
-            criterion = "결정사항 반영 여부",
+            FirstValidationInput(
+                sourceBlocks = listOf(block("s1", "변경 본문")),
+                targetBlocks = listOf(block("t1", "반대 본문")),
+                criterion = "결정사항 반영 여부",
+            ),
         )
 
         assertEquals(1, result.size)
@@ -63,6 +66,7 @@ class OpenAiConflictDetectorContractTest {
         assertEquals("t1", result[0].targetBlockId)
         assertEquals("reason", result[0].rationale)
         assertEquals("fix", result[0].newText)
+        assertEquals("제목", result[0].title)
 
         wireMock.verify(
             postRequestedFor(urlEqualTo("/v1/chat/completions"))
@@ -87,7 +91,7 @@ class OpenAiConflictDetectorContractTest {
                 )
         )
 
-        val result = detector.detect(emptyList(), emptyList(), "c")
+        val result = detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         assertTrue(result.isEmpty())
     }
 
@@ -99,7 +103,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpClientErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(429, ex.statusCode.value())
     }
@@ -112,7 +116,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpServerErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(503, ex.statusCode.value())
     }
@@ -125,7 +129,7 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val ex = assertThrows(HttpClientErrorException::class.java) {
-            detector.detect(emptyList(), emptyList(), "c")
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(401, ex.statusCode.value())
     }

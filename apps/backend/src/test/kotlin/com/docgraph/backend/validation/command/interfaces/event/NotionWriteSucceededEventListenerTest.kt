@@ -31,6 +31,7 @@ class NotionWriteSucceededEventListenerTest {
             targetBlockId = "t",
             rationale = "r",
             newText = "n",
+            title = "tt",
             detectedAt = now,
         )
 

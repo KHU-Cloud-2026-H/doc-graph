@@ -5,4 +5,5 @@ data class DetectedConflict(
     val targetBlockId: String,
     val rationale: String,
     val newText: String,
+    val title: String,
 )

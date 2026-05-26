@@ -9,6 +9,7 @@ data class MyConflictRow(
     val projectName: String,
     val sourceDocument: InboxDocumentRef,
     val targetDocument: InboxDocumentRef,
+    val title: String,
     val status: MyConflictStatus,
     val firstDetectedAt: OffsetDateTime,
     val ignoredAt: OffsetDateTime?,
