@@ -1,7 +1,25 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from '../store';
-import { Settings, Plus } from 'lucide-react';
+import { Plus, UserPlus, CheckCircle2, X } from 'lucide-react';
 import { TopAppBar } from '../components/TopAppBar';
+import { useState } from 'react';
+
+// TODO(API): GET /workspaces/{id} → WorkspaceDetail.members[] (WorkspaceMemberSummary) 로 교체
+const MOCK_WORKSPACE_MEMBERS = [
+  { userId: 1, name: '박관우', email: 'kwanwoo@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
+  { userId: 2, name: '서영채', email: 'youngchae@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
+  { userId: 3, name: '신정환', email: 'junghwan@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
+  { userId: 4, name: '전현준', email: 'hyunjun@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
+  { userId: 5, name: '이창민', email: 'changmin@khu.ac.kr', joinedAt: '2026-03-01T09:05:00Z' },
+  { userId: 6, name: '김연길', email: 'yeongil@khu.ac.kr', joinedAt: '2026-03-01T09:10:00Z' },
+  { userId: 7, name: '이주안', email: 'juwon@khu.ac.kr', joinedAt: '2026-03-01T09:15:00Z' },
+] as const;
+
+// joinedAt ISO string → "2026년 3월 1일" 형식
+const formatJoinedAt = (iso: string): string => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
 
 const WorkspaceHome = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -10,6 +28,27 @@ const WorkspaceHome = () => {
 
   const workspace = workspaces.find((w) => w.id === Number(workspaceId));
   const workspaceProjects = projects.filter((p) => p.workspaceId === Number(workspaceId));
+
+  const [members, setMembers] = useState([...MOCK_WORKSPACE_MEMBERS]);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  // TODO(API): POST /workspaces/{id}/members (InviteMemberRequest: { email })
+  const handleInvite = () => {
+    if (!inviteEmail.trim()) return;
+    setInviteSuccess(true);
+    setTimeout(() => {
+      setInviteSuccess(false);
+      setInviteEmail('');
+      setIsInviteOpen(false);
+    }, 1800);
+  };
+
+  // TODO(API): DELETE /workspaces/{id}/members/{memberId}
+  const handleRemoveMember = (userId: number) => {
+    setMembers((prev) => prev.filter((m) => m.userId !== userId));
+  };
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
@@ -27,16 +66,9 @@ const WorkspaceHome = () => {
           </h1>
         </div>
 
-        {/* Section 2: 워크스페이스 홈 + 관리 버튼 */}
+        {/* Section 2: 워크스페이스 홈 */}
         <div className="flex items-center gap-3 mb-12">
           <span className="text-base text-slate-500 font-medium">워크스페이스 홈</span>
-          <button
-            onClick={() => navigate(`/w/${workspaceId}/settings`)}
-            className="flex items-center gap-1.5 bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            워크스페이스 관리
-          </button>
         </div>
 
         {/* Section 3 & 4: 프로젝트 목록 */}
@@ -75,6 +107,117 @@ const WorkspaceHome = () => {
             </div>
           </div>
         </section>
+
+        {/* 워크스페이스 멤버 섹션 */}
+        <section className="mt-14">
+          {/* 섹션 헤더 */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-800">워크스페이스 멤버</h2>
+            <button
+              onClick={() => setIsInviteOpen(true)}
+              className="flex items-center gap-2 bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all font-medium text-sm shadow-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              멤버 초대하기
+            </button>
+          </div>
+
+          {/* 멤버 테이블 */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="text-left px-5 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">이름</th>
+                  <th className="text-left px-5 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">이메일</th>
+                  <th className="text-left px-5 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">가입일</th>
+                  <th className="whitespace-nowrap px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member, idx) => (
+                  <tr
+                    key={member.userId}
+                    className={`${idx !== members.length - 1 ? 'border-b border-slate-100' : ''} hover:bg-slate-50 transition-colors`}
+                  >
+                    <td className="px-5 py-3.5 font-medium text-slate-900">{member.name}</td>
+                    <td className="px-5 py-3.5 text-slate-500">{member.email}</td>
+                    <td className="px-5 py-3.5 text-slate-400">{formatJoinedAt(member.joinedAt)}</td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        onClick={() => handleRemoveMember(member.userId)}
+                        className="text-xs text-red-400 bg-red-50 hover:text-red-600 hover:bg-red-100 whitespace-nowrap px-2.5 py-1 rounded-md transition-colors font-medium"
+                      >
+                        내보내기
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 멤버 초대 모달 */}
+        {isInviteOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setIsInviteOpen(false); }}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative flex flex-col items-center gap-5">
+
+              {/* 닫기 버튼 */}
+              <button
+                onClick={() => { setIsInviteOpen(false); setInviteEmail(''); setInviteSuccess(false); }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* 아이콘 */}
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <UserPlus className="w-8 h-8 text-blue-600" />
+              </div>
+
+              {/* 타이틀 */}
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-slate-900 leading-snug">
+                  이 워크스페이스에서 함께할 멤버를 초대해보세요!
+                </h3>
+                <p className="text-sm text-slate-500 mt-1.5">
+                  Notion에서 이 워크스페이스에 가입된 이메일로만 초대할 수 있습니다.
+                </p>
+              </div>
+
+              {/* 이메일 입력 + 초대 버튼 */}
+              <div className="w-full flex gap-2">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
+                  placeholder="Notion 이메일 입력"
+                  className="flex-1 h-10 rounded-lg border border-slate-200 px-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                />
+                <button
+                  onClick={handleInvite}
+                  disabled={!inviteEmail.trim() || inviteSuccess}
+                  className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  초대
+                </button>
+              </div>
+
+              {/* 성공 메시지 */}
+              {inviteSuccess && (
+                <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium bg-emerald-50 w-full justify-center py-2.5 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4" />
+                  초대를 보냈습니다!
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       <footer className="w-full mt-auto bg-slate-100 border-t border-slate-200">
