@@ -315,6 +315,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/notion-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notion 최상위 페이지 목록
+         * @description 프로젝트 생성 위저드 루트 페이지 후보. 워크스페이스 최상위 Notion 페이지를 라이브 조회한다. 워크스페이스 생성자 전용.
+         */
+        get: operations["listRootPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/notion-pages/{pageId}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notion 페이지 직계 자식 목록
+         * @description 프로젝트 생성 위저드 카테고리 매핑 대상. 페이지의 직계 자식 Notion 페이지를 라이브 조회한다. 워크스페이스 생성자 전용.
+         */
+        get: operations["listChildPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{id}": {
         parameters: {
             query?: never;
@@ -849,6 +889,18 @@ export interface components {
              */
             lastNotionChangedAt?: string | null;
         };
+        IconResponse: {
+            /**
+             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
+             * @enum {string}
+             */
+            type?: "EMOJI" | "EXTERNAL" | "FILE";
+            /**
+             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
+             * @example 📄
+             */
+            value?: string;
+        };
         ProjectSummary: {
             /**
              * Format: int64
@@ -884,6 +936,22 @@ export interface components {
              * @description 프로젝트 내 문서의 Notion 측 최근 변경 시각
              */
             lastNotionChangedAt?: string | null;
+            /** @description 루트 Notion 페이지 제목 (미동기화 시 null) */
+            rootPageTitle?: string | null;
+            rootPageIcon?: components["schemas"]["IconResponse"] | null;
+        };
+        NotionPageRef: {
+            /**
+             * @description Notion 페이지 ID — 프로젝트 생성·카테고리 등록 API 입력에 사용
+             * @example abc1234567890def
+             */
+            notionPageId?: string;
+            /**
+             * @description 페이지 제목 (드롭다운·카테고리 화면 표시용)
+             * @example Q2 Planning
+             */
+            title?: string;
+            icon?: components["schemas"]["IconResponse"] | null;
         };
         WorkspaceDetail: {
             /**
@@ -1242,18 +1310,6 @@ export interface components {
              */
             parentDocumentId?: number | null;
             icon?: components["schemas"]["IconResponse"] | null;
-        };
-        IconResponse: {
-            /**
-             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
-             * @enum {string}
-             */
-            type?: "EMOJI" | "EXTERNAL" | "FILE";
-            /**
-             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
-             * @example 📄
-             */
-            value?: string;
         };
         PageResponseDocumentSummary: {
             content?: components["schemas"]["DocumentSummary"][];
@@ -2423,6 +2479,79 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["WorkspaceSummary"][];
                 };
+            };
+        };
+    };
+    listRootPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionPageRef"][];
+                };
+            };
+            /** @description 호출자가 워크스페이스 생성자 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 워크스페이스 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listChildPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionPageRef"][];
+                };
+            };
+            /** @description 호출자가 워크스페이스 생성자 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 워크스페이스 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

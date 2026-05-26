@@ -113,6 +113,17 @@ class ProjectQueryRepository {
             .fetch()
     }
 
+    fun findNotionRootPageIdsByProjectIds(projectIds: Collection<Long>): Map<Long, String> {
+        if (projectIds.isEmpty()) return emptyMap()
+        val p = QProject.project
+        return queryFactory
+            .select(p.id, p.notionRootPageId)
+            .from(p)
+            .where(p.id.`in`(projectIds))
+            .fetch()
+            .associate { it.get(p.id)!! to it.get(p.notionRootPageId)!! }
+    }
+
     fun findProjectMemberCountsByIds(projectIds: Collection<Long>): Map<Long, Int> {
         if (projectIds.isEmpty()) return emptyMap()
         val pm = QProjectMember.projectMember

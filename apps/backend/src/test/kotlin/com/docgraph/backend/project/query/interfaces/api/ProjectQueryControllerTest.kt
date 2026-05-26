@@ -3,7 +3,10 @@ package com.docgraph.backend.project.query.interfaces.api
 import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.auth.query.application.SearchUserAccountsByIdsQuery
 import com.docgraph.backend.auth.query.application.UserResponse
+import com.docgraph.backend.document.command.domain.Document
+import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.project.command.domain.Category
 import com.docgraph.backend.project.command.domain.CategoryRepository
@@ -63,6 +66,7 @@ class ProjectQueryControllerTest @Autowired constructor(
     private val projectMemberRepository: ProjectMemberRepository,
     private val categoryRepository: CategoryRepository,
     private val typeAssigneeRepository: TypeAssigneeDefaultRepository,
+    private val documentRepository: DocumentRepository,
     private val getCurrentUserId: FakeGetCurrentUserIdQueryQ,
 ) {
 
@@ -99,6 +103,41 @@ class ProjectQueryControllerTest @Autowired constructor(
         mockMvc.get("/workspaces/${workspace.id}/projects").andExpect {
             status { isOk() }
             jsonPath("$.length()") { value(0) }
+        }
+    }
+
+    @Test
+    fun `GET workspaces projects — 루트 페이지 제목·아이콘 노출`() {
+        val (workspace, _) = seedWorkspaceWithCreator(creatorUserId = 1L)
+        val project = seedProjectWithAdmin(workspaceId = workspace.id, adminUserId = 1L, name = "P")
+        // 루트 페이지가 동기화된 Document (notionPageId == project.notionRootPageId)
+        documentRepository.save(
+            Document(
+                projectId = project.id,
+                notionPageId = project.notionRootPageId,
+                title = "Root Page",
+                iconType = IconType.EMOJI,
+                iconValue = "🏠",
+            ),
+        )
+
+        mockMvc.get("/workspaces/${workspace.id}/projects").andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.id == ${project.id})].rootPageTitle") { value("Root Page") }
+            jsonPath("$[?(@.id == ${project.id})].rootPageIcon.type") { value("EMOJI") }
+            jsonPath("$[?(@.id == ${project.id})].rootPageIcon.value") { value("🏠") }
+        }
+    }
+
+    @Test
+    fun `GET workspaces projects — 루트 Document 없으면 rootPage 필드 null`() {
+        val (workspace, _) = seedWorkspaceWithCreator(creatorUserId = 1L)
+        val project = seedProjectWithAdmin(workspaceId = workspace.id, adminUserId = 1L, name = "P")
+
+        mockMvc.get("/workspaces/${workspace.id}/projects").andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.id == ${project.id})].rootPageTitle") { value(null) }
+            jsonPath("$[?(@.id == ${project.id})].rootPageIcon") { value(null) }
         }
     }
 
