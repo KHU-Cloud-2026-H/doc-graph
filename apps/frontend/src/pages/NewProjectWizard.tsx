@@ -10,8 +10,8 @@ const MOCK_NOTION_ROOT_PAGES = [
 
 // 2단계: 카테고리 등록 대상 페이지 (루트의 직계 자식)
 const MOCK_CATEGORY_PAGES = [
-  { id: 1,  emoji: '💡', title: '기획' },
-  { id: 6,  emoji: '📅', title: '회의록' },
+  { id: 1, emoji: '💡', title: '기획' },
+  { id: 6, emoji: '📅', title: '회의록' },
   { id: 11, emoji: '🔷', title: '설계' },
   { id: 16, emoji: '🔍', title: 'QA및테스트' },
   { id: 21, emoji: '⚙️', title: '프론트엔드' },
@@ -208,108 +208,120 @@ const NewProjectWizard: React.FC = () => {
     </>
   );
 
-  const renderStep3 = () => (
-    <>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 멤버 배정</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        워크스페이스에 있는 멤버 중 이 프로젝트에 참여할 멤버를 배정해 주세요.
-      </p>
+  const renderStep3 = () => {
+    const hasNoMembers = projectMembers.length === 0;
+    const hasNoAdmin = projectMembers.length > 0 && !projectMembers.some(m => m.role === 'ADMIN');
+    const canProceed = !hasNoMembers && !hasNoAdmin;
+    return (
+      <>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 멤버 배정</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          워크스페이스에 있는 멤버 중 이 프로젝트에 참여할 멤버를 배정해 주세요.
+        </p>
 
-      <div className="flex items-end gap-3 mb-6">
-        <select
-          value={pendingMemberId !== null ? String(pendingMemberId) : ''}
-          onChange={e => setPendingMemberId(e.target.value === '' ? null : Number(e.target.value))}
-          className={`${selectCls} w-40`}
-        >
-          <option value="" disabled>멤버 선택</option>
-          {availableMembers.map(m => (
-            <option key={m.id} value={String(m.id)}>{m.name}</option>
-          ))}
-        </select>
-        <span className="text-sm text-gray-600 self-center">를</span>
-        <select
-          value={pendingRole}
-          onChange={e => setPendingRole(e.target.value as 'ADMIN' | 'MEMBER')}
-          className={`${selectCls} w-28`}
-        >
-          <option value="ADMIN">ADMIN</option>
-          <option value="MEMBER">MEMBER</option>
-        </select>
-        <span className="text-sm text-gray-600 self-center">으로</span>
-        <button
-          className={btnPrimary}
-          disabled={pendingMemberId === null}
-          onClick={handleAddMember}
-        >
-          추가하기
-        </button>
-      </div>
-
-      <div className="border-t border-gray-200 my-6" />
-
-      <h3 className="text-base font-semibold text-gray-800 mb-3">프로젝트 멤버</h3>
-
-      <div className="w-full overflow-x-auto">
-        <table className="w-full caption-bottom text-sm">
-          <thead className="[&_tr]:border-b">
-            <tr className="border-b">
-              <th className={thCls}>이름</th>
-              <th className={thCls}>역할</th>
-              <th className={`${thCls} w-px text-right`}> </th>
-            </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
-            {projectMembers.map(row => (
-              <tr key={row.memberId} className="border-b hover:bg-gray-50 transition-colors">
-                <td className={tdCls}>{row.name}</td>
-                <td className={tdCls}>
-                  <select
-                    value={row.role}
-                    onChange={e =>
-                      setProjectMembers(prev =>
-                        prev.map(m =>
-                          m.memberId === row.memberId
-                            ? { ...m, role: e.target.value as 'ADMIN' | 'MEMBER' }
-                            : m
-                        )
-                      )
-                    }
-                    className={`${selectCls} w-28`}
-                  >
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="MEMBER">MEMBER</option>
-                  </select>
-                </td>
-                <td className={`${tdCls} w-px text-right`}>
-                  <button
-                    onClick={() =>
-                      setProjectMembers(prev => prev.filter(m => m.memberId !== row.memberId))
-                    }
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
-                  >
-                    <X size={14} className="text-white" strokeWidth={2.5} />
-                  </button>
-                </td>
-              </tr>
+        <div className="flex items-end gap-3 mb-6">
+          <select
+            value={pendingMemberId !== null ? String(pendingMemberId) : ''}
+            onChange={e => setPendingMemberId(e.target.value === '' ? null : Number(e.target.value))}
+            className={`${selectCls} w-40`}
+          >
+            <option value="" disabled>멤버 선택</option>
+            {availableMembers.map(m => (
+              <option key={m.id} value={String(m.id)}>{m.name}</option>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </select>
+          <span className="text-sm text-gray-600 self-center">를</span>
+          <select
+            value={pendingRole}
+            onChange={e => setPendingRole(e.target.value as 'ADMIN' | 'MEMBER')}
+            className={`${selectCls} w-28`}
+          >
+            <option value="ADMIN">ADMIN</option>
+            <option value="MEMBER">MEMBER</option>
+          </select>
+          <span className="text-sm text-gray-600 self-center">으로</span>
+          <button
+            className={btnPrimary}
+            disabled={pendingMemberId === null}
+            onClick={handleAddMember}
+          >
+            추가하기
+          </button>
+        </div>
 
-      {projectMembers.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-6">추가된 멤버가 없습니다.</p>
-      )}
+        <div className="border-t border-gray-200 my-6" />
 
-      <div className="flex gap-3 mt-8">
-        <button className={btnPrimary} onClick={() => setStep(4)}>
-          멤버 배정 완료
-        </button>
-        <button className={btnGhost} onClick={() => setStep(2)}>
-          뒤로가기
-        </button>
-      </div>
-    </>
-  );
+        <h3 className="text-base font-semibold text-gray-800 mb-3">프로젝트 멤버</h3>
+
+        {hasNoMembers && (
+          <p className="text-xs text-red-500 mb-3">한 명 이상의 멤버를 추가해야 합니다.</p>
+        )}
+        {hasNoAdmin && (
+          <p className="text-xs text-red-500 mb-3">한 명 이상의 ADMIN을 추가해야 합니다.</p>
+        )}
+
+        <div className="w-full overflow-x-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b">
+              <tr className="border-b">
+                <th className={thCls}>이름</th>
+                <th className={thCls}>역할</th>
+                <th className={`${thCls} w-px text-right`}> </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {projectMembers.map(row => (
+                <tr key={row.memberId} className="border-b hover:bg-gray-50 transition-colors">
+                  <td className={tdCls}>{row.name}</td>
+                  <td className={tdCls}>
+                    <select
+                      value={row.role}
+                      onChange={e =>
+                        setProjectMembers(prev =>
+                          prev.map(m =>
+                            m.memberId === row.memberId
+                              ? { ...m, role: e.target.value as 'ADMIN' | 'MEMBER' }
+                              : m
+                          )
+                        )
+                      }
+                      className={`${selectCls} w-28`}
+                    >
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="MEMBER">MEMBER</option>
+                    </select>
+                  </td>
+                  <td className={`${tdCls} w-px text-right`}>
+                    <button
+                      onClick={() =>
+                        setProjectMembers(prev => prev.filter(m => m.memberId !== row.memberId))
+                      }
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                    >
+                      <X size={14} className="text-white" strokeWidth={2.5} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {projectMembers.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-6">추가된 멤버가 없습니다.</p>
+        )}
+
+        <div className="flex gap-3 mt-8">
+          <button className={btnPrimary} disabled={!canProceed} onClick={() => setStep(4)}>
+            멤버 배정 완료
+          </button>
+          <button className={btnGhost} onClick={() => setStep(2)}>
+            뒤로가기
+          </button>
+        </div>
+      </>
+    );
+  };
 
   const renderStep4 = () => (
     <>
