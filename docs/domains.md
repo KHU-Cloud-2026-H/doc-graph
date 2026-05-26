@@ -136,7 +136,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
-| `GetCurrentUserIdQuery` | workspace·project·validation | REST 요청의 인증된 사용자 식별 |
+| `GetCurrentUserIdQuery` | workspace·project·validation·document | REST 요청의 인증된 사용자 식별 |
 | `FindUserIdByEmailQuery` | workspace | 멤버 초대 시 이메일로 기존 사용자 식별 |
 | `SearchUserAccountsByIdsQuery` | workspace, project | 상세 조회 응답 보강 시 멤버 사용자 정보(이메일·이름) 일괄 조회 |
 
@@ -167,7 +167,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | --- | --- | --- |
 | `FindWorkspaceIdByMemberIdQuery` | project | 프로젝트 멤버 배정·타입 담당자 설정 시 멤버의 워크스페이스 검증 |
 | `FindWorkspaceMemberIdByUserIdQuery` | project | 사용자의 워크스페이스 멤버 자격·멤버 ID 식별(권한 검증·프로젝트 멤버 등록) |
-| `FindWorkspaceCreatorIdByIdQuery` | project | 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여 |
+| `FindWorkspaceCreatorIdByIdQuery` | project, document | project는 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여; document는 Notion 페이지 브라우징 시 워크스페이스 생성자 게이트 |
 
 ---
 
