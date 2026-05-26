@@ -22,7 +22,7 @@ class OpenAiConflictDetector(
     ): List<DetectedConflict> {
         val request = OpenAiChatCompletionRequest(
             model = props.model,
-            messages = ConflictDetectionPromptBuilder.build(changedBlocks, counterpartBlocks),
+            messages = ConflictDetectionPromptBuilder.build(changedBlocks, counterpartBlocks, criterion),
             responseFormat = ConflictDetectionResponseSchema.responseFormat(),
         )
         val response = restClient.post()
