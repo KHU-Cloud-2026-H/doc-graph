@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppStore } from "../store";
-import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Settings, Layout, Home, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Layout, Home, Plus } from "lucide-react";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { InboxPopup } from "./InboxPopup";
 import { inboxNotifications } from "./InboxList";
@@ -18,9 +18,8 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
   return (
     <li>
       <div
-        className={`flex items-center gap-1.5 py-1 px-2 rounded-sm group cursor-pointer overflow-hidden ${
-          isActive ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-slate-100 text-slate-700 font-medium"
-        }`}
+        className={`flex items-center gap-1.5 py-1 px-2 rounded-sm group cursor-pointer overflow-hidden ${isActive ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-slate-100 text-slate-700 font-medium"
+          }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => {
           if (workspaceId && projectId) {
@@ -69,7 +68,7 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
             ))
           ) : (
             <li>
-              <div 
+              <div
                 className="text-slate-400 text-[13px] py-1 cursor-default"
                 style={{ paddingLeft: `${level * 16 + 34}px` }}
               >
@@ -225,9 +224,8 @@ export const Sidebar = () => {
       <div className="mx-2 mt-2 space-y-1 mb-3 relative">
         <Link
           to={workspaceId && projectId ? `/w/${workspaceId}/p/${projectId}/graph` : '#'}
-          className={`flex items-center justify-between px-3 py-2 rounded-md group transition-colors text-[14px] ${
-            isGraphActive ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-slate-100 text-slate-700 font-medium"
-          }`}
+          className={`flex items-center justify-between px-3 py-2 rounded-md group transition-colors text-[14px] ${isGraphActive ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-slate-100 text-slate-700 font-medium"
+            }`}
         >
           <div className="flex items-center gap-2.5">
             <GitMerge className={`w-4 h-4 ${isGraphActive ? "text-blue-600" : "text-slate-500"}`} />
@@ -282,10 +280,6 @@ export const Sidebar = () => {
           anchorRef={inboxButtonRef}
           placement="right"
         />
-        <button className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors text-[13px] font-medium mt-2">
-          <Settings className="w-4 h-4 text-slate-500" />
-          <span>Workspace Settings</span>
-        </button>
         <div className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer mt-1 font-medium">
           <img
             src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop"

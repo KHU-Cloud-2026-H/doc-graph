@@ -14,16 +14,19 @@ PUT /projects/{id}/type-assignees.
 SOURCE_PAGE_ID = "88888888-8888-8888-8888-880000000001"
 TARGET_PAGE_ID = "88888888-8888-8888-8888-880000000002"
 TARGET_TYPE = "requirements"
-ASSIGNEE_USER_ID = 88
 
 
 def test_uc8_type_assignee_routes_conflict_to_inbox(
-    client, auth_headers, seeder, inbox_has, wait_until
+    client, auth_headers, login, seeder, inbox_has, wait_until
 ):
     """UC8 happy path: 담당자 매핑 설정 후 해당 타입 conflict가 담당자 인박스로 라우팅."""
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc8", name="UC8 Workspace")
     project_id = seeder.project(workspace_id, name="UC8 Project")
-    assignee_member_id = seeder.workspace_member(workspace_id=workspace_id, user_id=ASSIGNEE_USER_ID)
+
+    # 담당자 = default(admin)와 다른 user. 세션 발급(V17 FK) 위해 로그인으로 user_account 확보, /auth/me로 id 조회.
+    assignee_headers = login("assignee")
+    assignee_user_id = client.get("/auth/me", headers=assignee_headers).json()["id"]
+    assignee_member_id = seeder.workspace_member(workspace_id=workspace_id, user_id=assignee_user_id)
     seeder.project_member(project_id=project_id, workspace_member_id=assignee_member_id)
 
     # 검증 axis: 타입별 담당자 매핑 설정
@@ -64,7 +67,6 @@ def test_uc8_type_assignee_routes_conflict_to_inbox(
     )
     conflict_id = conflict["id"]
 
-    assignee_headers = {"X-Test-User-Id": str(ASSIGNEE_USER_ID)}
     wait_until(
         lambda: inbox_has(conflict_id, headers=assignee_headers),
         reason="설정된 담당자 인박스에 conflict가 라우팅되지 않음",
