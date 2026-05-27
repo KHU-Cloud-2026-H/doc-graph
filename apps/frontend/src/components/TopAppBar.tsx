@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Settings, Inbox } from "lucide-react";
 import { InboxPopup } from "./InboxPopup";
-import { inboxNotifications } from "./InboxList";
+import { inboxActiveCount } from "./InboxList";
 
 interface TopAppBarProps {
   centerLabel: string;
@@ -13,7 +14,7 @@ const NOTION_LOGO =
 const PROFILE_IMAGE =
   "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop";
 
-const unreadCount = inboxNotifications.length;
+const unreadCount = inboxActiveCount;
 
 export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
   const [isInboxOpen, setIsInboxOpen] = useState(false);
@@ -22,7 +23,9 @@ export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
   return (
     <header className="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-white border-b border-slate-200 antialiased">
       <div className="flex items-center gap-6">
-        <div className="font-bold tracking-tight text-slate-900 text-2xl">DocGraph</div>
+        <Link to="/workspaces" className="font-bold tracking-tight text-slate-900 text-2xl hover:text-blue-600 transition-colors">
+          DocGraph
+        </Link>
       </div>
 
       <div className="flex justify-center max-w-md mx-4 absolute left-1/2 -translate-x-1/2">

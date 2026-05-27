@@ -3,7 +3,7 @@ import { useAppStore } from "../store";
 import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Layout, Home, Plus } from "lucide-react";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { InboxPopup } from "./InboxPopup";
-import { inboxNotifications } from "./InboxList";
+import { inboxActiveCount } from "./InboxList";
 import { TopAppBar } from "./TopAppBar";
 
 
@@ -271,7 +271,7 @@ export const Sidebar = () => {
             <span className="text-[13px] font-medium">Inbox</span>
           </div>
           <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">
-            {inboxNotifications.length}
+            {inboxActiveCount}
           </span>
         </button>
         <InboxPopup
@@ -288,7 +288,10 @@ export const Sidebar = () => {
           />
           <span className="text-[13px]">김상민</span>
         </div>
-        <div className="text-left font-bold text-slate-800 text-2xl tracking-tight px-2 mt-4">DocGraph</div>
+        <div
+          className="text-left font-bold text-slate-800 text-2xl tracking-tight px-2 mt-4 cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={() => navigate('/workspaces')}
+        >DocGraph</div>
         <div className="text-[10px] text-slate-400 px-2 mt-0.5 pb-2">DocGraph는 실수할 수 있습니다.</div>
       </div>
 

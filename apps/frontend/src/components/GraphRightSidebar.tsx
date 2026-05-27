@@ -10,7 +10,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
           <AlertTriangle className="w-4 h-4 text-red-600" />
           <h3 className="font-bold text-sm text-slate-900 tracking-tight">INTEGRITY ISSUES</h3>
         </div>
-        <button 
+        <button
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center"
         >
@@ -39,6 +39,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
             <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded">AI</span>
           </div>
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h2 className="text-base font-bold text-slate-900 mb-1.5">결정사항 전파 누락</h2>
             <p className="text-sm font-semibold text-slate-800 leading-relaxed">
               최근 주간 회의록에서 수수료 최적화 이슈로 Toss Payments를 우선 연동하는 것으로 결정되었습니다.
             </p>
@@ -49,7 +50,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
         <div className="mb-8">
           <h4 className="text-sm font-semibold text-slate-900 mb-3">문서 대조 분석</h4>
           <div className="space-y-4">
-            
+
             {/* PRD Document */}
             <div className="border border-red-200 rounded-lg overflow-hidden shadow-sm">
               <div className="bg-red-50 px-3 py-2 flex items-center justify-between border-b border-red-100">
@@ -85,7 +86,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
                 </p>
               </div>
             </div>
-            
+
           </div>
         </div>
 
@@ -95,7 +96,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
             <h4 className="text-sm font-semibold text-slate-900">DocGraph AI 제안</h4>
             <Lightbulb className="w-4 h-4 text-blue-600" />
           </div>
-          
+
           <div className="rounded-lg border border-slate-200 overflow-hidden text-xs font-mono shadow-sm">
             <div className="bg-red-50 text-red-800 px-3 py-2.5 flex gap-3 items-start">
               <span className="text-red-400 select-none font-bold mt-0.5">-</span>
@@ -115,7 +116,7 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
         <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-sm transition-colors flex items-center justify-center gap-2">
           제안 적용하기
         </button>
-        <Link 
+        <Link
           to={`/w/${workspaceId}/p/${projectId}/docs/prd`}
           className="w-full py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-md transition-colors flex items-center justify-center"
         >
