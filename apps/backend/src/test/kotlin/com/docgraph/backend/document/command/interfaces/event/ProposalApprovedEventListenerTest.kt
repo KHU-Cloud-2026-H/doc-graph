@@ -1,6 +1,6 @@
 package com.docgraph.backend.document.command.interfaces.event
 
-import com.docgraph.backend.document.command.domain.NotionPageWriter
+import com.docgraph.backend.document.command.domain.NotionDocumentClient
 import com.docgraph.backend.document.command.domain.NotionPatchResult
 import com.docgraph.backend.document.command.domain.NotionWriteSucceededEvent
 import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
@@ -18,10 +18,10 @@ import java.time.OffsetDateTime
 class ProposalApprovedEventListenerTest {
 
     private val findConflictFindingById = mockk<FindConflictFindingByIdQuery>()
-    private val notionPageWriter = mockk<NotionPageWriter>()
+    private val notionDocumentClient = mockk<NotionDocumentClient>()
     private val publisher = mockk<ApplicationEventPublisher>(relaxed = true)
 
-    private val listener = ProposalApprovedEventListener(findConflictFindingById, notionPageWriter, publisher)
+    private val listener = ProposalApprovedEventListener(findConflictFindingById, notionDocumentClient, publisher)
 
     private val now = OffsetDateTime.parse("2026-05-01T00:00:00Z")
 
@@ -33,7 +33,7 @@ class ProposalApprovedEventListenerTest {
             targetBlockId = "block-x",
             newText = "new",
         )
-        every { notionPageWriter.patch("block-x", "new", null) } returns NotionPatchResult.Success
+        every { notionDocumentClient.patchBlockText("block-x", "new", null, null) } returns NotionPatchResult.Success
 
         listener.on(ProposalApprovedEvent(conflictFindingId = 500L, approvedBy = 1L, occurredAt = now))
 
@@ -48,7 +48,7 @@ class ProposalApprovedEventListenerTest {
 
         listener.on(ProposalApprovedEvent(conflictFindingId = 500L, approvedBy = 1L, occurredAt = now))
 
-        verify(exactly = 0) { notionPageWriter.patch(any(), any(), any()) }
+        verify(exactly = 0) { notionDocumentClient.patchBlockText(any(), any(), any(), any()) }
         verify(exactly = 0) { publisher.publishEvent(any<NotionWriteSucceededEvent>()) }
     }
 }

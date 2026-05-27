@@ -5,6 +5,7 @@ import com.docgraph.backend.document.command.domain.NotionDocumentClient
 import com.docgraph.backend.document.command.domain.NotionIcon
 import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.command.domain.NotionPage
+import com.docgraph.backend.document.command.domain.NotionPatchResult
 import com.docgraph.backend.document.command.domain.NotionSearchPage
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -130,6 +131,46 @@ class NotionDocumentRestClient(
             }
     }
 
+    override fun patchBlockText(
+        notionBlockId: String,
+        newText: String,
+        expectedLastEditedAt: OffsetDateTime?,
+        accessToken: String?,
+    ): NotionPatchResult {
+        val block = fetchBlock(notionBlockId, accessToken)
+        val type = block.path("type").asText("unsupported")
+        require(type in richTextBlockTypes) { "unsupported Notion text patch block type: $type" }
+
+        val lastEditedTime = block.path("last_edited_time").asOffsetDateTimeOrNull()
+        if (expectedLastEditedAt != null && lastEditedTime != null && lastEditedTime.isAfter(expectedLastEditedAt)) {
+            error("Notion block is newer than expected: $notionBlockId")
+        }
+
+        val body = mapOf(
+            type to mapOf(
+                "rich_text" to listOf(
+                    mapOf(
+                        "type" to "text",
+                        "text" to mapOf("content" to newText),
+                    ),
+                ),
+            ),
+        )
+
+        restClient.patch()
+            .uri("/v1/blocks/{blockId}", notionBlockId)
+            .headers { headers ->
+                if (!accessToken.isNullOrBlank()) {
+                    headers.setBearerAuth(accessToken)
+                }
+            }
+            .body(body)
+            .retrieve()
+            .toBodilessEntity()
+
+        return NotionPatchResult.Success
+    }
+
     private fun JsonNode.toDomainBlock(): NotionBlock {
         val type = path("type").asText("unsupported")
         val typed = path(type)
@@ -151,6 +192,19 @@ class NotionDocumentRestClient(
             rawJson = objectMapper.writeValueAsString(this),
         )
     }
+
+    private fun fetchBlock(blockId: String, accessToken: String?): JsonNode =
+        restClient.get()
+            .uri("/v1/blocks/{blockId}", blockId)
+            .headers { headers ->
+                if (!accessToken.isNullOrBlank()) {
+                    headers.setBearerAuth(accessToken)
+                }
+            }
+            .retrieve()
+            .body(String::class.java)
+            ?.let(objectMapper::readTree)
+            ?: error("empty Notion block response: $blockId")
 
     private fun extractTitle(page: JsonNode): String {
         val properties = page.path("properties")
@@ -208,6 +262,19 @@ class NotionDocumentRestClient(
         return parent.path(type).asTextOrNull()
     }
 }
+
+private val richTextBlockTypes = setOf(
+    "paragraph",
+    "heading_1",
+    "heading_2",
+    "heading_3",
+    "bulleted_list_item",
+    "numbered_list_item",
+    "to_do",
+    "toggle",
+    "quote",
+    "callout",
+)
 
 private fun JsonNode.asTextOrNull(): String? =
     takeIf { !it.isMissingNode && !it.isNull }?.asText()?.takeIf { it.isNotBlank() }

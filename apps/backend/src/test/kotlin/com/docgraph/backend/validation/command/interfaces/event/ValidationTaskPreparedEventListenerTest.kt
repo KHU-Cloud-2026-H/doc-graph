@@ -110,8 +110,8 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         val task = newPendingTask(edgeId = 41L)
         wireFakes(
             edgeId = 41L,
-            sourceBlocks = listOf(Block("s1", null, "paragraph", "source text", 0)),
-            targetBlocks = listOf(Block("t1", null, "paragraph", "target text", 0)),
+            sourceBlocks = listOf(Block("s1", null, "paragraph", "source text", null, 0)),
+            targetBlocks = listOf(Block("t1", null, "paragraph", "target text", null, 0)),
         )
         detector.behavior = { _ ->
             listOf(DetectedConflict(listOf("s1"), "t1", "불일치", "수정 제안", "제목"))
@@ -130,8 +130,8 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         val task = newPendingTask(edgeId = 42L)
         wireFakes(
             edgeId = 42L,
-            sourceBlocks = listOf(Block("s", null, "paragraph", "s", 0)),
-            targetBlocks = listOf(Block("t", null, "paragraph", "t", 0)),
+            sourceBlocks = listOf(Block("s", null, "paragraph", "s", null, 0)),
+            targetBlocks = listOf(Block("t", null, "paragraph", "t", null, 0)),
         )
         detector.behavior = { _ -> throw RuntimeException("AI failure") }
 

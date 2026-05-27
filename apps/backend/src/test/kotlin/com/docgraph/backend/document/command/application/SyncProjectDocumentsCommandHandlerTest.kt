@@ -28,6 +28,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 @Tag("unit")
 class SyncProjectDocumentsCommandHandlerTest {
@@ -81,7 +82,8 @@ class SyncProjectDocumentsCommandHandlerTest {
         every { documentRepository.save(any()) } answers {
             firstArg<Document>().also { it.id = nextDocumentId++ }
         }
-        every { blockRepository.deleteByDocument_Id(any()) } returns Unit
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(any()) } returns emptyList()
+        every { blockRepository.deleteAll(any<Iterable<Block>>()) } returns Unit
         every { blockRepository.saveAll(any<Iterable<Block>>()) } answers {
             firstArg<Iterable<Block>>().toList()
         }
@@ -128,6 +130,90 @@ class SyncProjectDocumentsCommandHandlerTest {
         assertEquals(30L, commandSlot.captured.ruleId)
         assertEquals("source must reflect target", commandSlot.captured.validationCriterion)
         assertEquals(DependencyEdgeSource.NOTION_REFERENCE, commandSlot.captured.source)
+    }
+
+    @Test
+    fun `동기화는 기존 block을 덮어쓰기 전에 previousText에 직전 값을 보관한다`() {
+        every { findProjectDetailById.find(1L, 9L) } returns ProjectDetail(
+            id = 1L,
+            name = "Project",
+            notionRootPageId = "root-page",
+            members = emptyList(),
+        )
+        every { searchCategoriesByProject.search(1L) } returns emptyList()
+        every { projectRepository.findById(1L) } returns null
+        val document = Document(projectId = 1L, notionPageId = "root-page", title = "Root").also { it.id = 100L }
+        val existingBlock = Block(
+            document = document,
+            notionBlockId = "block-1",
+            type = "paragraph",
+            text = "before text",
+            sortOrder = 0,
+        )
+        every { documentRepository.findByProjectIdAndNotionPageId(1L, "root-page") } returns document
+        every { documentRepository.save(any()) } answers { firstArg() }
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(100L) } returns listOf(existingBlock)
+        every { blockRepository.deleteAll(any<Iterable<Block>>()) } returns Unit
+        every { blockRepository.saveAll(any<Iterable<Block>>()) } answers {
+            firstArg<Iterable<Block>>().toList()
+        }
+        every { notionDocumentClient.fetchPage("root-page", null) } returns page("root-page", "Root")
+        every { notionDocumentClient.fetchBlockChildren("root-page", null) } returns listOf(
+            block(id = "block-1", text = "after text"),
+        )
+
+        handler.handle(SyncProjectDocumentsCommand(projectId = 1L, requestedBy = 9L))
+
+        assertEquals("before text", existingBlock.previousText)
+        assertEquals("after text", existingBlock.text)
+    }
+
+    @Test
+    fun `initial sync stores pages discovered through page mentions and their child pages`() {
+        every { findProjectDetailById.find(1L, 9L) } returns ProjectDetail(
+            id = 1L,
+            name = "Project",
+            notionRootPageId = "root-page",
+            members = emptyList(),
+        )
+        every { searchCategoriesByProject.search(1L) } returns emptyList()
+        every { projectRepository.findById(1L) } returns null
+        every { documentRepository.findByProjectIdAndNotionPageId(any(), any()) } returns null
+
+        var nextDocumentId = 100L
+        val savedDocuments = mutableListOf<Document>()
+        every { documentRepository.save(any()) } answers {
+            firstArg<Document>().also {
+                it.id = nextDocumentId++
+                savedDocuments += it
+            }
+        }
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(any()) } returns emptyList()
+        every { blockRepository.deleteAll(any<Iterable<Block>>()) } returns Unit
+        every { blockRepository.saveAll(any<Iterable<Block>>()) } answers {
+            firstArg<Iterable<Block>>().toList()
+        }
+
+        every { notionDocumentClient.fetchPage("root-page", null) } returns page("root-page", "Root")
+        every { notionDocumentClient.fetchBlockChildren("root-page", null) } returns listOf(
+            block(id = "paragraph-1", text = "See linked", linkedPageIds = setOf("linked-page")),
+        )
+        every { notionDocumentClient.fetchPage("linked-page", null) } returns page("linked-page", "Linked")
+        every { notionDocumentClient.fetchBlockChildren("linked-page", null) } returns listOf(
+            block(id = "nested-child-page", type = "child_page", childPageTitle = "Nested"),
+        )
+        every { notionDocumentClient.fetchPage("nested-child-page", null) } returns page("nested-child-page", "Nested")
+        every { notionDocumentClient.fetchBlockChildren("nested-child-page", null) } returns emptyList()
+
+        handler.handle(SyncProjectDocumentsCommand(projectId = 1L, requestedBy = 9L))
+
+        assertEquals(listOf("root-page", "linked-page", "nested-child-page"), savedDocuments.map { it.notionPageId })
+        val linked = savedDocuments.first { it.notionPageId == "linked-page" }
+        assertNull(linked.parentNotionPageId)
+        assertNull(linked.parentDocumentId)
+        val nested = savedDocuments.first { it.notionPageId == "nested-child-page" }
+        assertEquals("linked-page", nested.parentNotionPageId)
+        assertEquals(linked.id, nested.parentDocumentId)
     }
 
     private fun page(id: String, title: String): NotionPage = NotionPage(

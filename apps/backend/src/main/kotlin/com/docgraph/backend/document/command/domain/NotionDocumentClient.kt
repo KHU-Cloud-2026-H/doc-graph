@@ -6,6 +6,12 @@ interface NotionDocumentClient {
     fun fetchPage(pageId: String, accessToken: String? = null): NotionPage
     fun fetchBlockChildren(blockId: String, accessToken: String? = null): List<NotionBlock>
     fun searchPages(accessToken: String, query: String? = null, pageSize: Int = 50): List<NotionSearchPage>
+    fun patchBlockText(
+        notionBlockId: String,
+        newText: String,
+        expectedLastEditedAt: OffsetDateTime? = null,
+        accessToken: String? = null,
+    ): NotionPatchResult
 }
 
 data class NotionPage(

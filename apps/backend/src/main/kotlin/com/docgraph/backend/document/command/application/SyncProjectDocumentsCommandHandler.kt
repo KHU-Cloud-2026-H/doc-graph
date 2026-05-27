@@ -47,12 +47,9 @@ class SyncProjectDocumentsCommandHandler(
         val synced = linkedMapOf<String, SyncedDocument>()
         val accessToken = findWorkspaceAccessToken(command.projectId, command.requestedBy)
 
-        syncPage(
+        syncReachablePages(
             projectId = command.projectId,
-            pageId = project.notionRootPageId,
-            parentNotionPageId = null,
-            parentDocumentId = null,
-            inheritedType = null,
+            rootPageId = project.notionRootPageId,
             categoryTypes = categoryTypes,
             synced = synced,
             accessToken = accessToken,
@@ -61,48 +58,70 @@ class SyncProjectDocumentsCommandHandler(
         createEdges(command.projectId, synced.values.toList())
     }
 
-    private fun syncPage(
+    private fun syncReachablePages(
         projectId: Long,
-        pageId: String,
-        parentNotionPageId: String?,
-        parentDocumentId: Long?,
-        inheritedType: DocumentType?,
+        rootPageId: String,
         categoryTypes: Map<String, DocumentType>,
         synced: MutableMap<String, SyncedDocument>,
         accessToken: String?,
     ) {
-        val page = notionDocumentClient.fetchPage(pageId, accessToken)
-        val blocks = fetchBlockTree(pageId, accessToken)
-        val type = categoryTypes[notionPageKey(page.id)] ?: inheritedType
-        val flatText = blocks.mapNotNull { it.text ?: it.childPageTitle }
-            .joinToString("\n")
-            .ifBlank { null }
+        val queue = ArrayDeque<PageSyncJob>()
+        val queued = mutableSetOf<String>()
+        fun enqueue(job: PageSyncJob) {
+            if (queued.add(notionPageKey(job.pageId))) {
+                queue += job
+            }
+        }
 
-        val document = upsertDocument(
-            projectId = projectId,
-            page = page,
-            parentNotionPageId = parentNotionPageId,
-            parentDocumentId = parentDocumentId,
-            type = type,
-            flatText = flatText,
-        )
-        replaceBlocks(document, blocks)
-        synced[notionPageKey(page.id)] = SyncedDocument(
-            document = document,
-            linkedPageIds = blocks.flatMap { it.linkedPageIds }.toSet(),
-        )
+        enqueue(PageSyncJob(pageId = rootPageId))
+        while (queue.isNotEmpty()) {
+            val job = queue.removeFirst()
+            val pageKey = notionPageKey(job.pageId)
+            if (synced.containsKey(pageKey)) {
+                continue
+            }
 
-        blocks.filter { it.type == "child_page" }.forEach { child ->
-            syncPage(
+            val page = notionDocumentClient.fetchPage(job.pageId, accessToken)
+            val blocks = fetchBlockTree(page.id, accessToken)
+            val type = categoryTypes[notionPageKey(page.id)] ?: job.inheritedType
+            val flatText = blocks.mapNotNull { it.text ?: it.childPageTitle }
+                .joinToString("\n")
+                .ifBlank { null }
+
+            val document = upsertDocument(
                 projectId = projectId,
-                pageId = child.id,
-                parentNotionPageId = page.id,
-                parentDocumentId = document.id,
-                inheritedType = type,
-                categoryTypes = categoryTypes,
-                synced = synced,
-                accessToken = accessToken,
+                page = page,
+                parentNotionPageId = job.parentNotionPageId,
+                parentDocumentId = job.parentDocumentId,
+                type = type,
+                flatText = flatText,
             )
+            replaceBlocks(document, blocks)
+
+            val linkedPageIds = blocks.flatMap { it.linkedPageIds }.toSet()
+            synced[notionPageKey(page.id)] = SyncedDocument(
+                document = document,
+                linkedPageIds = linkedPageIds,
+            )
+
+            blocks.filter { it.type == "child_page" }.forEach { child ->
+                enqueue(
+                    PageSyncJob(
+                        pageId = child.id,
+                        parentNotionPageId = page.id,
+                        parentDocumentId = document.id,
+                        inheritedType = type,
+                    ),
+                )
+            }
+            linkedPageIds.forEach { linkedPageId ->
+                enqueue(
+                    PageSyncJob(
+                        pageId = linkedPageId,
+                        inheritedType = type,
+                    ),
+                )
+            }
         }
     }
 
@@ -168,16 +187,40 @@ class SyncProjectDocumentsCommandHandler(
     }
 
     private fun replaceBlocks(document: Document, blocks: List<NotionBlock>) {
-        blockRepository.deleteByDocument_Id(document.id)
+        val existingBlocks = blockRepository.findByDocument_IdOrderBySortOrderAsc(document.id)
+            .associateBy { it.notionBlockId }
+        val syncedBlockIds = blocks.mapTo(mutableSetOf()) { it.id }
+        val obsoleteBlocks = existingBlocks.values.filterNot { it.notionBlockId in syncedBlockIds }
+        if (obsoleteBlocks.isNotEmpty()) {
+            blockRepository.deleteAll(obsoleteBlocks)
+        }
+
         blockRepository.saveAll(
             blocks.mapIndexed { index, block ->
-                Block(
+                val text = block.text ?: block.childPageTitle
+                existingBlocks[block.id]?.apply {
+                    refreshSnapshot(
+                        parentType = block.parentType,
+                        parentId = block.parentId,
+                        type = block.type,
+                        text = text,
+                        sortOrder = index,
+                        createdTime = block.createdTime,
+                        createdBy = block.createdBy,
+                        lastEditedTime = block.lastEditedTime,
+                        lastEditedBy = block.lastEditedBy,
+                        hasChildren = block.hasChildren,
+                        archived = block.archived,
+                        inTrash = block.inTrash,
+                        rawBlock = block.rawJson,
+                    )
+                } ?: Block(
                     document = document,
                     notionBlockId = block.id,
                     parentType = block.parentType,
                     parentId = block.parentId,
                     type = block.type,
-                    text = block.text ?: block.childPageTitle,
+                    text = text,
                     sortOrder = index,
                     createdTime = block.createdTime,
                     createdBy = block.createdBy,
@@ -224,6 +267,13 @@ class SyncProjectDocumentsCommandHandler(
 private data class SyncedDocument(
     val document: Document,
     val linkedPageIds: Set<String>,
+)
+
+private data class PageSyncJob(
+    val pageId: String,
+    val parentNotionPageId: String? = null,
+    val parentDocumentId: Long? = null,
+    val inheritedType: DocumentType? = null,
 )
 
 private fun notionPageKey(id: String): String = id.replace("-", "").lowercase()

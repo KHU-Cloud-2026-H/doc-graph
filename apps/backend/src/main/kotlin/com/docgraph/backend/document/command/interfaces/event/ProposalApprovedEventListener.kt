@@ -1,6 +1,6 @@
 package com.docgraph.backend.document.command.interfaces.event
 
-import com.docgraph.backend.document.command.domain.NotionPageWriter
+import com.docgraph.backend.document.command.domain.NotionDocumentClient
 import com.docgraph.backend.document.command.domain.NotionPatchResult
 import com.docgraph.backend.document.command.domain.NotionWriteSucceededEvent
 import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
@@ -13,13 +13,13 @@ import org.springframework.transaction.event.TransactionalEventListener
 @Component
 class ProposalApprovedEventListener(
     private val findConflictFindingById: FindConflictFindingByIdQuery,
-    private val notionPageWriter: NotionPageWriter,
+    private val notionDocumentClient: NotionDocumentClient,
     private val publisher: ApplicationEventPublisher,
 ) {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun on(event: ProposalApprovedEvent) {
         val finding = findConflictFindingById.find(event.conflictFindingId) ?: return
-        val result = notionPageWriter.patch(
+        val result = notionDocumentClient.patchBlockText(
             notionBlockId = finding.targetBlockId,
             newText = finding.newText,
             expectedLastEditedAt = null,

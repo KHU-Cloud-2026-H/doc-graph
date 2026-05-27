@@ -53,6 +53,7 @@ class DocumentQueryRepository {
                     parentBlockId = if (b.parentType == "block_id") b.parentId else null,
                     type = b.type,
                     text = b.text,
+                    previousText = b.previousText,
                     order = b.sortOrder,
                 )
             }
