@@ -33,7 +33,7 @@ class ProjectQueryRepository {
         val pm = QProjectMember.projectMember
         val wm = QWorkspaceMember.workspaceMember
         return queryFactory
-            .select(Projections.constructor(ProjectRef::class.java, p.id, p.name))
+            .select(Projections.constructor(ProjectRef::class.java, p.id, p.workspaceId, p.name))
             .from(p)
             .join(pm).on(pm.projectId.eq(p.id))
             .join(wm).on(wm.id.eq(pm.workspaceMemberId))
@@ -107,7 +107,7 @@ class ProjectQueryRepository {
         if (projectIds.isEmpty()) return emptyList()
         val p = QProject.project
         return queryFactory
-            .select(Projections.constructor(ProjectRef::class.java, p.id, p.name))
+            .select(Projections.constructor(ProjectRef::class.java, p.id, p.workspaceId, p.name))
             .from(p)
             .where(p.id.`in`(projectIds))
             .fetch()

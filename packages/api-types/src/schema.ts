@@ -1466,6 +1466,8 @@ export interface components {
             /** Format: int64 */
             edgeId?: number;
             /** Format: int64 */
+            workspaceId?: number;
+            /** Format: int64 */
             projectId?: number;
             projectName?: string;
             sourceDocument?: components["schemas"]["InboxDocumentRef"];

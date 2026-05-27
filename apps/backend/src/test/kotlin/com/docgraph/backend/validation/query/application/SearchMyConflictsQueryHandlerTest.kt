@@ -111,8 +111,8 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // project summaries
         every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
-            ProjectRef(1L, "P1"),
-            ProjectRef(2L, "P2"),
+            ProjectRef(1L, 7L, "P1"),
+            ProjectRef(2L, 8L, "P2"),
         )
         every { validationQueryRepository.findFindingsByConflictIds(match { it.toSet() == setOf(500L, 501L) }) } returns listOf(
             ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "T500", now),
@@ -124,6 +124,7 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(2, result.content.size)
         val row1 = result.content.first { it.id == 500L }
         assertEquals(30L, row1.edgeId)
+        assertEquals(7L, row1.workspaceId)
         assertEquals(1L, row1.projectId)
         assertEquals("P1", row1.projectName)
         assertEquals(InboxDocumentRef(40L, "S40", DocumentType.PLANNING), row1.sourceDocument)
@@ -133,6 +134,7 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals("T500", row1.title)
 
         val row2 = result.content.first { it.id == 501L }
+        assertEquals(8L, row2.workspaceId)
         assertEquals(2L, row2.projectId)
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
@@ -165,7 +167,7 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
-        every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, "P"))
+        every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, 9L, "P"))
         every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
             ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "TI", now),
         )
