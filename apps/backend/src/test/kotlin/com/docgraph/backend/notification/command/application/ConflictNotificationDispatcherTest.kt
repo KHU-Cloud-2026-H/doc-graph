@@ -44,7 +44,7 @@ class ConflictNotificationDispatcherTest {
         every { findEdgeById.find(70L) } returns EdgeDetail(70L, 5L, 100L, 200L, "기준")
         every { projectWebhookRepository.findByProjectId(5L) } returns
             ProjectWebhook(projectId = 5L, url = "https://hooks.slack.com/x", createdAt = OffsetDateTime.now())
-        every { searchProjectRefs.search(listOf(5L)) } returns listOf(ProjectRef(5L, "기획 프로젝트"))
+        every { searchProjectRefs.search(listOf(5L)) } returns listOf(ProjectRef(5L, 1L, "기획 프로젝트"))
         every { searchDocumentReferences.search(listOf(100L, 200L)) } returns listOf(
             DocumentReference(100L, 5L, "회의록", null),
             DocumentReference(200L, 5L, "요구사항", null),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Inbox } from "lucide-react";
-import { InboxList } from "./InboxList";
+import { InboxList, type InboxFilter } from "./InboxList";
 
 interface InboxPopupProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface InboxPopupProps {
 export const InboxPopup = ({ isOpen, onClose, anchorRef, placement = 'below' }: InboxPopupProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [filter, setFilter] = useState<InboxFilter>('ACTIVE');
 
   useEffect(() => {
     if (isOpen && anchorRef.current) {
@@ -71,12 +72,39 @@ export const InboxPopup = ({ isOpen, onClose, anchorRef, placement = 'below' }: 
       className="fixed z-[100] w-80 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden flex flex-col"
       style={{ top: pos.top, left: pos.left }}
     >
-      <div className="flex items-center px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-        <Inbox className="w-4 h-4 text-slate-700" />
-        <span className="font-semibold text-sm text-slate-900 ml-2">Inbox</span>
+      {/* 헤더 + 필터 pills 한 줄 */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center gap-2">
+          <Inbox className="w-4 h-4 text-slate-700" />
+          <span className="font-semibold text-sm text-slate-900">Inbox</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {(
+            [
+              { value: 'ACTIVE', label: '미해소' },
+              { value: 'IGNORED', label: '무시됨' },
+              { value: 'ALL', label: '전체' },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${filter === f.value
+                  ? f.value === 'ACTIVE'
+                    ? 'bg-red-100 text-red-700'
+                    : f.value === 'IGNORED'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-700'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="max-h-[400px] overflow-y-auto">
-        <InboxList onClose={onClose} />
+      <div className="h-[360px] overflow-y-auto">
+        <InboxList onClose={onClose} filter={filter} />
       </div>
     </div>
   );

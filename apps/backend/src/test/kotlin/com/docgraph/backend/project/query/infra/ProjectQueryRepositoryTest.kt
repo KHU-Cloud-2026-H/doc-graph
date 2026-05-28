@@ -144,8 +144,8 @@ class ProjectQueryRepositoryTest @Autowired constructor(
 
         assertEquals(
             setOf(
-                ProjectRef(p1.id, "Q2 Planning"),
-                ProjectRef(p2.id, "Spec Drafts"),
+                ProjectRef(p1.id, ws.id, "Q2 Planning"),
+                ProjectRef(p2.id, ws.id, "Spec Drafts"),
             ),
             result,
         )
@@ -158,7 +158,7 @@ class ProjectQueryRepositoryTest @Autowired constructor(
 
         val result = queryRepository.findProjectRefsByIds(listOf(p.id, 99999L))
 
-        assertEquals(listOf(ProjectRef(p.id, "Only")), result)
+        assertEquals(listOf(ProjectRef(p.id, ws.id, "Only")), result)
     }
 
     @Test
