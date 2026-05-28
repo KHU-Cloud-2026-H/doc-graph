@@ -18,6 +18,7 @@ import { create } from 'zustand';
 //      이전 mock은 필드명이 정반대였으나 API 매핑 혼동 방지를 위해 정정됨.
 export interface IntegrityIssue {
   id: string;
+  status: 'ACTIVE' | 'IGNORED';    // API: ConflictResponse.status
   title: string;                 // API: ConflictResponse.title (충돌 사안 한 줄 요약 제목)
   rationale: string;             // API: ConflictFindingResponse.rationale (충돌 원인 AI 판정)
   sourceDocumentId: number;      // API: ConflictResponse.sourceDocumentId (충돌의 근거가 된 다른 문서)
@@ -108,6 +109,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-4',
+                  status: 'ACTIVE',
                   title: '모바일 플랫폼 테스트 범위 불일치',
                   rationale: '문서 1의 핵심 요구사항에서는 모바일 환경에서 iOS 및 Android 양쪽 모두를 지원해야 한다고 기재되어 있으나, QA 테스트 전략에서는 오직 Android 환경에서만 테스트를 수행하도록 제한하여 충돌이 발생함.',
                   sourceDocumentId: 17,
@@ -119,6 +121,7 @@ export const useAppStore = create<AppState>((set) => ({
                 },
                 {
                   id: 'err-9',
+                  status: 'IGNORED',
                   title: '비밀번호 최소 길이 기준 불일치',
                   rationale: '보안 요구사항에서는 비밀번호 강도를 10자리 이상으로 엄격히 통제하나, 클라이언트 에러 명세의 8자리 제한 안내 메시지와 모순됨.',
                   sourceDocumentId: 25,
@@ -159,6 +162,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-7',
+                  status: 'ACTIVE',
                   title: '시간 데이터 포맷 불일치',
                   rationale: '비기능 요구사항은 시간 표기를 ISO 8601 문자열 포맷으로 강제하나, SIT 시나리오에서는 숫자형 Unix Timestamp로 전송하고 있어 포맷 충돌이 일어남.',
                   sourceDocumentId: 18,
@@ -208,6 +212,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-8',
+                  status: 'IGNORED',
                   title: '출근 시간 기준 불일치',
                   rationale: '09:10:59까지의 기록을 정상 출근으로 유예 인정한다고 정책을 명시하였으나 단위 테스트에서는 09:00:01 기록부터 즉각 지각(LATE) 처리되도록 하드코딩되어 모순됨.',
                   sourceDocumentId: 19,
@@ -240,6 +245,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-10',
+                  status: 'ACTIVE',
                   title: '근태 기록 접근 제어 미구현',
                   rationale: 'RBAC 매트릭스에서는 일반 사원이 타인의 근태 기록을 열람하는 것을 완벽히 차단해야 한다고 명확히 요구함. 그러나 Attendance 다건 조회 API는 토큰의 유효성만 확인할 뿐 필터링 로직이 누락됨.',
                   sourceDocumentId: 14,
@@ -373,6 +379,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-2',
+                  status: 'ACTIVE',
                   title: '휴가 결재 프로세스 단축 누락',
                   rationale: '회고 및 플래닝 과정에서 휴가 결재 프로세스를 부서장 1차 승인만으로 단축하고 HR 2차 승인 단계를 폐지하기로 결정했으나 비즈니스 상태 전이도에 여전히 PENDING_HR 단계가 존재함.',
                   sourceDocumentId: 10,
@@ -404,6 +411,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-5',
+                  status: 'ACTIVE',
                   title: '사원 식별자 형식 불일치',
                   rationale: 'DB 스키마는 정수형 타입에 스네이크 케이스를 적용한 employee_no (INTEGER)로 설계되었으나, Auth API 명세서에서는 카멜케이스 기반의 문자열 타입인 employeeId 로 응답을 정의함.',
                   sourceDocumentId: 15,
@@ -434,6 +442,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-1',
+                  status: 'ACTIVE',
                   title: 'GPS 위치 수집 기능 불일치',
                   rationale: '회의록에서는 위치 수집 기능을 완전히 삭제하기로 합의하였으나 API 명세서의 Request Body에는 여전히 latitude와 longitude가 필수 파라미터로 남아있음.',
                   sourceDocumentId: 8,
@@ -445,6 +454,7 @@ export const useAppStore = create<AppState>((set) => ({
                 },
                 {
                   id: 'err-6',
+                  status: 'ACTIVE',
                   title: '출근 상태 표현 형식 불일치',
                   rationale: '백엔드는 attendance_status라는 명칭의 열거형 문자열을 반환하도록 규정하나 프론트엔드 상태 관리는 단순 boolean인 isCheckedIn 속성으로 정의하여 충돌함.',
                   sourceDocumentId: 23,
@@ -561,6 +571,7 @@ export const useAppStore = create<AppState>((set) => ({
               issues: [
                 {
                   id: 'err-3',
+                  status: 'IGNORED',
                   title: '오프라인 동기화 기능 제외 미반영',
                   rationale: '데일리 스크럼에서 오프라인 출퇴근 기록 보정(Sync) 기능을 제외하기로 결정하였으나 컴포넌트 설계서에는 액션 버튼과 모달이 남아있음.',
                   sourceDocumentId: 9,

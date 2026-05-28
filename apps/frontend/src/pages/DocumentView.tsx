@@ -314,41 +314,41 @@ export const DocumentView = () => {
           </div>
         </div>
 
-        {/* Floating Integrity Badge: 이슈 있을 때 (빨간) */}
-        {!isPanelOpen && activeDoc?.hasIssue && (
-          <div className="absolute top-20 right-8 z-30">
-            <button
-              onClick={openPanel}
-              className="flex items-center gap-2.5 bg-white p-1.5 rounded-full shadow-lg border border-slate-200 hover:shadow-xl transition-shadow"
-            >
-              <div className="flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-full font-bold text-lg shrink-0">
-                {activeDoc.issues?.length || 1}
-              </div>
-              <div className="flex flex-col items-start leading-tight pr-3 ml-[-2px]">
-                <span className="text-slate-900 font-bold text-[11px] tracking-tight">INTEGRITY</span>
-                <span className="text-slate-900 font-bold text-[11px] tracking-tight">ISSUES</span>
-              </div>
-            </button>
-          </div>
-        )}
-        
-        {/* Floating Integrity Badge: 이슈 없을 때 (초록, 이제 클릭 가능) */}
-        {!isPanelOpen && !activeDoc?.hasIssue && (
-          <div className="absolute top-20 right-8 z-30">
-            <button
-              onClick={openPanel}
-              className="flex items-center gap-2.5 bg-white p-1.5 rounded-full shadow-md border border-slate-200 opacity-60 hover:opacity-100 hover:shadow-lg transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 bg-green-500 text-white rounded-full shrink-0">
-                <Check className="w-5 h-5 stroke-[3]" />
-              </div>
-              <div className="flex flex-col items-start leading-tight pr-3 ml-[-2px]">
-                <span className="text-slate-900 font-bold text-[11px] tracking-tight">INTEGRITY</span>
-                <span className="text-slate-500 text-[10px] tracking-tight">CLEAR</span>
-              </div>
-            </button>
-          </div>
-        )}
+        {/* Floating Integrity Badge: ACTIVE 이슈 있을 때 (빨간) */}
+        {!isPanelOpen && (() => {
+          const activeCount = (activeDoc?.issues ?? []).filter((i: IntegrityIssue) => i.status !== 'IGNORED').length;
+          return activeCount > 0 ? (
+            <div className="absolute top-20 right-8 z-30">
+              <button
+                onClick={openPanel}
+                className="flex items-center gap-2.5 bg-white p-1.5 rounded-full shadow-lg border border-slate-200 hover:shadow-xl transition-shadow"
+              >
+                <div className="flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-full font-bold text-lg shrink-0">
+                  {activeCount}
+                </div>
+                <div className="flex flex-col items-start leading-tight pr-3 ml-[-2px]">
+                  <span className="text-slate-900 font-bold text-[11px] tracking-tight">INTEGRITY</span>
+                  <span className="text-slate-900 font-bold text-[11px] tracking-tight">ISSUES</span>
+                </div>
+              </button>
+            </div>
+          ) : (
+            <div className="absolute top-20 right-8 z-30">
+              <button
+                onClick={openPanel}
+                className="flex items-center gap-2.5 bg-white p-1.5 rounded-full shadow-md border border-slate-200 opacity-60 hover:opacity-100 hover:shadow-lg transition-all"
+              >
+                <div className="flex items-center justify-center w-8 h-8 bg-green-500 text-white rounded-full shrink-0">
+                  <Check className="w-5 h-5 stroke-[3]" />
+                </div>
+                <div className="flex flex-col items-start leading-tight pr-3 ml-[-2px]">
+                  <span className="text-slate-900 font-bold text-[11px] tracking-tight">INTEGRITY</span>
+                  <span className="text-slate-500 text-[10px] tracking-tight">CLEAR</span>
+                </div>
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* RightSidebar: hasIssue 조건 제거 — 이슈 0개일 때도 빈 상태로 표시 */}

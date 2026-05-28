@@ -54,11 +54,14 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
 
         <span className="truncate text-[13px] flex-1 min-w-0">{node.title}</span>
 
-        {node.hasIssue && (
-          <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full shrink-0">
-            {node.issues?.length ?? 1}
-          </span>
-        )}
+        {(() => {
+          const activeCount = (node.issues ?? []).filter((i: any) => i.status !== 'IGNORED').length;
+          return activeCount > 0 ? (
+            <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full shrink-0">
+              {activeCount}
+            </span>
+          ) : null;
+        })()}
       </div>
 
       {isOpen && (
