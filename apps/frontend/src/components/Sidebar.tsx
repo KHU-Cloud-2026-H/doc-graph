@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppStore } from "../store";
-import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Layout, Home, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Layout, Home, Plus, ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { InboxPopup } from "./InboxPopup";
 import { inboxActiveCount } from "./InboxList";
 import { TopAppBar } from "./TopAppBar";
+import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
 
 
 const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) => {
@@ -93,6 +94,8 @@ export const Sidebar = () => {
 
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const inboxButtonRef = useRef<HTMLButtonElement>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarClosedByRoute = useRef(false);
 
   const isFullPageRoute = /\/w\/[^/]+\/(settings|new-project)$/.test(location.pathname);
@@ -142,9 +145,18 @@ export const Sidebar = () => {
           onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
         >
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-xs font-bold">
-              {projects.find((p) => p.id === Number(projectId))?.name?.[0] || 'P'}
-            </div>
+            {(() => {
+              const currentProject = projects.find((p) => p.id === Number(projectId));
+              return currentProject?.notionRootPageEmoji ? (
+                <span className="text-base leading-none w-5 h-5 flex items-center justify-center">
+                  {currentProject.notionRootPageEmoji}
+                </span>
+              ) : (
+                <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-xs font-bold">
+                  {currentProject?.name?.[0] || 'P'}
+                </div>
+              );
+            })()}
             <span className="font-semibold text-slate-900 text-sm tracking-tight truncate max-w-[180px]">
               {projects.find((p) => p.id === Number(projectId))?.name || '프로젝트 선택'}
             </span>
@@ -163,9 +175,20 @@ export const Sidebar = () => {
                 setIsProjectDropdownOpen(false);
               }}
             >
-              <p className="text-base font-bold text-slate-900 leading-snug truncate">
-                {workspaces.find((w) => w.id === Number(workspaceId))?.name ?? '워크스페이스'}
-              </p>
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-xs font-bold shrink-0 mt-0.5">
+                  {(workspaces.find((w) => w.id === Number(workspaceId))?.name ?? 'W')[0]}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-bold text-slate-900 leading-snug truncate">
+                    {workspaces.find((w) => w.id === Number(workspaceId))?.name ?? '워크스페이스'}
+                  </p>
+                  <p className="flex items-center gap-0.5 text-xs text-slate-400 mt-0.5">
+                    워크스페이스 홈
+                    <ArrowRight className="w-3 h-3" />
+                  </p>
+                </div>
+              </div>
             </div>
             {/* 2. 구분선 */}
             <hr className="border-slate-100" />
@@ -196,7 +219,15 @@ export const Sidebar = () => {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-xs font-bold">{p.name[0]}</div>
+                    {p.notionRootPageEmoji ? (
+                      <span className="text-base leading-none w-5 h-5 flex items-center justify-center">
+                        {p.notionRootPageEmoji}
+                      </span>
+                    ) : (
+                      <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-xs font-bold">
+                        {p.name[0]}
+                      </div>
+                    )}
                     <span className="text-[13px] font-medium text-slate-900">{p.name}</span>
                   </div>
                   {p.id === Number(projectId) && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
@@ -266,9 +297,9 @@ export const Sidebar = () => {
           onClick={() => setIsInboxOpen(!isInboxOpen)}
           className={`flex w-full items-center justify-between px-2 py-1.5 rounded-sm transition-colors ${isInboxOpen ? 'bg-slate-100 text-slate-900' : 'hover:bg-slate-100 text-slate-700'} group`}
         >
-          <div className="flex items-center gap-2.5">
-            <Inbox className={`w-4 h-4 ${isInboxOpen ? 'text-slate-700' : 'text-slate-500'}`} />
-            <span className="text-[13px] font-medium">Inbox</span>
+          <div className="flex items-center gap-2">
+            <Inbox className={`w-[18px] h-[18px] ${isInboxOpen ? 'text-slate-700' : 'text-slate-500'}`} />
+            <span className="text-[14px] font-medium">Inbox</span>
           </div>
           <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0 rounded-full">
             {inboxActiveCount}
@@ -280,14 +311,20 @@ export const Sidebar = () => {
           anchorRef={inboxButtonRef}
           placement="right"
         />
-        <div className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer mt-1 font-medium">
-          <img
-            src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop"
-            alt="User"
-            className="w-4 h-4 rounded-full object-cover"
-          />
-          <span className="text-[13px]">김상민</span>
-        </div>
+        <button
+          ref={profileButtonRef}
+          onClick={() => setIsProfileOpen(!isProfileOpen)}
+          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors mt-1 font-medium"
+        >
+          <UserAvatar size="xs" />
+          <span className="text-[14px]">김상민</span>
+        </button>
+        <UserProfilePopup
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          anchorRef={profileButtonRef}
+          placement="above"
+        />
         <div
           className="text-left font-bold text-slate-800 text-2xl tracking-tight px-2 mt-4 cursor-pointer hover:text-blue-600 transition-colors"
           onClick={() => navigate('/workspaces')}

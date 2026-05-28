@@ -48,6 +48,8 @@ interface Project {
   name: string;
   workspaceId: number;
   notionRootPageId?: string;
+  // TODO(API): ProjectSummary·ProjectDetail에 notionRootPageIcon(IconResponse) 포함 시 교체
+  notionRootPageEmoji?: string | null;
 }
 
 interface AppState {
@@ -614,7 +616,7 @@ interface LeaveState {
     },
   ],
   workspaces: [{ id: 1, name: '엔터프라이즈 근태관리 B2B SaaS 프로젝트' }],
-  projects: [{ id: 1, name: 'WorkSync 도입 프로젝트', workspaceId: 1 }],
+  projects: [{ id: 1, name: 'WorkSync 도입 프로젝트', workspaceId: 1, notionRootPageEmoji: '🏠' }],
   currentWorkspaceId: 1,
   currentProjectId: 1,
   setCurrentProject: (projectId) => set(() => ({ currentProjectId: projectId })),

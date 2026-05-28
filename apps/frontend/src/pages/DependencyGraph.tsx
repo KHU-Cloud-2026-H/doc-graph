@@ -65,7 +65,7 @@ export const DependencyGraph = () => {
             {workspaceName}
           </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>
-          <Link to={`/w/${workspaceId}/p/${projectId}`} className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">
+          <Link to={`/w/${workspaceId}/p/${projectId}/graph`} className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">
             {projectName}
           </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>

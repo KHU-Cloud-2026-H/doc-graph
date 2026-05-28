@@ -170,7 +170,21 @@ export const DocumentView = () => {
             >
               {projectName}
             </Link>
-            {parentPage && (
+            {/* 루트 페이지 — 현재 보는 문서가 루트(id=0)가 아닐 때만 링크로 표시 */}
+            {activeDoc?.id !== 0 && documents[0] && (
+              <>
+                <span className="mx-1 text-[14px] opacity-40">/</span>
+                <Link
+                  to={`/w/${workspaceId}/p/${projectId}/docs/0`}
+                  className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
+                >
+                  {documents[0].emoji && <span>{documents[0].emoji}</span>}
+                  <span>{documents[0].title}</span>
+                </Link>
+              </>
+            )}
+            {/* 부모 페이지 — 존재하고 루트(id=0)가 아닐 때만 표시 */}
+            {parentPage && parentPage.id !== 0 && (
               <>
                 <span className="mx-1 text-[14px] opacity-40">/</span>
                 <Link

@@ -63,7 +63,7 @@ const MOCK_PROJECT_SUMMARIES: ProjectSummaryMock[] = [
     documentCount: 25,
     unresolvedConflictCount: 2,
     lastNotionChangedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    notionRootPageIcon: null,
+    notionRootPageIcon: { type: 'EMOJI' as const, value: '🏠' },
   },
 ];
 
