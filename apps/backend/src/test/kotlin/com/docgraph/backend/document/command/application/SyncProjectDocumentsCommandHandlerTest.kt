@@ -65,6 +65,10 @@ class SyncProjectDocumentsCommandHandlerTest {
             name = "Project",
             notionRootPageId = "root-page",
             members = emptyList(),
+            memberCount = 0,
+            documentCount = 0L,
+            unresolvedConflictCount = 0L,
+            lastNotionChangedAt = null,
         )
         every { searchCategoriesByProject.search(1L) } returns listOf(
             CategoryProjection("source-page", DocumentType.REQUIREMENTS),

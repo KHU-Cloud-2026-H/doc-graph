@@ -11,10 +11,10 @@ import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.SearchEdgeDetailsByIdsQuery
 import com.docgraph.backend.graph.query.application.SearchEdgeIdsByTargetDocumentIdsQuery
 import com.docgraph.backend.project.query.application.AssignedDocumentType
-import com.docgraph.backend.project.query.application.ProjectSummary
+import com.docgraph.backend.project.query.application.ProjectRef
 import com.docgraph.backend.project.query.application.SearchAdminProjectIdsByUserIdQuery
 import com.docgraph.backend.project.query.application.SearchAssignedDocumentTypesByUserIdQuery
-import com.docgraph.backend.project.query.application.SearchProjectSummariesByIdsQuery
+import com.docgraph.backend.project.query.application.SearchProjectRefsByIdsQuery
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import com.docgraph.backend.workspace.query.application.SearchWorkspaceMemberIdsByUserIdQuery
 import io.mockk.every
@@ -40,7 +40,7 @@ class SearchMyConflictsQueryHandlerTest {
     private val searchDocumentReferences = mockk<SearchDocumentReferencesByIdsQuery>()
     private val searchEdgeIdsByTargetDocuments = mockk<SearchEdgeIdsByTargetDocumentIdsQuery>()
     private val searchEdgeDetailsByIds = mockk<SearchEdgeDetailsByIdsQuery>()
-    private val searchProjectSummaries = mockk<SearchProjectSummariesByIdsQuery>()
+    private val searchProjectRefs = mockk<SearchProjectRefsByIdsQuery>()
     private val validationQueryRepository = mockk<ValidationQueryRepository>()
 
     private val handler = SearchMyConflictsQueryHandler(
@@ -54,7 +54,7 @@ class SearchMyConflictsQueryHandlerTest {
         searchDocumentReferences,
         searchEdgeIdsByTargetDocuments,
         searchEdgeDetailsByIds,
-        searchProjectSummaries,
+        searchProjectRefs,
         validationQueryRepository,
     )
 
@@ -101,18 +101,21 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // edge details (source/target mapping)
         every { searchEdgeDetailsByIds.search(listOf(30L, 31L)) } returns listOf(
-            EdgeDetail(id = 30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
-            EdgeDetail(id = 31L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
+            EdgeDetail(id = 30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c1"),
+            EdgeDetail(id = 31L, projectId = 1L, sourceDocumentId = 41L, targetDocumentId = 22L, validationCriterion = "c2"),
         )
         // source doc refs
         every { searchDocumentReferences.search(match { it.toSet() == setOf(40L, 41L) }) } returns listOf(
             DocumentReference(40L, 1L, "S40", DocumentType.PLANNING),
             DocumentReference(41L, 2L, "S41", DocumentType.REQUIREMENTS),
         )
-        // project summaries
-        every { searchProjectSummaries.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
-            ProjectSummary(1L, "P1", 10L),
-            ProjectSummary(2L, "P2", 20L),
+        every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
+            ProjectRef(1L, 7L, "P1"),
+            ProjectRef(2L, 8L, "P2"),
+        )
+        every { validationQueryRepository.findFindingsByConflictIds(match { it.toSet() == setOf(500L, 501L) }) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "T500", now),
+            ConflictFindingRow(2L, 501L, listOf("x"), "y", "r", "n", "T501", now),
         )
 
         val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
@@ -120,19 +123,21 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(2, result.content.size)
         val row1 = result.content.first { it.id == 500L }
         assertEquals(30L, row1.edgeId)
+        assertEquals(7L, row1.workspaceId)
         assertEquals(1L, row1.projectId)
-        assertEquals(10L, row1.workspaceId)
         assertEquals("P1", row1.projectName)
         assertEquals(InboxDocumentRef(40L, "S40", DocumentType.PLANNING), row1.sourceDocument)
         assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS), row1.targetDocument)
         assertEquals(MyConflictStatus.ACTIVE, row1.status)
         assertEquals(now, row1.firstDetectedAt)
+        assertEquals("T500", row1.title)
 
         val row2 = result.content.first { it.id == 501L }
+        assertEquals(8L, row2.workspaceId)
         assertEquals(2L, row2.projectId)
-        assertEquals(20L, row2.workspaceId)
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
+        assertEquals("T501", row2.title)
     }
 
     @Test
@@ -156,17 +161,20 @@ class SearchMyConflictsQueryHandlerTest {
             1L,
         )
         every { searchEdgeDetailsByIds.search(listOf(30L)) } returns listOf(
-            EdgeDetail(30L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
+            EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
         )
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
-        every { searchProjectSummaries.search(listOf(1L)) } returns listOf(ProjectSummary(1L, "P", 10L))
+        every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, 9L, "P"))
+        every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "TI", now),
+        )
 
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 
         assertEquals(MyConflictStatus.IGNORED, result.content[0].status)
-        assertEquals(10L, result.content[0].workspaceId)
+        assertEquals(9L, result.content[0].workspaceId)
         assertEquals(ignoredAt, result.content[0].ignoredAt)
     }
 

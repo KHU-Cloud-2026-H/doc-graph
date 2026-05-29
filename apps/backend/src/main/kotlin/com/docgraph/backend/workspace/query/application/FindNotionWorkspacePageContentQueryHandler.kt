@@ -18,7 +18,7 @@ class FindNotionWorkspacePageContentQueryHandler(
 ) : FindNotionWorkspacePageContentQuery {
 
     override fun find(workspaceId: Long, userId: Long, pageId: String): NotionWorkspacePageContentResponse? {
-        workspaceQueryRepository.findWorkspaceSummaryAccessibleBy(workspaceId, userId) ?: return null
+        workspaceQueryRepository.findWorkspaceRefAccessibleBy(workspaceId, userId) ?: return null
         val workspace = workspaceRepository.findById(workspaceId) ?: return null
         val connection = notionConnectionRepository.findByUserIdAndNotionWorkspaceId(
             userId = userId,

@@ -5,6 +5,7 @@ import com.docgraph.backend.document.command.domain.BlockRepository
 import com.docgraph.backend.document.command.domain.Document
 import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.query.application.DocumentReference
+import com.docgraph.backend.document.query.application.DocumentStats
 import com.docgraph.backend.document.query.application.DocumentType
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.project.query.application.AssignedDocumentType
@@ -479,5 +480,72 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         val ids = queryRepository.searchUnassignedIdsByProject(1L)
 
         assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — projectId별 document count와 notionLastEditedAt MAX 반환`() {
+        val t1 = OffsetDateTime.parse("2026-05-01T10:00:00Z")
+        val t2 = OffsetDateTime.parse("2026-05-20T10:00:00Z")
+        val t3 = OffsetDateTime.parse("2026-05-15T10:00:00Z")
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A", notionLastEditedAt = t1))
+        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B", notionLastEditedAt = t2))
+        documentRepository.save(Document(projectId = 2L, notionPageId = "c", title = "C", notionLastEditedAt = t3))
+
+        val stats = queryRepository.searchStatsByProjectIds(listOf(1L, 2L))
+
+        assertEquals(DocumentStats(2L, t2), stats[1L])
+        assertEquals(DocumentStats(1L, t3), stats[2L])
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — 입력 빈 리스트면 빈 Map`() {
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+
+        val stats = queryRepository.searchStatsByProjectIds(emptyList())
+
+        assertTrue(stats.isEmpty())
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — document 없는 projectId는 Map에 미포함`() {
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+
+        val stats = queryRepository.searchStatsByProjectIds(listOf(1L, 999L))
+
+        assertEquals(1, stats.size)
+        assertEquals(DocumentStats(1L, null), stats[1L])
+        assertNull(stats[999L])
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — notionLastEditedAt이 모두 null인 projectId는 lastChangedAt null`() {
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B"))
+
+        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+
+        assertEquals(DocumentStats(2L, null), stats[1L])
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — 다른 projectId의 document는 제외`() {
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = 2L, notionPageId = "b", title = "B"))
+
+        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+
+        assertEquals(DocumentStats(1L, null), stats[1L])
+        assertNull(stats[2L])
+    }
+
+    @Test
+    fun `searchStatsByProjectIds — notionLastEditedAt 일부만 null이면 non-null 중 MAX`() {
+        val t = OffsetDateTime.parse("2026-05-10T10:00:00Z")
+        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B", notionLastEditedAt = t))
+
+        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+
+        assertEquals(DocumentStats(2L, t), stats[1L])
     }
 }

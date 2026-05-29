@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Tag("slice")
@@ -93,6 +94,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b2",
                 rationale = "first",
                 newText = "sug1",
+                title = "tt1",
                 detectedAt = now,
             ),
         )
@@ -104,6 +106,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b4",
                 rationale = "second",
                 newText = "sug2",
+                title = "tt2",
                 detectedAt = now,
             ),
         )
@@ -115,6 +118,7 @@ class ValidationQueryRepositoryTest @Autowired constructor(
                 targetBlockId = "b6",
                 rationale = "third",
                 newText = "sug3",
+                title = "tt3",
                 detectedAt = now,
             ),
         )
@@ -124,6 +128,48 @@ class ValidationQueryRepositoryTest @Autowired constructor(
 
         assertEquals(2, grouped[conflict1.id]?.size)
         assertEquals(1, grouped[conflict2.id]?.size)
+        assertEquals("tt3", grouped[conflict2.id]?.single()?.title)
+    }
+
+    @Test
+    fun `findLatestFindingTitleByConflictId — 최신 detectedAt finding의 title`() {
+        val now = OffsetDateTime.now()
+        val conflict = conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        val task = taskRepository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 1L))
+        findingRepository.save(
+            ConflictFinding(
+                conflictId = conflict.id,
+                validationTaskId = task.id,
+                sourceBlockIds = listOf("b1"),
+                targetBlockId = "t1",
+                rationale = "r1",
+                newText = "n1",
+                title = "오래된 충돌",
+                detectedAt = now.minusHours(1),
+            ),
+        )
+        findingRepository.save(
+            ConflictFinding(
+                conflictId = conflict.id,
+                validationTaskId = task.id,
+                sourceBlockIds = listOf("b2"),
+                targetBlockId = "t2",
+                rationale = "r2",
+                newText = "n2",
+                title = "최신 충돌",
+                detectedAt = now,
+            ),
+        )
+
+        assertEquals("최신 충돌", queryRepository.findLatestFindingTitleByConflictId(conflict.id))
+    }
+
+    @Test
+    fun `findLatestFindingTitleByConflictId — finding 없으면 null`() {
+        val now = OffsetDateTime.now()
+        val conflict = conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+
+        assertNull(queryRepository.findLatestFindingTitleByConflictId(conflict.id))
     }
 
     @Test
@@ -240,5 +286,38 @@ class ValidationQueryRepositoryTest @Autowired constructor(
         assertEquals(2L, page.totalElements)
         assertTrue(page.content.all { it.edgeId in listOf(1L, 2L) })
         assertTrue(page.content.all { it.status == OutboxStatus.PENDING })
+    }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 활성 미무시 conflict가 있는 edgeId 반환`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 1L, firstDetectedAt = now, lastDetectedAt = now))
+        conflictRepository.save(
+            Conflict(edgeId = 2L, firstDetectedAt = now, lastDetectedAt = now, resolvedAt = now),
+        )
+        conflictRepository.save(
+            Conflict(edgeId = 3L, firstDetectedAt = now, lastDetectedAt = now, ignoredAt = now, ignoredBy = 99L),
+        )
+        conflictRepository.save(Conflict(edgeId = 4L, firstDetectedAt = now, lastDetectedAt = now))
+
+        val ids = queryRepository.findActiveUnignoredEdgeIds(listOf(1L, 2L, 3L, 4L)).toSet()
+
+        assertEquals(setOf(1L, 4L), ids)
+    }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 빈 입력이면 빈 리스트`() {
+        val ids = queryRepository.findActiveUnignoredEdgeIds(emptyList())
+        assertTrue(ids.isEmpty())
+    }
+
+    @Test
+    fun `findActiveUnignoredEdgeIds — 입력에 포함되지 않은 edge는 제외`() {
+        val now = OffsetDateTime.now()
+        conflictRepository.save(Conflict(edgeId = 99L, firstDetectedAt = now, lastDetectedAt = now))
+
+        val ids = queryRepository.findActiveUnignoredEdgeIds(listOf(1L, 2L))
+
+        assertTrue(ids.isEmpty())
     }
 }

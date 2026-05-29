@@ -137,6 +137,7 @@ class ApproveProposalCommandHandlerTest {
         targetBlockId = "t",
         rationale = "r",
         newText = "sug",
+        title = "tt",
         detectedAt = OffsetDateTime.now(),
     )
 
@@ -150,6 +151,7 @@ class ApproveProposalCommandHandlerTest {
         every { conflictRepository.findById(conflictId) } returns conflict
         every { findEdgeById.find(edgeId) } returns EdgeDetail(
             id = edgeId,
+            projectId = 1L,
             sourceDocumentId = 100L,
             targetDocumentId = targetDocumentId,
             validationCriterion = "c",

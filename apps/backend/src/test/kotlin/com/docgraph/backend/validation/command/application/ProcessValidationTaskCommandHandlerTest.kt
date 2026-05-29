@@ -50,7 +50,7 @@ class ProcessValidationTaskCommandHandlerTest {
         val taskId = 1L
         val edgeId = 100L
         every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
-        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
+        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 1L, 200L, 300L, "criterion")
         every { findDocumentById.find(any()) } returns document(0L)
 
         handler.handle(ProcessValidationTaskCommand(taskId))
@@ -94,7 +94,7 @@ class ProcessValidationTaskCommandHandlerTest {
         val taskId = 1L
         val edgeId = 100L
         every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
-        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
+        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 1L, 200L, 300L, "criterion")
         every { findDocumentById.find(200L) } returns null
 
         handler.handle(ProcessValidationTaskCommand(taskId))
@@ -108,7 +108,7 @@ class ProcessValidationTaskCommandHandlerTest {
         val taskId = 1L
         val edgeId = 100L
         every { repository.findById(taskId) } returns pendingTask(taskId, edgeId)
-        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 200L, 300L, "criterion")
+        every { findEdgeById.find(edgeId) } returns EdgeDetail(edgeId, 1L, 200L, 300L, "criterion")
         every { findDocumentById.find(200L) } returns document(200L)
         every { findDocumentById.find(300L) } returns null
 

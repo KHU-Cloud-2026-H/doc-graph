@@ -63,6 +63,7 @@ class ConflictFixtureController(
                     targetBlockId = item.targetBlockId,
                     rationale = item.rationale,
                     newText = item.newText ?: "",
+                    title = item.title ?: "",
                     detectedAt = now,
                 ),
             )
@@ -88,6 +89,7 @@ data class SeedFindingItem(
     val targetBlockId: String,
     val rationale: String,
     val newText: String? = null,
+    val title: String? = null,
 )
 
 data class SeedConflictResponse(

@@ -146,7 +146,7 @@ class ValidationTaskQueuedEventListenerTest {
         val sourceDocId = 200L
         val targetDocId = 300L
         findEdge.behavior = { id ->
-            if (id == edgeId) EdgeDetail(edgeId, sourceDocId, targetDocId, "criterion") else null
+            if (id == edgeId) EdgeDetail(edgeId, 1L, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
             DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, null, emptyList())
@@ -179,7 +179,7 @@ class ValidationTaskQueuedEventListenerTest {
         val edgeIdFail = 999L
         findEdge.behavior = { id ->
             when (id) {
-                edgeIdOk -> EdgeDetail(id, 200L, 300L, "criterion")
+                edgeIdOk -> EdgeDetail(id, 1L, 200L, 300L, "criterion")
                 edgeIdFail -> throw RuntimeException("forced-failure")
                 else -> null
             }

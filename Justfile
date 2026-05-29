@@ -40,10 +40,11 @@ test-class class *gradleArgs:
 # mode: mock (default, wiremock) | live (실제 Notion·OpenAI + ngrok).
 # 회원가입 UI 실제 흐름 시연은 live + OAuth2 backend 통합 완료가 전제.
 compose-up mode="mock":
-    COMPOSE_PROFILES=backend,{{mode}} {{dotenv-run}} docker compose up
+    COMPOSE_PROFILES=backend,{{mode}} {{dotenv-run}} docker compose up --build
 
+# 모든 profile 서비스를 내림 — COMPOSE_PROFILES='*'로 전 profile 활성화(profile 미지정 시 비-profile 서비스만 대상이라 backend/mock/live가 orphan으로 남는 문제 회피).
 compose-down:
-    {{dotenv-run}} docker compose down
+    COMPOSE_PROFILES='*' {{dotenv-run}} docker compose down
 
 # Backend 직접 호출용 임시 fixture seed (OAuth/frontend 부재 한정) — acceptance profile boot 전제, idempotent (POST /test/reset 선행).
 seed-fixture backend="http://localhost:8080/api":

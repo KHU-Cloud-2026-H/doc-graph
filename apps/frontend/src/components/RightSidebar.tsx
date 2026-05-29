@@ -68,7 +68,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
       {/* 본문: 이슈 있으면 카드 리스트, 없으면 빈 상태 */}
       {hasIssues ? (
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {doc.issues?.map((issue, index) => {
+          {doc.issues?.map((issue) => {
             const isCollapsed = !!collapsed[issue.id];
             return (
               <div key={issue.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -79,7 +79,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                 >
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-[18px] h-[18px] text-amber-600" />
-                    <span className="text-[15px] font-semibold text-slate-900">정합성 충돌 의심 #{index + 1}</span>
+                    <span className="text-[15px] font-semibold text-slate-900">{issue.title}</span>
                   </div>
                   <ChevronUp className={`w-5 h-5 text-slate-400 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
                 </button>
@@ -93,9 +93,10 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                       <p className="text-slate-600 mt-1">{issue.rationale}</p>
                     </div>
 
-                    {/* 소스 페이지(노란색) + 회색 직사각형(검증 기준 + 버튼들) */}
-                    <div className="relative">
-                      <div className="border border-yellow-200 rounded-lg overflow-hidden shadow-sm relative z-10 bg-white">
+                    {/* 소스 문서 + 검증 기준 + 액션 버튼 */}
+                    <div className="space-y-2.5">
+                      {/* 소스 문서 카드 */}
+                      <div className="border border-yellow-200 rounded-lg overflow-hidden">
                         <Link
                           to={`/w/${workspaceId}/p/${projectId}/docs/${issue.sourceDocumentId}`}
                           className="bg-yellow-50 px-3 py-2 flex items-center justify-between gap-2 border-b border-yellow-100 hover:bg-yellow-100 transition-colors"
@@ -114,23 +115,24 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                         </div>
                       </div>
 
-                      <div className="bg-slate-100 rounded-lg px-3 pt-4 pb-3 -mt-2">
-                        <p className="text-xs text-slate-600 leading-relaxed mb-2">
-                          💡 {issue.validationCriterion}
-                        </p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* TODO(API): "연결 무시" — edge 자체를 ignore. 현재 백엔드에는 conflict ignore만 있음. */}
-                          <button className="px-2 py-1 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded transition-colors">
-                            연결 무시
-                          </button>
-                          <Link
-                            to={`/w/${workspaceId}/p/${projectId}/graph`}
-                            className="px-2 py-1 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded transition-colors flex items-center gap-1"
-                          >
-                            Dependency Graph
-                            <ExternalLink className="w-3 h-3" />
-                          </Link>
-                        </div>
+                      {/* 검증 기준 */}
+                      <p className="text-xs text-slate-500 leading-relaxed px-0.5">
+                        💡 {issue.validationCriterion}
+                      </p>
+
+                      {/* 액션 버튼 */}
+                      <div className="flex items-center gap-1.5">
+                        {/* TODO(API): "연결 무시" — edge 자체를 ignore. 현재 백엔드에는 conflict ignore만 있음. */}
+                        <button className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors">
+                          이 문서와의 연결 무시
+                        </button>
+                        <Link
+                          to={`/w/${workspaceId}/p/${projectId}/graph`}
+                          className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors flex items-center gap-1"
+                        >
+                          Dependency Graph
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </Link>
                       </div>
                     </div>
 

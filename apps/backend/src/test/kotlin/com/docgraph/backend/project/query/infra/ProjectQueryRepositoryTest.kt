@@ -6,8 +6,11 @@ import com.docgraph.backend.project.command.domain.Project
 import com.docgraph.backend.project.command.domain.TypeAssigneeDefault
 import com.docgraph.backend.project.command.infra.ProjectJpaRepository
 import com.docgraph.backend.project.command.infra.TypeAssigneeDefaultJpaRepository
+import com.docgraph.backend.project.command.domain.ProjectMember
+import com.docgraph.backend.project.command.domain.ProjectMemberRole
+import com.docgraph.backend.project.command.infra.ProjectMemberJpaRepository
 import com.docgraph.backend.project.query.application.AssignedDocumentType
-import com.docgraph.backend.project.query.application.ProjectSummary
+import com.docgraph.backend.project.query.application.ProjectRef
 import com.docgraph.backend.workspace.command.domain.Workspace
 import com.docgraph.backend.workspace.command.domain.WorkspaceMember
 import com.docgraph.backend.workspace.command.infra.WorkspaceJpaRepository
@@ -30,6 +33,7 @@ class ProjectQueryRepositoryTest @Autowired constructor(
     private val workspaceJpa: WorkspaceJpaRepository,
     private val workspaceMemberJpa: WorkspaceMemberJpaRepository,
     private val projectJpa: ProjectJpaRepository,
+    private val projectMemberJpa: ProjectMemberJpaRepository,
     private val typeAssigneeJpa: TypeAssigneeDefaultJpaRepository,
 ) {
 
@@ -131,42 +135,121 @@ class ProjectQueryRepositoryTest @Autowired constructor(
     }
 
     @Test
-    fun `findSummariesByIds — 매칭되는 project를 id와 name으로 반환`() {
+    fun `findProjectRefsByIds — 매칭되는 project를 id와 name으로 반환`() {
         val ws = workspaceJpa.save(newWorkspace("ws-sum-1"))
         val p1 = projectJpa.save(newProject(ws.id, "Q2 Planning"))
         val p2 = projectJpa.save(newProject(ws.id, "Spec Drafts"))
 
-        val result = queryRepository.findSummariesByIds(listOf(p1.id, p2.id)).toSet()
+        val result = queryRepository.findProjectRefsByIds(listOf(p1.id, p2.id)).toSet()
 
         assertEquals(
             setOf(
-                ProjectSummary(p1.id, "Q2 Planning", ws.id),
-                ProjectSummary(p2.id, "Spec Drafts", ws.id),
+                ProjectRef(p1.id, ws.id, "Q2 Planning"),
+                ProjectRef(p2.id, ws.id, "Spec Drafts"),
             ),
             result,
         )
     }
 
     @Test
-    fun `findSummariesByIds — 일부 id만 매칭되면 매칭된 것만 반환`() {
+    fun `findProjectRefsByIds — 일부 id만 매칭되면 매칭된 것만 반환`() {
         val ws = workspaceJpa.save(newWorkspace("ws-sum-2"))
         val p = projectJpa.save(newProject(ws.id, "Only"))
 
-        val result = queryRepository.findSummariesByIds(listOf(p.id, 99999L))
+        val result = queryRepository.findProjectRefsByIds(listOf(p.id, 99999L))
 
-        assertEquals(listOf(ProjectSummary(p.id, "Only", ws.id)), result)
+        assertEquals(listOf(ProjectRef(p.id, ws.id, "Only")), result)
     }
 
     @Test
-    fun `findSummariesByIds — 입력 빈 리스트면 빈 리스트`() {
-        val result = queryRepository.findSummariesByIds(emptyList())
+    fun `findProjectRefsByIds — 입력 빈 리스트면 빈 리스트`() {
+        val result = queryRepository.findProjectRefsByIds(emptyList())
         assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `findSummariesByIds — 매칭 없으면 빈 리스트`() {
-        val result = queryRepository.findSummariesByIds(listOf(99999L, 88888L))
+    fun `findProjectRefsByIds — 매칭 없으면 빈 리스트`() {
+        val result = queryRepository.findProjectRefsByIds(listOf(99999L, 88888L))
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `findProjectMemberCountsByIds — projectId별 멤버 수 반환`() {
+        val ws = workspaceJpa.save(newWorkspace("ws-mc-1"))
+        val wm1 = workspaceMemberJpa.save(WorkspaceMember(workspaceId = ws.id, userId = 1L))
+        val wm2 = workspaceMemberJpa.save(WorkspaceMember(workspaceId = ws.id, userId = 2L))
+        val wm3 = workspaceMemberJpa.save(WorkspaceMember(workspaceId = ws.id, userId = 3L))
+        val p1 = projectJpa.save(newProject(ws.id, "P1"))
+        val p2 = projectJpa.save(newProject(ws.id, "P2"))
+        projectMemberJpa.save(ProjectMember(projectId = p1.id, workspaceMemberId = wm1.id, role = ProjectMemberRole.ADMIN))
+        projectMemberJpa.save(ProjectMember(projectId = p1.id, workspaceMemberId = wm2.id, role = ProjectMemberRole.MEMBER))
+        projectMemberJpa.save(ProjectMember(projectId = p2.id, workspaceMemberId = wm3.id, role = ProjectMemberRole.ADMIN))
+
+        val result = queryRepository.findProjectMemberCountsByIds(listOf(p1.id, p2.id))
+
+        assertEquals(2, result[p1.id])
+        assertEquals(1, result[p2.id])
+    }
+
+    @Test
+    fun `findProjectMemberCountsByIds — 빈 입력이면 빈 Map`() {
+        val result = queryRepository.findProjectMemberCountsByIds(emptyList())
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `findProjectMemberCountsByIds — 멤버 없는 project는 Map에 미포함`() {
+        val ws = workspaceJpa.save(newWorkspace("ws-mc-2"))
+        val p1 = projectJpa.save(newProject(ws.id, "EmptyP"))
+
+        val result = queryRepository.findProjectMemberCountsByIds(listOf(p1.id))
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `findProjectIdsByWorkspaceIdIn — workspace별 project ids 그룹화 반환`() {
+        val ws1 = workspaceJpa.save(newWorkspace("ws-grp-1"))
+        val ws2 = workspaceJpa.save(newWorkspace("ws-grp-2"))
+        val p1a = projectJpa.save(newProject(ws1.id, "A"))
+        val p1b = projectJpa.save(newProject(ws1.id, "B"))
+        val p2a = projectJpa.save(newProject(ws2.id, "C"))
+
+        val result = queryRepository.findProjectIdsByWorkspaceIdIn(listOf(ws1.id, ws2.id))
+
+        assertEquals(setOf(p1a.id, p1b.id), result[ws1.id]?.toSet())
+        assertEquals(listOf(p2a.id), result[ws2.id])
+    }
+
+    @Test
+    fun `findProjectIdsByWorkspaceIdIn — 빈 입력이면 빈 Map`() {
+        val result = queryRepository.findProjectIdsByWorkspaceIdIn(emptyList())
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `findProjectIdsByWorkspaceIdIn — project 없는 workspace는 Map에 미포함`() {
+        val ws1 = workspaceJpa.save(newWorkspace("ws-empty-1"))
+        val ws2 = workspaceJpa.save(newWorkspace("ws-empty-2"))
+        projectJpa.save(newProject(ws1.id, "Only"))
+
+        val result = queryRepository.findProjectIdsByWorkspaceIdIn(listOf(ws1.id, ws2.id))
+
+        assertEquals(1, result.size)
+        assertTrue(result.containsKey(ws1.id))
+        assertTrue(!result.containsKey(ws2.id))
+    }
+
+    @Test
+    fun `findProjectIdsByWorkspaceIdIn — 입력에 포함되지 않은 workspace는 제외`() {
+        val ws1 = workspaceJpa.save(newWorkspace("ws-excl-1"))
+        val ws2 = workspaceJpa.save(newWorkspace("ws-excl-2"))
+        projectJpa.save(newProject(ws1.id, "A"))
+        projectJpa.save(newProject(ws2.id, "B"))
+
+        val result = queryRepository.findProjectIdsByWorkspaceIdIn(listOf(ws1.id))
+
+        assertEquals(setOf(ws1.id), result.keys)
     }
 
     private fun newWorkspace(notionId: String) = Workspace(

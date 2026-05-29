@@ -42,6 +42,7 @@ class SearchConflictsByProjectQueryHandler(
                     targetBlockId = row.targetBlockId,
                     rationale = row.rationale,
                     newText = row.newText,
+                    title = row.title,
                     detectedAt = row.detectedAt,
                 )
             }

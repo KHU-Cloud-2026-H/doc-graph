@@ -21,12 +21,13 @@ object ConflictDetectionResponseSchema {
                 "items" to mapOf(
                     "type" to "object",
                     "additionalProperties" to false,
-                    "required" to listOf("source_block_ids", "target_block_id", "rationale", "new_text"),
+                    "required" to listOf("source_block_ids", "target_block_id", "rationale", "new_text", "title"),
                     "properties" to mapOf(
                         "source_block_ids" to arrayOfStrings(),
                         "target_block_id" to mapOf("type" to "string"),
                         "rationale" to mapOf("type" to "string"),
                         "new_text" to mapOf("type" to "string"),
+                        "title" to mapOf("type" to "string"),
                     ),
                 ),
             ),

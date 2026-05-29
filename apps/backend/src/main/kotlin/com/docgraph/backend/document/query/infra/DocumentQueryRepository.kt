@@ -6,7 +6,11 @@ import com.docgraph.backend.document.query.application.Block
 import com.docgraph.backend.document.query.application.DocumentDetail
 import com.docgraph.backend.document.query.application.DocumentNodeData
 import com.docgraph.backend.document.query.application.DocumentReference
+import com.docgraph.backend.document.query.application.DocumentStats
 import com.docgraph.backend.document.query.application.DocumentSummary
+import com.docgraph.backend.document.query.application.IconResponse
+import com.docgraph.backend.document.query.application.IconType
+import com.docgraph.backend.document.query.application.NotionPageRef
 import com.docgraph.backend.project.query.application.AssignedDocumentType
 import com.querydsl.core.BooleanBuilder
 import com.querydsl.core.types.Projections
@@ -59,13 +63,32 @@ class DocumentQueryRepository {
             title = document.title,
             type = document.type,
             parentDocumentId = document.parentDocumentId,
-            icon = null,
+            icon = toIcon(document.iconType, document.iconValue),
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
             flatText = document.flatText,
             blocks = blocks,
         )
     }
+
+    fun findPageInfoByNotionPageIds(notionPageIds: Collection<String>): List<NotionPageRef> {
+        if (notionPageIds.isEmpty()) return emptyList()
+        val doc = QDocument.document
+        return queryFactory
+            .selectFrom(doc)
+            .where(doc.notionPageId.`in`(notionPageIds))
+            .fetch()
+            .map { d ->
+                NotionPageRef(
+                    notionPageId = d.notionPageId,
+                    title = d.title,
+                    icon = toIcon(d.iconType, d.iconValue),
+                )
+            }
+    }
+
+    private fun toIcon(iconType: IconType?, iconValue: String?): IconResponse? =
+        iconType?.let { IconResponse(type = it, value = iconValue ?: "") }
 
     fun searchSummariesByProject(projectId: Long, pageable: Pageable): Page<DocumentSummary> {
         val doc = QDocument.document
@@ -89,7 +112,7 @@ class DocumentQueryRepository {
                     title = d.title,
                     type = d.type,
                     parentDocumentId = d.parentDocumentId,
-                    icon = null,
+                    icon = toIcon(d.iconType, d.iconValue),
                 )
             }
 
@@ -160,5 +183,22 @@ class DocumentQueryRepository {
             .from(doc)
             .where(doc.projectId.eq(projectId).and(doc.assigneeMemberId.isNull))
             .fetch()
+    }
+
+    fun searchStatsByProjectIds(projectIds: Collection<Long>): Map<Long, DocumentStats> {
+        if (projectIds.isEmpty()) return emptyMap()
+        val doc = QDocument.document
+        return queryFactory
+            .select(doc.projectId, doc.count(), doc.notionLastEditedAt.max())
+            .from(doc)
+            .where(doc.projectId.`in`(projectIds))
+            .groupBy(doc.projectId)
+            .fetch()
+            .associate { tuple ->
+                val projectId = tuple.get(doc.projectId)!!
+                val count = tuple.get(doc.count())!!
+                val maxEditedAt = tuple.get(doc.notionLastEditedAt.max())
+                projectId to DocumentStats(documentCount = count, lastNotionChangedAt = maxEditedAt)
+            }
     }
 }

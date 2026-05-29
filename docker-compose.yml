@@ -20,7 +20,7 @@ services:
     image: ngrok/ngrok:latest
     command: http --domain=${NGROK_STATIC_DOMAIN} host.docker.internal:8080
     environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?}
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
     ports:
       - "${NGROK_HOST_PORT:?}:4040"
     extra_hosts:
@@ -44,7 +44,8 @@ services:
       NOTION_API_BASE_URL: ${NOTION_API_BASE_URL:?}
       NOTION_CLIENT_ID: ${NOTION_CLIENT_ID:?}
       NOTION_CLIENT_SECRET: ${NOTION_CLIENT_SECRET:?}
-      AUTH_OAUTH_SUCCESS_REDIRECT_URI: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI:-/api/auth/me}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?}
+      AUTH_OAUTH_SUCCESS_REDIRECT_URI: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI:?}
     ports:
       - "${BACKEND_HOST_PORT:?}:8080"
     depends_on:

@@ -114,12 +114,23 @@ class ValidationQueryRepository {
                     f.targetBlockId,
                     f.rationale,
                     f.newText,
+                    f.title,
                     f.detectedAt,
                 ),
             )
             .from(f)
             .where(f.conflictId.`in`(conflictIds))
             .fetch()
+    }
+
+    fun findLatestFindingTitleByConflictId(conflictId: Long): String? {
+        val f = QConflictFinding.conflictFinding
+        return queryFactory
+            .select(f.title)
+            .from(f)
+            .where(f.conflictId.eq(conflictId))
+            .orderBy(f.detectedAt.desc(), f.id.desc())
+            .fetchFirst()
     }
 
     fun findFindingDetailById(findingId: Long): ConflictFindingDetailRow? {
@@ -140,6 +151,21 @@ class ValidationQueryRepository {
             .join(c).on(c.id.eq(f.conflictId))
             .where(f.id.eq(findingId))
             .fetchOne()
+    }
+
+    fun findActiveUnignoredEdgeIds(edgeIds: Collection<Long>): List<Long> {
+        if (edgeIds.isEmpty()) return emptyList()
+        val c = QConflict.conflict
+        return queryFactory
+            .select(c.edgeId)
+            .from(c)
+            .where(
+                c.edgeId.`in`(edgeIds),
+                c.resolvedAt.isNull,
+                c.ignoredAt.isNull,
+            )
+            .distinct()
+            .fetch()
     }
 
     fun findValidationTasksByEdgeIds(edgeIds: List<Long>, pageable: Pageable): Page<ValidationTaskRow> {

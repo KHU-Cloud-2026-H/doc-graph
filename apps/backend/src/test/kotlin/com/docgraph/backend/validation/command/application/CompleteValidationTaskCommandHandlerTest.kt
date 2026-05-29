@@ -95,8 +95,8 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
     fun `Detected — 기존 활성 없음 + findings 있음, 새 Conflict + Finding, ConflictDetectedEvent 발행`() {
         val task = newPendingTask(edgeId = 32L)
         val findings = listOf(
-            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockId = "t1", rationale = "r1", newText = "sug1"),
-            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockId = "t2", rationale = "r2", newText = "sug2"),
+            DetectedConflict(sourceBlockIds = listOf("s1"), targetBlockId = "t1", rationale = "r1", newText = "sug1", title = "tt1"),
+            DetectedConflict(sourceBlockIds = listOf("s2"), targetBlockId = "t2", rationale = "r2", newText = "sug2", title = "tt2"),
         )
 
         handler.handle(CompleteValidationTaskCommand(task.id, findings))
@@ -130,7 +130,7 @@ class CompleteValidationTaskCommandHandlerTest @Autowired constructor(
         handler.handle(
             CompleteValidationTaskCommand(
                 task.id,
-                findings = listOf(DetectedConflict(listOf("s"), "t", "r", "sug")),
+                findings = listOf(DetectedConflict(listOf("s"), "t", "r", "sug", "tt")),
             ),
         )
 

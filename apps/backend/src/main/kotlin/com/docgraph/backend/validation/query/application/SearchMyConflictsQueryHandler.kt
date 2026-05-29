@@ -9,7 +9,7 @@ import com.docgraph.backend.graph.query.application.SearchEdgeDetailsByIdsQuery
 import com.docgraph.backend.graph.query.application.SearchEdgeIdsByTargetDocumentIdsQuery
 import com.docgraph.backend.project.query.application.SearchAdminProjectIdsByUserIdQuery
 import com.docgraph.backend.project.query.application.SearchAssignedDocumentTypesByUserIdQuery
-import com.docgraph.backend.project.query.application.SearchProjectSummariesByIdsQuery
+import com.docgraph.backend.project.query.application.SearchProjectRefsByIdsQuery
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import com.docgraph.backend.web.PageResponse
 import com.docgraph.backend.workspace.query.application.SearchWorkspaceMemberIdsByUserIdQuery
@@ -28,7 +28,7 @@ class SearchMyConflictsQueryHandler(
     private val searchDocumentReferences: SearchDocumentReferencesByIdsQuery,
     private val searchEdgeIdsByTargetDocuments: SearchEdgeIdsByTargetDocumentIdsQuery,
     private val searchEdgeDetailsByIds: SearchEdgeDetailsByIdsQuery,
-    private val searchProjectSummaries: SearchProjectSummariesByIdsQuery,
+    private val searchProjectRefs: SearchProjectRefsByIdsQuery,
     private val validationQueryRepository: ValidationQueryRepository,
 ) : SearchMyConflictsQuery {
 
@@ -65,26 +65,31 @@ class SearchMyConflictsQueryHandler(
             )
         }
 
+        val titlesByConflict = validationQueryRepository.findFindingsByConflictIds(conflictPage.content.map { it.id })
+            .groupBy { it.conflictId }
+            .mapValues { (_, findings) -> findings.maxByOrNull { it.detectedAt }?.title.orEmpty() }
         val edgesInPage = searchEdgeDetailsByIds.search(conflictPage.content.map { it.edgeId })
         val edgeById = edgesInPage.associateBy { it.id }
         val sourceRefs = searchDocumentReferences.search(edgesInPage.map { it.sourceDocumentId }.distinct())
             .associateBy { it.id }
         val targetRefById = targetRefs.associateBy { it.id }
-        val projectById = searchProjectSummaries.search(targetRefs.map { it.projectId }.distinct())
+        val projectRefById = searchProjectRefs.search(targetRefs.map { it.projectId }.distinct())
             .associateBy { it.id }
 
         val rows = conflictPage.content.mapNotNull { conflict ->
             val edge = edgeById[conflict.edgeId] ?: return@mapNotNull null
             val target = targetRefById[edge.targetDocumentId] ?: return@mapNotNull null
             val source = sourceRefs[edge.sourceDocumentId] ?: return@mapNotNull null
+            val projectRef = projectRefById[target.projectId] ?: return@mapNotNull null
             MyConflictRow(
                 id = conflict.id,
                 edgeId = conflict.edgeId,
+                workspaceId = projectRef.workspaceId,
                 projectId = target.projectId,
-                workspaceId = projectById[target.projectId]?.workspaceId ?: return@mapNotNull null,
-                projectName = projectById[target.projectId]?.name.orEmpty(),
+                projectName = projectRef.name,
                 sourceDocument = InboxDocumentRef(source.id, source.title, source.type),
                 targetDocument = InboxDocumentRef(target.id, target.title, target.type),
+                title = titlesByConflict[conflict.id].orEmpty(),
                 status = if (conflict.ignoredAt != null) MyConflictStatus.IGNORED else MyConflictStatus.ACTIVE,
                 firstDetectedAt = conflict.firstDetectedAt,
                 ignoredAt = conflict.ignoredAt,

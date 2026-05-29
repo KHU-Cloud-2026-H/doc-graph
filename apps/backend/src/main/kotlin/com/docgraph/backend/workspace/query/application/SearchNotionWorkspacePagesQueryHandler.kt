@@ -74,7 +74,7 @@ class SearchNotionWorkspacePagesQueryHandler(
     }
 
     private fun findAccessToken(workspaceId: Long, userId: Long): String? {
-        workspaceQueryRepository.findWorkspaceSummaryAccessibleBy(workspaceId, userId) ?: return null
+        workspaceQueryRepository.findWorkspaceRefAccessibleBy(workspaceId, userId) ?: return null
         val workspace = workspaceRepository.findById(workspaceId) ?: return null
         val connection = notionConnectionRepository.findByUserIdAndNotionWorkspaceId(
             userId = userId,

@@ -1,12 +1,24 @@
 package com.docgraph.backend.project.query.application
 
+import com.docgraph.backend.document.query.application.IconResponse
 import io.swagger.v3.oas.annotations.media.Schema
+import java.time.OffsetDateTime
 
 data class ProjectSummary(
     @Schema(description = "프로젝트 ID", example = "1")
     val id: Long,
     @Schema(description = "프로젝트 이름", example = "Q2 Planning")
     val name: String,
-    @Schema(description = "소속 워크스페이스 ID", example = "1")
-    val workspaceId: Long,
+    @Schema(description = "프로젝트에 배정된 멤버 수", example = "5")
+    val memberCount: Int,
+    @Schema(description = "동기화된 문서 수", example = "42")
+    val documentCount: Long,
+    @Schema(description = "미해소(active 미무시) 충돌 수", example = "3")
+    val unresolvedConflictCount: Long,
+    @Schema(description = "프로젝트 내 문서의 Notion 측 최근 변경 시각", nullable = true)
+    val lastNotionChangedAt: OffsetDateTime?,
+    @Schema(description = "루트 Notion 페이지 제목 (미동기화 시 null)", nullable = true)
+    val rootPageTitle: String?,
+    @Schema(description = "루트 Notion 페이지 아이콘 (없거나 미동기화 시 null)")
+    val rootPageIcon: IconResponse?,
 )

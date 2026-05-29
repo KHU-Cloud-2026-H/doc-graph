@@ -136,7 +136,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
-| `GetCurrentUserIdQuery` | workspace·project·validation | REST 요청의 인증된 사용자 식별 |
+| `GetCurrentUserIdQuery` | workspace·project·validation·document | REST 요청의 인증된 사용자 식별 |
 | `FindUserIdByEmailQuery` | workspace | 멤버 초대 시 이메일로 기존 사용자 식별 |
 | `SearchUserAccountsByIdsQuery` | workspace, project | 상세 조회 응답 보강 시 멤버 사용자 정보(이메일·이름) 일괄 조회 |
 
@@ -167,7 +167,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | --- | --- | --- |
 | `FindWorkspaceIdByMemberIdQuery` | project | 프로젝트 멤버 배정·타입 담당자 설정 시 멤버의 워크스페이스 검증 |
 | `FindWorkspaceMemberIdByUserIdQuery` | project | 사용자의 워크스페이스 멤버 자격·멤버 ID 식별(권한 검증·프로젝트 멤버 등록) |
-| `FindWorkspaceCreatorIdByIdQuery` | project | 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여 |
+| `FindWorkspaceCreatorIdByIdQuery` | project, document | project는 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여; document는 Notion 페이지 브라우징 시 워크스페이스 생성자 게이트 |
 
 ---
 
@@ -208,7 +208,9 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
 | `SearchCategoriesByProjectQuery` | document | 페이지 동기화 시 조상 라인 카테고리 매핑으로 문서 타입 결정 |
-| `SearchAdminProjectIdsByUserIdQuery` | validation | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속 |
+| `SearchAdminProjectIdsByUserIdQuery` | validation, notification | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속; notification은 webhook 설정·조회 시 Project Admin 권한 검증 |
+| `SearchProjectIdsByWorkspaceIdsQuery` | workspace | 워크스페이스 카드 응답 조립 — workspace별 프로젝트 ID 묶음 조회 |
+| `SearchProjectRefsByIdsQuery` | validation, notification | 인박스 라우팅·충돌 알림 — 프로젝트 ID 묶음으로 이름 조회 |
 
 ---
 
@@ -275,6 +277,9 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `FindDocumentByIdQuery` | validation | ValidationTask 처리·제안 수락 시 양쪽 문서 본문·블록 조회 |
 | `SearchDocumentIdsByAssigneeQuery` | validation | 인박스 라우팅 — 사용자가 담당자로 지정된 문서 식별 |
 | `SearchUnassignedDocumentIdsByProjectQuery` | validation | 인박스 라우팅 — 담당자 미지정 문서를 Project Admin에게 귀속 |
+| `SearchDocumentStatsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 문서 수·Notion 최근 변경 시각 조회 |
+| `SearchPageInfoByNotionPageIdsQuery` | project | 카드 응답 조립 — 루트 Notion 페이지 제목·아이콘 조회(프로젝트 아이콘 표시) |
+| `SearchDocumentReferencesByIdsQuery` | validation, notification | 인박스·충돌 알림 — 문서 ID 묶음으로 제목·프로젝트 조회 |
 
 ---
 
@@ -325,9 +330,10 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
-| `FindEdgeByIdQuery` | validation | ValidationTask 처리·제안 수락 시 엣지(source/target 문서·검증 기준) 조회 |
+| `FindEdgeByIdQuery` | validation, notification | ValidationTask 처리·제안 수락 시 엣지(source/target 문서·검증 기준) 조회; notification은 충돌 알림 시 엣지의 프로젝트·문서 식별 |
 | `SearchEdgeDetailsByProjectQuery` | validation | 프로젝트 충돌 목록 조회 시 엣지 정보 join |
 | `SearchEdgeIdsByProjectQuery` | validation | 프로젝트 검증 작업 목록 조회 시 엣지 ID 필터 |
+| `SearchEdgeIdsByProjectIdsQuery` | validation | 카드 미해소 충돌 카운트 조립 — 프로젝트 묶음의 엣지 ID 일괄 조회 |
 | `SearchEdgeIdsByTargetDocumentIdsQuery` | validation | 인박스 라우팅 — 사용자의 담당 문서로 향하는 엣지 식별 |
 
 ---
@@ -351,8 +357,8 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 **주요 흐름**
 1. `graph`로부터 검증 대상 쌍 수신 (변경 감지, 제안 수락, 수동 엣지 추가 경로 모두 동일) → `ValidationTask(pending)` 영속화
 2. 비동기 worker가 `ValidationTask(pending)` 1건 수신
-3. 두 문서의 본문 스냅샷·블록 row 조회, 변경 batch의 변경 블록 식별
-4. AI API non-blocking 호출 (타임아웃 30초). 입력 = (변경 블록, 반대편 문서 전체 블록, 검증 기준). 응답 = finding 배열 (각 finding은 target block 1개 단위, source block 다수 참조, `rationale`, `new_text`).
+3. source·target 블록 조회. source는 직전 변경 감지 대비 변경 전·후 블록(엣지 첫 검증 시 전체), target은 전체 블록.
+4. AI API non-blocking 호출 (타임아웃 30초). 입력 = (source 변경 전·후 블록, target 전체 블록, 검증 기준). 응답 = finding 배열 (각 finding은 target block 1개 단위, source block 다수 참조, `rationale`, `new_text`).
 5. ValidationTask 결과 저장, `graph`의 엣지 상태 업데이트
 6. 충돌 감지 시 기존 Conflict 갱신 또는 신규 생성, `notification`으로 이벤트 발행
 7. 재검증 결과 충돌 없음: 기존 Conflict 비활성화 (`ignored` 포함 해제)
@@ -379,6 +385,8 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 | 이름 | 소비자 | 호출 의도 |
 | --- | --- | --- |
 | `FindConflictFindingByIdQuery` | document | `ProposalApprovedEvent` listener가 patch 본문(`target_block_id`, `new_text`) 조회 후 Notion 쓰기 |
+| `CountUnresolvedConflictsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 미해소(active 미무시) 충돌 카운트 조회 |
+| `FindConflictTitleByIdQuery` | notification | 충돌 알림 메시지 요약 — conflict의 대표 finding Title 조회 |
 
 ---
 

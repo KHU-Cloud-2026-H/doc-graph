@@ -1,8 +1,10 @@
 package com.docgraph.backend.validation.command.infra.openai
 
-import com.docgraph.backend.document.query.application.Block
+import com.docgraph.backend.validation.command.domain.ConflictDetectionInput
 import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.DetectedConflict
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
+import com.docgraph.backend.validation.command.domain.RevalidationInput
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -17,14 +19,18 @@ class OpenAiConflictDetector(
     private val props: OpenAiProperties,
 ) : ConflictDetector {
 
-    override fun detect(
-        changedBlocks: List<Block>,
-        counterpartBlocks: List<Block>,
-        criterion: String,
-    ): List<DetectedConflict> {
+    override fun detect(input: ConflictDetectionInput): List<DetectedConflict> {
+        val messages = when (input) {
+            is FirstValidationInput -> ConflictDetectionPromptBuilder.buildFirstValidation(
+                input.sourceBlocks, input.targetBlocks, input.criterion,
+            )
+            is RevalidationInput -> ConflictDetectionPromptBuilder.buildRevalidation(
+                input.sourceBeforeBlocks, input.sourceAfterBlocks, input.targetBlocks, input.criterion,
+            )
+        }
         val request = OpenAiChatCompletionRequest(
             model = props.model,
-            messages = ConflictDetectionPromptBuilder.build(changedBlocks, counterpartBlocks, criterion),
+            messages = messages,
             responseFormat = ConflictDetectionResponseSchema.responseFormat(),
         )
         val response = restClient.post()
