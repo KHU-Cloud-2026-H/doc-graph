@@ -70,8 +70,8 @@ class SearchMyConflictsQueryHandler(
         val sourceRefs = searchDocumentReferences.search(edgesInPage.map { it.sourceDocumentId }.distinct())
             .associateBy { it.id }
         val targetRefById = targetRefs.associateBy { it.id }
-        val projectNameById = searchProjectSummaries.search(targetRefs.map { it.projectId }.distinct())
-            .associate { it.id to it.name }
+        val projectById = searchProjectSummaries.search(targetRefs.map { it.projectId }.distinct())
+            .associateBy { it.id }
 
         val rows = conflictPage.content.mapNotNull { conflict ->
             val edge = edgeById[conflict.edgeId] ?: return@mapNotNull null
@@ -81,7 +81,8 @@ class SearchMyConflictsQueryHandler(
                 id = conflict.id,
                 edgeId = conflict.edgeId,
                 projectId = target.projectId,
-                projectName = projectNameById[target.projectId].orEmpty(),
+                workspaceId = projectById[target.projectId]?.workspaceId ?: return@mapNotNull null,
+                projectName = projectById[target.projectId]?.name.orEmpty(),
                 sourceDocument = InboxDocumentRef(source.id, source.title, source.type),
                 targetDocument = InboxDocumentRef(target.id, target.title, target.type),
                 status = if (conflict.ignoredAt != null) MyConflictStatus.IGNORED else MyConflictStatus.ACTIVE,

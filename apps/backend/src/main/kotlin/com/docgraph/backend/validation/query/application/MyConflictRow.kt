@@ -6,6 +6,7 @@ data class MyConflictRow(
     val id: Long,
     val edgeId: Long,
     val projectId: Long,
+    val workspaceId: Long,
     val projectName: String,
     val sourceDocument: InboxDocumentRef,
     val targetDocument: InboxDocumentRef,

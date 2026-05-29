@@ -3,9 +3,13 @@ package com.docgraph.backend.workspace.query.interfaces.api
 import com.docgraph.backend.auth.query.application.GetCurrentUserIdQuery
 import com.docgraph.backend.workspace.query.application.FindWorkspaceDetailByIdQuery
 import com.docgraph.backend.workspace.query.application.FindNotionWorkspacePageContentQuery
+import com.docgraph.backend.workspace.query.application.FindNotionPageMetadataQuery
 import com.docgraph.backend.workspace.query.application.NotionWorkspacePageContentResponse
+import com.docgraph.backend.workspace.query.application.NotionWorkspacePageMetadataResponse
 import com.docgraph.backend.workspace.query.application.NotionWorkspacePageResponse
 import com.docgraph.backend.workspace.query.application.SearchAccessibleWorkspacesQuery
+import com.docgraph.backend.workspace.query.application.SearchNotionPageChildrenQuery
+import com.docgraph.backend.workspace.query.application.SearchNotionRootPagesQuery
 import com.docgraph.backend.workspace.query.application.SearchNotionWorkspacePagesQuery
 import com.docgraph.backend.workspace.query.application.WorkspaceDetail
 import com.docgraph.backend.workspace.query.application.WorkspaceSummary
@@ -28,6 +32,9 @@ class WorkspaceQueryController(
     private val searchAccessibleWorkspaces: SearchAccessibleWorkspacesQuery,
     private val findWorkspaceDetailById: FindWorkspaceDetailByIdQuery,
     private val searchNotionWorkspacePages: SearchNotionWorkspacePagesQuery,
+    private val searchNotionRootPages: SearchNotionRootPagesQuery,
+    private val searchNotionPageChildren: SearchNotionPageChildrenQuery,
+    private val findNotionPageMetadata: FindNotionPageMetadataQuery,
     private val findNotionWorkspacePageContent: FindNotionWorkspacePageContentQuery,
     private val getCurrentUserId: GetCurrentUserIdQuery,
 ) {
@@ -65,6 +72,50 @@ class WorkspaceQueryController(
         val pages = searchNotionWorkspacePages.search(id, getCurrentUserId.get(), query)
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
         return ResponseEntity.ok(pages)
+    }
+
+    @GetMapping("/{id}/notion/root-pages")
+    @Operation(summary = "Notion 루트 페이지 후보 목록")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "새 프로젝트 생성 시 선택 가능한 최상위 page 목록"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 접근 권한/Notion 연결 없음"),
+    ])
+    fun listNotionRootPages(
+        @PathVariable id: Long,
+    ): ResponseEntity<List<NotionWorkspacePageResponse>> {
+        val pages = searchNotionRootPages.searchRootPages(id, getCurrentUserId.get())
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        return ResponseEntity.ok(pages)
+    }
+
+    @GetMapping("/{id}/notion/pages/{pageId}/children")
+    @Operation(summary = "Notion page 직계 자식 page 목록")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "카테고리 매핑에 사용할 루트 page 직계 자식 page 목록"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 접근 권한/Notion 연결/page 접근 없음"),
+    ])
+    fun listNotionPageChildren(
+        @PathVariable id: Long,
+        @PathVariable pageId: String,
+    ): ResponseEntity<List<NotionWorkspacePageResponse>> {
+        val pages = searchNotionPageChildren.searchPageChildren(id, getCurrentUserId.get(), pageId)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        return ResponseEntity.ok(pages)
+    }
+
+    @GetMapping("/{id}/notion/pages/{pageId}/metadata")
+    @Operation(summary = "Notion page 제목/아이콘 조회")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Notion page 제목과 아이콘"),
+        ApiResponse(responseCode = "404", description = "워크스페이스 없음 또는 접근 권한/Notion 연결/page 접근 없음"),
+    ])
+    fun getNotionPageMetadata(
+        @PathVariable id: Long,
+        @PathVariable pageId: String,
+    ): ResponseEntity<NotionWorkspacePageMetadataResponse> {
+        val metadata = findNotionPageMetadata.find(id, getCurrentUserId.get(), pageId)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        return ResponseEntity.ok(metadata)
     }
 
     @GetMapping("/{id}/notion/pages/{pageId}/content")

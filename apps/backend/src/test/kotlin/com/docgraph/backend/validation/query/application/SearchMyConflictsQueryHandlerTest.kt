@@ -111,8 +111,8 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // project summaries
         every { searchProjectSummaries.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
-            ProjectSummary(1L, "P1"),
-            ProjectSummary(2L, "P2"),
+            ProjectSummary(1L, "P1", 10L),
+            ProjectSummary(2L, "P2", 20L),
         )
 
         val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
@@ -121,6 +121,7 @@ class SearchMyConflictsQueryHandlerTest {
         val row1 = result.content.first { it.id == 500L }
         assertEquals(30L, row1.edgeId)
         assertEquals(1L, row1.projectId)
+        assertEquals(10L, row1.workspaceId)
         assertEquals("P1", row1.projectName)
         assertEquals(InboxDocumentRef(40L, "S40", DocumentType.PLANNING), row1.sourceDocument)
         assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS), row1.targetDocument)
@@ -129,6 +130,7 @@ class SearchMyConflictsQueryHandlerTest {
 
         val row2 = result.content.first { it.id == 501L }
         assertEquals(2L, row2.projectId)
+        assertEquals(20L, row2.workspaceId)
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
     }
@@ -159,11 +161,12 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
             DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
         )
-        every { searchProjectSummaries.search(listOf(1L)) } returns listOf(ProjectSummary(1L, "P"))
+        every { searchProjectSummaries.search(listOf(1L)) } returns listOf(ProjectSummary(1L, "P", 10L))
 
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 
         assertEquals(MyConflictStatus.IGNORED, result.content[0].status)
+        assertEquals(10L, result.content[0].workspaceId)
         assertEquals(ignoredAt, result.content[0].ignoredAt)
     }
 

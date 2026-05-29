@@ -7,4 +7,6 @@ data class ProjectSummary(
     val id: Long,
     @Schema(description = "프로젝트 이름", example = "Q2 Planning")
     val name: String,
+    @Schema(description = "소속 워크스페이스 ID", example = "1")
+    val workspaceId: Long,
 )

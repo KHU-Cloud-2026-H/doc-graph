@@ -11,6 +11,7 @@ interface NotionDocumentClient {
 data class NotionPage(
     val id: String,
     val title: String,
+    val icon: NotionIcon?,
     val createdTime: OffsetDateTime?,
     val lastEditedTime: OffsetDateTime?,
     val createdBy: String?,
@@ -39,6 +40,20 @@ data class NotionBlock(
 data class NotionSearchPage(
     val id: String,
     val title: String,
+    val icon: NotionIcon?,
+    val parentType: String?,
+    val parentId: String?,
     val url: String?,
     val lastEditedTime: OffsetDateTime?,
+)
+
+enum class NotionIconType {
+    EMOJI,
+    EXTERNAL,
+    FILE,
+}
+
+data class NotionIcon(
+    val type: NotionIconType,
+    val value: String,
 )

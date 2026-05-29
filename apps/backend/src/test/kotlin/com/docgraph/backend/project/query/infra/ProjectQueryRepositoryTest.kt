@@ -140,8 +140,8 @@ class ProjectQueryRepositoryTest @Autowired constructor(
 
         assertEquals(
             setOf(
-                ProjectSummary(p1.id, "Q2 Planning"),
-                ProjectSummary(p2.id, "Spec Drafts"),
+                ProjectSummary(p1.id, "Q2 Planning", ws.id),
+                ProjectSummary(p2.id, "Spec Drafts", ws.id),
             ),
             result,
         )
@@ -154,7 +154,7 @@ class ProjectQueryRepositoryTest @Autowired constructor(
 
         val result = queryRepository.findSummariesByIds(listOf(p.id, 99999L))
 
-        assertEquals(listOf(ProjectSummary(p.id, "Only")), result)
+        assertEquals(listOf(ProjectSummary(p.id, "Only", ws.id)), result)
     }
 
     @Test

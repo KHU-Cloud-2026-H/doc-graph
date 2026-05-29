@@ -2,6 +2,8 @@ package com.docgraph.backend.document.command.infra.notion
 
 import com.docgraph.backend.document.command.domain.NotionBlock
 import com.docgraph.backend.document.command.domain.NotionDocumentClient
+import com.docgraph.backend.document.command.domain.NotionIcon
+import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.command.domain.NotionPage
 import com.docgraph.backend.document.command.domain.NotionSearchPage
 import com.fasterxml.jackson.databind.JsonNode
@@ -57,6 +59,7 @@ class NotionDocumentRestClient(
         return NotionPage(
             id = node.path("id").asText(pageId),
             title = extractTitle(node).ifBlank { "Untitled" },
+            icon = extractIcon(node),
             createdTime = node.path("created_time").asOffsetDateTimeOrNull(),
             lastEditedTime = node.path("last_edited_time").asOffsetDateTimeOrNull(),
             createdBy = node.path("created_by").path("id").asTextOrNull(),
@@ -121,6 +124,9 @@ class NotionDocumentRestClient(
                 NotionSearchPage(
                     id = page.path("id").asText(),
                     title = extractTitle(page).ifBlank { "Untitled" },
+                    icon = extractIcon(page),
+                    parentType = page.path("parent").path("type").asTextOrNull(),
+                    parentId = extractParentId(page.path("parent")),
                     url = page.path("url").asTextOrNull(),
                     lastEditedTime = page.path("last_edited_time").asOffsetDateTimeOrNull(),
                 )
@@ -158,6 +164,19 @@ class NotionDocumentRestClient(
             }
         }
         return ""
+    }
+
+    private fun extractIcon(page: JsonNode): NotionIcon? {
+        val icon = page.path("icon")
+        return when (icon.path("type").asTextOrNull()) {
+            "emoji" -> icon.path("emoji").asTextOrNull()
+                ?.let { NotionIcon(NotionIconType.EMOJI, it) }
+            "external" -> icon.path("external").path("url").asTextOrNull()
+                ?.let { NotionIcon(NotionIconType.EXTERNAL, it) }
+            "file" -> icon.path("file").path("url").asTextOrNull()
+                ?.let { NotionIcon(NotionIconType.FILE, it) }
+            else -> null
+        }
     }
 
     private fun extractPlainText(typed: JsonNode): String? {

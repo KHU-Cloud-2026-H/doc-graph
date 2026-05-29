@@ -129,6 +129,7 @@ class SyncProjectDocumentsCommandHandlerTest {
     private fun page(id: String, title: String): NotionPage = NotionPage(
         id = id,
         title = title,
+        icon = null,
         createdTime = null,
         lastEditedTime = null,
         createdBy = null,
