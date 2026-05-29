@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Settings, Inbox } from "lucide-react";
 import { InboxPopup } from "./InboxPopup";
 import { inboxActiveCount } from "./InboxList";
+import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
 
 interface TopAppBarProps {
   centerLabel: string;
@@ -11,14 +12,14 @@ interface TopAppBarProps {
 
 const NOTION_LOGO =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Notion-logo.svg/3840px-Notion-logo.svg.png";
-const PROFILE_IMAGE =
-  "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=300&auto=format&fit=crop";
 
 const unreadCount = inboxActiveCount;
 
 export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const inboxButtonRef = useRef<HTMLButtonElement>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <header className="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-white border-b border-slate-200 antialiased">
@@ -55,12 +56,12 @@ export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
             </span>
           )}
         </button>
-        <button className="hover:bg-slate-100 transition-colors duration-200 p-1 rounded-full flex items-center justify-center border border-slate-200">
-          <img
-            alt="User profile"
-            className="w-8 h-8 rounded-full object-cover"
-            src={PROFILE_IMAGE}
-          />
+        <button
+          ref={profileButtonRef}
+          onClick={() => setIsProfileOpen(!isProfileOpen)}
+          className="hover:bg-slate-100 transition-colors duration-200 p-0.5 rounded-full flex items-center justify-center border border-slate-200"
+        >
+          <UserAvatar size="md" />
         </button>
       </div>
 
@@ -68,6 +69,12 @@ export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
         isOpen={isInboxOpen}
         onClose={() => setIsInboxOpen(false)}
         anchorRef={inboxButtonRef}
+      />
+      <UserProfilePopup
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        anchorRef={profileButtonRef}
+        placement="below"
       />
     </header>
   );

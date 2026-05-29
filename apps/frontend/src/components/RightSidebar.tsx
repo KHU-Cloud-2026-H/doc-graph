@@ -1,4 +1,4 @@
-import { X, AlertTriangle, CheckCircle, FileText, ExternalLink, RefreshCw, ChevronUp, Lightbulb } from "lucide-react";
+import { X, AlertTriangle, CheckCircle, FileText, ExternalLink, RefreshCw, ChevronUp, ChevronDown, Lightbulb, EyeOff } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useState } from "react";
 import type { DocumentNode } from "../store";
@@ -13,6 +13,10 @@ interface RightSidebarProps {
 export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarProps) => {
   const { workspaceId, projectId } = useParams();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // 무시됨 섹션 전체 토글
+  const [showIgnoredSection, setShowIgnoredSection] = useState(true);
+  // 무시됨 카드 개별 펼치기 (기본: 접힘 → Set에 있으면 펼쳐진 상태)
+  const [openedIgnored, setOpenedIgnored] = useState<Set<string>>(new Set());
 
   const toggleCollapsed = (id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
@@ -24,7 +28,9 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
   const lastValidatedAt = new Date(Date.now() - 2 * 60 * 1000);
   const validatedAgo = formatRelativeTime(lastValidatedAt);
 
-  const issueCount = doc.issues?.length ?? 0;
+  const activeIssues = (doc.issues ?? []).filter(i => i.status !== 'IGNORED');
+  const ignoredIssues = (doc.issues ?? []).filter(i => i.status === 'IGNORED');
+  const issueCount = activeIssues.length;
   const hasIssues = issueCount > 0;
 
   return (
@@ -66,9 +72,10 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
       </div>
 
       {/* 본문: 이슈 있으면 카드 리스트, 없으면 빈 상태 */}
-      {hasIssues ? (
+      {hasIssues || ignoredIssues.length > 0 ? (
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {doc.issues?.map((issue) => {
+          {/* ── ACTIVE 이슈 카드들 ── */}
+          {activeIssues.map((issue) => {
             const isCollapsed = !!collapsed[issue.id];
             return (
               <div key={issue.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -95,7 +102,6 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
 
                     {/* 소스 문서 + 검증 기준 + 액션 버튼 */}
                     <div className="space-y-2.5">
-                      {/* 소스 문서 카드 */}
                       <div className="border border-yellow-200 rounded-lg overflow-hidden">
                         <Link
                           to={`/w/${workspaceId}/p/${projectId}/docs/${issue.sourceDocumentId}`}
@@ -109,20 +115,11 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                           <ExternalLink className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
                         </Link>
                         <div className="bg-white p-3">
-                          <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                            {issue.sourceBlockText}
-                          </p>
+                          <p className="text-xs text-slate-700 leading-relaxed font-medium">{issue.sourceBlockText}</p>
                         </div>
                       </div>
-
-                      {/* 검증 기준 */}
-                      <p className="text-xs text-slate-500 leading-relaxed px-0.5">
-                        💡 {issue.validationCriterion}
-                      </p>
-
-                      {/* 액션 버튼 */}
+                      <p className="text-xs text-slate-500 leading-relaxed px-0.5">💡 {issue.validationCriterion}</p>
                       <div className="flex items-center gap-1.5">
-                        {/* TODO(API): "연결 무시" — edge 자체를 ignore. 현재 백엔드에는 conflict ignore만 있음. */}
                         <button className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors">
                           이 문서와의 연결 무시
                         </button>
@@ -170,6 +167,72 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
               </div>
             );
           })}
+
+          {/* ── 빈 상태 (ACTIVE 없고 IGNORED만 있을 때) ── */}
+          {activeIssues.length === 0 && ignoredIssues.length > 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle className="w-12 h-12 text-slate-300 mb-3" strokeWidth={1.5} />
+              <p className="text-[15px] text-slate-500 leading-relaxed">
+                미해소 충돌이 없습니다.
+              </p>
+            </div>
+          )}
+
+          {/* ── 무시됨 충돌 섹션 ── */}
+          {ignoredIssues.length > 0 && (
+            <div className="border-t border-slate-100 pt-2 -mx-4 px-4">
+              <button
+                onClick={() => setShowIgnoredSection(!showIgnoredSection)}
+                className="w-full flex items-center justify-between px-1 py-2 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
+              >
+                <span>무시됨 충돌 {ignoredIssues.length}건</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showIgnoredSection ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showIgnoredSection && (
+                <div className="space-y-3 mt-2">
+                  {ignoredIssues.map((issue) => {
+                    const isExpanded = openedIgnored.has(issue.id);
+                    return (
+                      <div key={issue.id} className="rounded-xl border border-slate-200 overflow-hidden opacity-70">
+                        {/* 무시됨 카드 헤더 */}
+                        <button
+                          onClick={() => setOpenedIgnored(prev => {
+                            const next = new Set(prev);
+                            next.has(issue.id) ? next.delete(issue.id) : next.add(issue.id);
+                            return next;
+                          })}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors bg-slate-50/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <EyeOff className="w-[18px] h-[18px] text-slate-400" />
+                            <span className="text-[14px] font-medium text-slate-500">{issue.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">무시됨</span>
+                            <ChevronUp className={`w-4 h-4 text-slate-300 transition-transform ${!isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-3 bg-white">
+                            <p className="text-xs text-slate-500 leading-relaxed pt-3">{issue.rationale}</p>
+                            <p className="text-xs text-slate-400 px-0.5">💡 {issue.validationCriterion}</p>
+                            {/* TODO(API): "무시 취소" = DELETE /conflicts/{id}/ignore */}
+                            <div className="flex items-center justify-end pt-1">
+                              <button className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded transition-colors">
+                                무시 취소
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         /* 빈 상태: 정합성 이슈 없음 */
