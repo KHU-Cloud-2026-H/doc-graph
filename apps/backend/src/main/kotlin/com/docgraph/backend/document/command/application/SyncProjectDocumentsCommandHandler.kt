@@ -8,8 +8,11 @@ import com.docgraph.backend.document.command.domain.Document
 import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.command.domain.NotionBlock
 import com.docgraph.backend.document.command.domain.NotionDocumentClient
+import com.docgraph.backend.document.command.domain.NotionIcon
+import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.command.domain.NotionPage
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommand
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommandHandler
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
@@ -146,10 +149,13 @@ class SyncProjectDocumentsCommandHandler(
                 notionPageId = page.id,
                 title = page.title,
             )
+        val (iconType, iconValue) = page.icon.toIconFields()
         document.refreshSnapshot(
             title = page.title,
             parentNotionPageId = parentNotionPageId,
             type = type,
+            iconType = iconType,
+            iconValue = iconValue,
             assigneeMemberId = document.assigneeMemberId,
             rawContent = page.rawJson,
             flatText = flatText,
@@ -221,3 +227,10 @@ private data class SyncedDocument(
 )
 
 private fun notionPageKey(id: String): String = id.replace("-", "").lowercase()
+
+private fun NotionIcon?.toIconFields(): Pair<IconType?, String?> = when (this?.type) {
+    NotionIconType.EMOJI -> IconType.EMOJI to value
+    NotionIconType.EXTERNAL -> IconType.EXTERNAL to value
+    NotionIconType.FILE -> IconType.FILE to value
+    null -> null to null
+}

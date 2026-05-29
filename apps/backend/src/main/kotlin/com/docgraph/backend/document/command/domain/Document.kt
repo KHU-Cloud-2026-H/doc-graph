@@ -79,6 +79,8 @@ class Document(
         title: String,
         parentNotionPageId: String?,
         type: DocumentType?,
+        iconType: IconType?,
+        iconValue: String?,
         assigneeMemberId: Long?,
         rawContent: String?,
         flatText: String?,
@@ -89,6 +91,8 @@ class Document(
         this.title = title
         this.parentNotionPageId = parentNotionPageId
         this.type = type
+        this.iconType = iconType
+        this.iconValue = iconValue
         this.assigneeMemberId = assigneeMemberId
         this.rawContent = rawContent
         this.flatText = flatText
