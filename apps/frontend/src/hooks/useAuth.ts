@@ -26,7 +26,7 @@ export function useLogout() {
     mutationFn: () => apiClient.DELETE('/api/auth/sessions'),
     onSuccess: () => {
       qc.clear()
-      window.location.href = '/login'
+      window.location.href = '/workspaces'
     },
   })
 }
