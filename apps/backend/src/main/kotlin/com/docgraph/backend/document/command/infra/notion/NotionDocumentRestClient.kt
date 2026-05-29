@@ -27,13 +27,10 @@ class NotionDocumentClientConfig {
 
     @Bean
     fun notionRestClient(properties: NotionDocumentProperties): RestClient {
-        val builder = RestClient.builder()
+        return RestClient.builder()
             .baseUrl(properties.baseUrl)
             .defaultHeader("Notion-Version", "2022-06-28")
-        if (properties.apiKey.isNotBlank()) {
-            builder.defaultHeader("Authorization", "Bearer ${properties.apiKey}")
-        }
-        return builder.build()
+            .build()
     }
 }
 

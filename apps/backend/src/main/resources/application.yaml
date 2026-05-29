@@ -62,4 +62,3 @@ auth:
 notion:
   api:
     base-url: ${NOTION_API_BASE_URL:https://api.notion.com}
-    api-key: ${NOTION_API_KEY:}
