@@ -5,6 +5,8 @@ import { RightSidebar } from "../components/RightSidebar";
 import { useAppStore } from '../store';
 import type { IntegrityIssue } from '../store';
 import { formatRelativeTime } from '../lib/timeAgo';
+import { BlockRenderer } from "../features/document/BlockRenderer";
+import { MOCK_DOCUMENT_BLOCKS } from "../features/document/documentBlocks.mock";
 
 const findParentPage = (docs: any[], targetId: string): any | null => {
   const numId = Number(targetId);
@@ -95,62 +97,6 @@ export const DocumentView = () => {
     }
     lastDocIdRef.current = activeDoc?.id;
   }, [activeDoc?.id]);
-
-  let processedHtml = activeDoc?.contentHtml || '';
-
-  // Transform Notion-like child page links
-  processedHtml = processedHtml.replaceAll(
-    'class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded border border-slate-200 text-blue-600 transition-colors"',
-    'class="flex items-center w-fit gap-2 px-1.5 py-1 hover:bg-[#efefef] rounded-[4px] text-[#37352f] transition-colors cursor-pointer text-[15px] border-none outline-none"'
-  );
-
-  if (activeDoc?.hasIssue && activeDoc.issues) {
-    activeDoc.issues.forEach((issue: IntegrityIssue) => {
-      if (showRightSidebar) {
-        // 본문 인라인 diff. 외부 div에 style="font: inherit;"를 박아 부모(<h1>/<p>/<li> 등)의
-        // 폰트 크기·볼드·이탤릭을 그대로 상속받게 함. 텍스트 색상만 명시.
-        // 마이너스/플러스 배지 18px로 RightSidebar와 일관성 유지.
-        const diffHtml = `
-          <div class="block border border-slate-200 rounded-md my-2 shadow-sm overflow-hidden bg-white" style="font: inherit;">
-            <div class="flex items-start gap-2 bg-red-50 p-2.5 border-b border-slate-200">
-              <span class="bg-red-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">-</span>
-              <span class="whitespace-pre-wrap leading-relaxed text-red-900">${issue.currentText}</span>
-            </div>
-            <div class="flex items-start gap-2 bg-green-50 p-2.5">
-              <span class="bg-green-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">+</span>
-              <span class="whitespace-pre-wrap leading-relaxed text-green-900">${issue.newText}</span>
-            </div>
-          </div>
-        `;
-        
-        const exactSpan1 = `<span class="bg-red-50 text-red-700 px-1 rounded">${issue.currentText}</span>`;
-        const exactSpan2 = `<span class="bg-red-200 text-red-900 px-1">${issue.currentText}</span>`;
-        const exactSpan3 = `<span class="bg-red-50 text-red-700 px-1 rounded">'오전 9시 10분 59초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 정확히 09:11:00의 기록부터 지각(LATE) 상태로 산정되어 리포트에 기록된다.</span>`;
-        
-        if (processedHtml.includes(exactSpan1)) processedHtml = processedHtml.replace(exactSpan1, diffHtml);
-        else if (processedHtml.includes(exactSpan2)) processedHtml = processedHtml.replace(exactSpan2, diffHtml);
-        else if (issue.id === 'err-8' && processedHtml.includes(exactSpan3)) processedHtml = processedHtml.replace(exactSpan3, diffHtml);
-        else {
-           const fallbackSpan = new RegExp(`<span[^>]*bg-red[^>]*>${issue.currentText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}</span>`, 'g');
-           processedHtml = processedHtml.replace(fallbackSpan, diffHtml);
-        }
-      } else {
-        const clickableHtml = `<span class="issue-target bg-red-50 text-red-700 px-1 rounded border-b border-red-400 cursor-pointer hover:bg-red-100 transition-colors" title="클릭하여 이슈 확인">${issue.currentText}</span>`;
-        
-        const exactSpan1 = `<span class="bg-red-50 text-red-700 px-1 rounded">${issue.currentText}</span>`;
-        const exactSpan2 = `<span class="bg-red-200 text-red-900 px-1">${issue.currentText}</span>`;
-        const exactSpan3 = `<span class="bg-red-50 text-red-700 px-1 rounded">'오전 9시 10분 59초'까지 시스템에 기록된 출근 데이터는 정상 출근(PRESENT)으로 인정한다. 정확히 09:11:00의 기록부터 지각(LATE) 상태로 산정되어 리포트에 기록된다.</span>`;
-        
-        if (processedHtml.includes(exactSpan1)) processedHtml = processedHtml.replace(exactSpan1, clickableHtml);
-        else if (processedHtml.includes(exactSpan2)) processedHtml = processedHtml.replace(exactSpan2, clickableHtml);
-        else if (issue.id === 'err-8' && processedHtml.includes(exactSpan3)) processedHtml = processedHtml.replace(exactSpan3, clickableHtml);
-        else {
-           const fallbackSpan = new RegExp(`<span[^>]*bg-red[^>]*>${issue.currentText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}</span>`, 'g');
-           processedHtml = processedHtml.replace(fallbackSpan, clickableHtml);
-        }
-      }
-    });
-  }
 
   return (
     <main className="flex-1 flex h-screen overflow-hidden bg-white font-sans relative">
@@ -305,11 +251,7 @@ export const DocumentView = () => {
                 }
               }}
             >
-              {activeDoc?.contentHtml ? (
-                <div dangerouslySetInnerHTML={{ __html: processedHtml }} />
-              ) : (
-                <p className="text-slate-500 italic">This document is currently empty or loading from Notion...</p>
-              )}
+              <BlockRenderer blocks={MOCK_DOCUMENT_BLOCKS} />
             </div>
           </div>
         </div>
