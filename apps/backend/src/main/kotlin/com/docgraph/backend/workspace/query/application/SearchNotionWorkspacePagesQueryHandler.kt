@@ -53,13 +53,12 @@ class SearchNotionWorkspacePagesQueryHandler(
         return notionDocumentClient.fetchBlockChildren(pageId, accessToken)
             .filter { it.type == "child_page" && !it.archived && !it.inTrash }
             .map { block ->
-                val page = notionDocumentClient.fetchPage(block.id, accessToken)
                 NotionWorkspacePageResponse(
-                    notionPageId = page.id,
-                    title = page.title.ifBlank { block.childPageTitle ?: "Untitled" },
-                    icon = page.icon.toIconResponse(),
+                    notionPageId = block.id,
+                    title = block.childPageTitle ?: "Untitled",
+                    icon = null,
                     url = null,
-                    lastEditedTime = page.lastEditedTime,
+                    lastEditedTime = block.lastEditedTime,
                 )
             }
     }

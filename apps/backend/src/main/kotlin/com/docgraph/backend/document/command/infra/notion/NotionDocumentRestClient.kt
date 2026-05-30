@@ -96,39 +96,48 @@ class NotionDocumentRestClient(
     }
 
     override fun searchPages(accessToken: String, query: String?, pageSize: Int): List<NotionSearchPage> {
-        val body = mutableMapOf<String, Any>(
-            "filter" to mapOf(
-                "value" to "page",
-                "property" to "object",
-            ),
-            "page_size" to pageSize.coerceIn(1, 100),
-        )
-        if (!query.isNullOrBlank()) {
-            body["query"] = query
-        }
-
-        val node = restClient.post()
-            .uri("/v1/search")
-            .headers { it.setBearerAuth(accessToken) }
-            .body(body)
-            .retrieve()
-            .body(String::class.java)
-            ?.let(objectMapper::readTree)
-            ?: error("empty Notion search response")
-
-        return node.path("results")
-            .filter { it.path("object").asTextOrNull() == "page" }
-            .map { page ->
-                NotionSearchPage(
-                    id = page.path("id").asText(),
-                    title = extractTitle(page).ifBlank { "Untitled" },
-                    icon = extractIcon(page),
-                    parentType = page.path("parent").path("type").asTextOrNull(),
-                    parentId = extractParentId(page.path("parent")),
-                    url = page.path("url").asTextOrNull(),
-                    lastEditedTime = page.path("last_edited_time").asOffsetDateTimeOrNull(),
-                )
+        val result = mutableListOf<NotionSearchPage>()
+        var cursor: String? = null
+        do {
+            val body = mutableMapOf<String, Any>(
+                "filter" to mapOf(
+                    "value" to "page",
+                    "property" to "object",
+                ),
+                "page_size" to pageSize.coerceIn(1, 100),
+            )
+            if (!query.isNullOrBlank()) {
+                body["query"] = query
             }
+            if (cursor != null) {
+                body["start_cursor"] = cursor
+            }
+
+            val node = restClient.post()
+                .uri("/v1/search")
+                .headers { it.setBearerAuth(accessToken) }
+                .body(body)
+                .retrieve()
+                .body(String::class.java)
+                ?.let(objectMapper::readTree)
+                ?: error("empty Notion search response")
+
+            node.path("results")
+                .filter { it.path("object").asTextOrNull() == "page" }
+                .mapTo(result) { page ->
+                    NotionSearchPage(
+                        id = page.path("id").asText(),
+                        title = extractTitle(page).ifBlank { "Untitled" },
+                        icon = extractIcon(page),
+                        parentType = page.path("parent").path("type").asTextOrNull(),
+                        parentId = extractParentId(page.path("parent")),
+                        url = page.path("url").asTextOrNull(),
+                        lastEditedTime = page.path("last_edited_time").asOffsetDateTimeOrNull(),
+                    )
+                }
+            cursor = node.path("next_cursor").asTextOrNull()
+        } while (cursor != null)
+        return result
     }
 
     override fun patchBlockText(
