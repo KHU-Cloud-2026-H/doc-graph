@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FileText, Database } from "lucide-react";
+import { FileText, Database, Info, Square } from "lucide-react";
 import type { components } from "@docgraph/api-types";
 import { blocksToTree, type BlockTreeNode } from "../../lib/blocksToTree";
 
@@ -96,6 +96,19 @@ function renderSiblings(nodes: BlockTreeNode[]): ReactNode {
       continue;
     }
 
+    if (node.type === "toggle") {
+      output.push(
+        <details key={node.blockId} className="my-2">
+          <summary className="cursor-pointer font-medium">{node.text}</summary>
+          <div className="pl-4 mt-1.5 space-y-1.5 [&>*]:!my-0">
+            {renderSiblings(node.children)}
+          </div>
+        </details>
+      );
+      i++;
+      continue;
+    }
+
     output.push(
       <div key={node.blockId} className={blockMarginClass(node.type)}>
         {renderBlock(node)}
@@ -119,6 +132,9 @@ function blockMarginClass(type: string): string {
     case "heading_4":  return "mt-4 mb-1";
     case "quote":      return "my-3";
     case "divider":    return "my-6";
+    case "code":       return "my-3";
+    case "callout":    return "my-3";
+    case "to_do":      return "my-0.5";
     default:           return "my-2";
   }
 }
@@ -145,6 +161,30 @@ function renderBlock(node: BlockTreeNode): ReactNode {
       );
     case "divider":
       return <hr className="border-slate-200" />;
+    case "code":
+      return (
+        <pre className="bg-slate-100 rounded-md p-3 overflow-x-auto text-sm font-mono whitespace-pre">
+          <code>{text}</code>
+        </pre>
+      );
+    case "callout":
+      return (
+        <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-md p-3">
+          <span className="flex items-center h-6 shrink-0">
+            <Info className="w-4 h-4 text-slate-500" />
+          </span>
+          <div>{text}</div>
+        </div>
+      );
+    case "to_do":
+      return (
+        <div className="flex items-start gap-2">
+          <span className="flex items-center h-6 shrink-0">
+            <Square className="w-4 h-4 text-slate-400" />
+          </span>
+          <span>{text}</span>
+        </div>
+      );
     default:
       if (text) return <p>{text}</p>;
       return (
