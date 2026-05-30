@@ -15,5 +15,6 @@ interface DependencyEdgeJpaRepository : JpaRepository<DependencyEdge, Long> {
         projectId: Long,
         targetDocumentIds: List<Long>,
     ): List<DependencyEdge>
+    fun findAllBySourceDocumentId(sourceDocumentId: Long): List<DependencyEdge>
     fun deleteAllByProjectId(projectId: Long)
 }

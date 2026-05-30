@@ -48,7 +48,7 @@ class DocumentCommandController(
         }
 
         val json = objectMapper.readTree(rawBody)
-        val verificationToken = json.get("verification_token")?.asText()
+        val verificationToken = json.path("verification_token").takeIf { !it.isMissingNode && !it.isNull }?.asText()
         if (verificationToken != null) {
             log.info("Notion webhook verification_token: {}", verificationToken)
             return ResponseEntity.ok().build()

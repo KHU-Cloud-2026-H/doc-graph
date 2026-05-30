@@ -126,6 +126,31 @@ class DocumentCommandControllerTest @Autowired constructor(
 
         assertNull(noticeRepository.findByNotionEventId("evt-unknown-1"))
     }
+
+    @Test
+    fun `verification_token 필드 있는 Notion 검증 요청 — 200 OK, notice 저장 안 함`() {
+        // Notion이 웹훅 소유권 확인 시 보내는 verification_token 페이로드
+        // tools.jackson MissingNode.asText()="" 오탐으로 실제 이벤트가 저장 안 되던 버그 회귀 방지
+        val verificationBody = """{"verification_token":"secret_abc123"}"""
+
+        mockMvc.post(WEBHOOK_PATH) {
+            contentType = MediaType.APPLICATION_JSON
+            content = verificationBody
+        }.andExpect { status { isOk() } }
+
+        assertEquals(0, noticeRepository.findAll().size)
+    }
+
+    @Test
+    fun `실제 webhook 이벤트 — verification_token 없음, notice 정상 저장`() {
+        // verification_token이 없는 실제 이벤트는 저장돼야 함 (MissingNode 버그 수정 후)
+        mockMvc.post(WEBHOOK_PATH) {
+            contentType = MediaType.APPLICATION_JSON
+            content = webhookPayload(id = "evt-real-1")
+        }.andExpect { status { isOk() } }
+
+        assertNotNull(noticeRepository.findByNotionEventId("evt-real-1"))
+    }
 }
 
 @Tag("component")
