@@ -160,11 +160,10 @@ export const DocumentView = () => {
 
         <div className="flex-1 overflow-y-auto px-8 py-12 flex justify-center">
           <div className="w-full max-w-[800px] pb-24">
-            {!activeDoc?.children?.length && (
-              <>
-                <h1 className="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">
-                  {activeDoc?.title}
-                </h1>
+            <>
+              <h1 className="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">
+                {activeDoc?.title}
+              </h1>
 
                 {/* 메타데이터 영역
                     변경 사항:
@@ -221,8 +220,7 @@ export const DocumentView = () => {
                 </div>
 
                 <hr className="border-slate-200 mb-8"/>
-              </>
-            )}
+            </>
 
             <div 
               className="text-base text-slate-700 space-y-6 outline-none leading-relaxed"
