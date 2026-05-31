@@ -51,6 +51,7 @@ class BlockTest {
         assertEquals("parent-block", block.parentId)
         assertEquals("toggle", block.type)
         assertEquals("new text", block.text)
+        assertEquals("old text", block.previousText)
         assertEquals(2, block.sortOrder)
         assertEquals(createdTime, block.createdTime)
         assertEquals("user-created", block.createdBy)

@@ -1,6 +1,7 @@
 package com.docgraph.backend.document.command.domain
 
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconType
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
@@ -33,6 +34,8 @@ class DocumentTest {
             title = "After",
             parentNotionPageId = "parent-after",
             type = DocumentType.REQUIREMENTS,
+            iconType = IconType.EMOJI,
+            iconValue = "📄",
             assigneeMemberId = 20L,
             rawContent = """{"new":true}""",
             flatText = "new text",
@@ -44,6 +47,8 @@ class DocumentTest {
         assertEquals("After", document.title)
         assertEquals("parent-after", document.parentNotionPageId)
         assertEquals(DocumentType.REQUIREMENTS, document.type)
+        assertEquals(IconType.EMOJI, document.iconType)
+        assertEquals("📄", document.iconValue)
         assertEquals(20L, document.assigneeMemberId)
         assertEquals("""{"new":true}""", document.rawContent)
         assertEquals("new text", document.flatText)

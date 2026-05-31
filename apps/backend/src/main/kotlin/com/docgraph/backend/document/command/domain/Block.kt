@@ -38,6 +38,9 @@ class Block(
     @Column(columnDefinition = "text")
     var text: String? = null,
 
+    @Column(name = "previous_text", columnDefinition = "text")
+    var previousText: String? = null,
+
     @Column(name = "sort_order", nullable = false)
     var sortOrder: Int,
 
@@ -82,6 +85,7 @@ class Block(
         inTrash: Boolean,
         rawBlock: String?,
     ) {
+        previousText = this.text
         this.parentType = parentType
         this.parentId = parentId
         this.type = type

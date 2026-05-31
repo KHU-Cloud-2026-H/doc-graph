@@ -372,6 +372,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{id}/notion/root-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion 루트 페이지 후보 목록 */
+        get: operations["listNotionRootPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/notion/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion 워크스페이스 접근 가능 페이지 목록 */
+        get: operations["listNotionPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/notion/pages/{pageId}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion page 제목/아이콘 조회 */
+        get: operations["getNotionPageMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/notion/pages/{pageId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion page 본문 block/text 조회 */
+        get: operations["getNotionPageContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/notion/pages/{pageId}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notion page 직계 자식 page 목록 */
+        get: operations["listNotionPageChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}": {
         parameters: {
             query?: never;
@@ -1019,6 +1104,64 @@ export interface components {
              */
             joinedAt?: string;
         };
+        NotionWorkspacePageResponse: {
+            /**
+             * @description Notion page ID
+             * @example abc1234567890def
+             */
+            notionPageId?: string;
+            /**
+             * @description Notion page title
+             * @example Product Requirements
+             */
+            title?: string;
+            icon?: components["schemas"]["IconResponse"] | null;
+            /** @description Notion page URL */
+            url?: string | null;
+            /**
+             * Format: date-time
+             * @description Notion 원본의 마지막 수정 시각
+             */
+            lastEditedTime?: string | null;
+            /** @description 기존 응답 호환용 alias. notionPageId와 동일 */
+            id?: string;
+        };
+        NotionWorkspacePageMetadataResponse: {
+            /**
+             * @description Notion page title
+             * @example Product Requirements
+             */
+            title?: string;
+            icon?: components["schemas"]["IconResponse"] | null;
+        };
+        NotionWorkspaceBlockResponse: {
+            id?: string;
+            type?: string;
+            parentId?: string | null;
+            text?: string | null;
+            childPageTitle?: string | null;
+            linkedPageIds?: string[];
+            hasChildren?: boolean;
+            archived?: boolean;
+            inTrash?: boolean;
+            /** Format: int32 */
+            sortOrder?: number;
+        };
+        NotionWorkspacePageContentResponse: {
+            /** @description Notion page ID */
+            id?: string;
+            /** @description Notion page title */
+            title?: string;
+            /** @description page 하위 block 텍스트를 순서대로 합친 값 */
+            flatText?: string | null;
+            /**
+             * Format: date-time
+             * @description Notion 원본의 마지막 수정 시각
+             */
+            lastEditedTime?: string | null;
+            /** @description page 하위 block tree를 pre-order로 펼친 목록 */
+            blocks?: components["schemas"]["NotionWorkspaceBlockResponse"][];
+        };
         ProjectDetail: {
             /**
              * Format: int64
@@ -1555,6 +1698,8 @@ export interface components {
              * @description Notion 원본의 마지막 수정 시각 (미동기화 시 null)
              */
             notionLastEditedAt?: string | null;
+            /** @description 저장된 block 텍스트를 합친 값 */
+            flatText?: string | null;
             /** @description 블록 row 목록 */
             blocks?: components["schemas"]["Block"][];
         };
@@ -2584,6 +2729,166 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceDetail"];
+                };
+            };
+        };
+    };
+    listNotionRootPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 새 프로젝트 생성 시 선택 가능한 최상위 page 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한/Notion 연결 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
+                };
+            };
+        };
+    };
+    listNotionPages: {
+        parameters: {
+            query?: {
+                query?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuth로 연결된 Notion workspace에서 검색 가능한 page 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한/Notion 연결 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
+                };
+            };
+        };
+    };
+    getNotionPageMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notion page 제목과 아이콘 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageMetadataResponse"];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한/Notion 연결/page 접근 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageMetadataResponse"];
+                };
+            };
+        };
+    };
+    getNotionPageContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuth로 연결된 Notion page의 block tree와 flat text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageContentResponse"];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한/Notion 연결/page 접근 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageContentResponse"];
+                };
+            };
+        };
+    };
+    listNotionPageChildren: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 카테고리 매핑에 사용할 루트 page 직계 자식 page 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
+                };
+            };
+            /** @description 워크스페이스 없음 또는 접근 권한/Notion 연결/page 접근 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotionWorkspacePageResponse"][];
                 };
             };
         };

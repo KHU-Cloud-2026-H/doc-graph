@@ -5,6 +5,7 @@ import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.DetectedConflict
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.validation.command.domain.RevalidationInput
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -12,6 +13,7 @@ import org.springframework.web.client.body
 
 @Component
 class OpenAiConflictDetector(
+    @Qualifier("openAiRestClient")
     private val restClient: RestClient,
     private val parser: ConflictDetectionResponseParser,
     private val props: OpenAiProperties,

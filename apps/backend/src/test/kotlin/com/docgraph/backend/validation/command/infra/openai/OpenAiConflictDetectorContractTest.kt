@@ -134,7 +134,7 @@ class OpenAiConflictDetectorContractTest {
         assertEquals(401, ex.statusCode.value())
     }
 
-    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, 0)
+    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, null, 0)
 
     private fun chatResponseBody(content: String): String {
         val escaped = content.replace("\\", "\\\\").replace("\"", "\\\"")

@@ -53,6 +53,7 @@ class DocumentQueryRepository {
                     parentBlockId = if (b.parentType == "block_id") b.parentId else null,
                     type = b.type,
                     text = b.text,
+                    previousText = b.previousText,
                     order = b.sortOrder,
                 )
             }
@@ -66,6 +67,7 @@ class DocumentQueryRepository {
             icon = toIcon(document.iconType, document.iconValue),
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
+            flatText = document.flatText,
             blocks = blocks,
         )
     }
