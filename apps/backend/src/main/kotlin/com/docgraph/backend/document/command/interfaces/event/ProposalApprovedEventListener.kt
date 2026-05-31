@@ -10,6 +10,7 @@ import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.validation.command.domain.ProposalApprovedEvent
 import com.docgraph.backend.validation.query.application.FindConflictFindingByIdQuery
 import com.docgraph.backend.workspace.command.domain.WorkspaceRepository
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.scheduling.annotation.Async
@@ -33,13 +34,23 @@ class ProposalApprovedEventListener(
     fun on(event: ProposalApprovedEvent) {
         val finding = findConflictFindingById.find(event.conflictFindingId) ?: return
         val accessToken = resolveAccessToken(finding.targetDocumentId, event.approvedBy) ?: return
-        val result = notionDocumentClient.patchBlockText(
-            notionBlockId = finding.targetBlockId,
-            newText = finding.newText,
-            // TODO: ConflictFinding에 targetBlockLastEditedAt 저장 후 전달 — 검출 이후 수정된 block 덮어쓰기(lost-update) 방지
-            expectedLastEditedAt = null,
-            accessToken = accessToken,
-        )
+        val result = try {
+            notionDocumentClient.patchBlockText(
+                notionBlockId = finding.targetBlockId,
+                newText = finding.newText,
+                // lost-update 가드는 승인 시점에 ApproveProposalCommandHandler가 문서 단위로 처리(UC4) → writer엔 미전달.
+                expectedLastEditedAt = null,
+                accessToken = accessToken,
+            )
+        } catch (e: Exception) {
+            // 권한·네트워크 오류 시 writer가 throw. @Async라 호출자에 전파 안 되므로 여기서 로그.
+            // 이벤트 미발행 → Conflict 유지(UC4 실패 분기), 인박스에 남아 재승인 가능.
+            logger.warn(
+                "Notion 쓰기 실패 — finding={} block={} 이벤트 미발행(Conflict 유지): {}",
+                finding.findingId, finding.targetBlockId, e.message,
+            )
+            return
+        }
         if (result == NotionPatchResult.Success) {
             publisher.publishEvent(
                 NotionWriteSucceededEvent(
@@ -48,7 +59,6 @@ class ProposalApprovedEventListener(
                 ),
             )
         }
-        // TODO: PATCH 실패(401·네트워크·버전 충돌) 시 재시도/실패 통지 경로 추가 — finding 승인 후 Notion 미반영 상태 방지
     }
 
     private fun resolveAccessToken(documentId: Long, userId: Long): String? {
@@ -61,5 +71,9 @@ class ProposalApprovedEventListener(
         ) ?: return null
         if (connection.revokedAt != null) return null
         return notionAccessTokenDecryptor.decrypt(connection.accessTokenEncrypted)
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(ProposalApprovedEventListener::class.java)
     }
 }
