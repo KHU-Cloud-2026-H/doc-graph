@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { X, Trash2, Plus, ArrowRight, GitBranch } from 'lucide-react';
+import { X, Trash2, Plus, ArrowRight, GitBranch, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import type { AppEdge } from '../features/graph/mockData';
 import type { DocumentFlowNode } from '../features/graph/mockData';
 
@@ -11,11 +11,18 @@ type Props = {
   onAddEdge: (sourceId: string, targetId: string) => void;
 };
 
+const SOURCE_LABEL: Record<string, string> = {
+  NOTION_REFERENCE: 'Notion 링크/멘션',
+  PROPOSAL_ACCEPTED: '제안 수락',
+  CUSTOM: '수동 추가',
+};
+
 export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onAddEdge }: Props) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [sourceId, setSourceId] = useState('');
   const [targetId, setTargetId] = useState('');
   const [width, setWidth] = useState(420);
+  const [expandedEdgeId, setExpandedEdgeId] = useState<string | null>(null);
   const isResizing = useRef(false);
 
   const onMouseDown = useCallback(() => {
@@ -44,7 +51,7 @@ export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onA
   const getNodeLabel = (nodeId: string) =>
     nodes.find((n) => n.id === nodeId)?.data.label ?? nodeId;
 
-  const managedEdges = edges.filter((e) => e.type !== 'conflict');
+  const managedEdges = edges;
 
   const handleAdd = () => {
     if (!sourceId || !targetId || sourceId === targetId) return;
@@ -52,6 +59,10 @@ export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onA
     setSourceId('');
     setTargetId('');
     setShowAddForm(false);
+  };
+
+  const toggleExpand = (edgeId: string) => {
+    setExpandedEdgeId((prev) => (prev === edgeId ? null : edgeId));
   };
 
   return (
@@ -88,28 +99,70 @@ export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onA
         {managedEdges.length === 0 ? (
           <p className="text-xs text-slate-400 text-center py-8">엣지가 없습니다.</p>
         ) : (
-          managedEdges.map((edge) => (
-            <div
-              key={edge.id}
-              className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-slate-100 bg-slate-50 group"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs text-slate-700 truncate">
-                  {getNodeLabel(edge.source)}
-                </span>
-                <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-700 truncate">
-                  {getNodeLabel(edge.target)}
-                </span>
-              </div>
-              <button
-                onClick={() => onDeleteEdge(edge.id)}
-                className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+          managedEdges.map((edge) => {
+            const isConflict = edge.data?.conflictStatus === 'CONFLICT';
+            const isExpanded = expandedEdgeId === edge.id;
+
+            return (
+              <div
+                key={edge.id}
+                className={`rounded-lg border group ${
+                  isConflict
+                    ? 'border-red-200 bg-red-50'
+                    : 'border-slate-100 bg-slate-50'
+                }`}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))
+                {/* 엣지 행 */}
+                <div
+                  className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer"
+                  onClick={() => toggleExpand(edge.id)}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isConflict && (
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    )}
+                    <span className={`text-xs break-words ${isConflict ? 'text-red-700' : 'text-slate-700'}`}>
+                      {getNodeLabel(edge.source)}
+                    </span>
+                    <ArrowRight className={`w-3 h-3 shrink-0 ${isConflict ? 'text-red-400' : 'text-slate-400'}`} />
+                    <span className={`text-xs break-words ${isConflict ? 'text-red-700' : 'text-slate-700'}`}>
+                      {getNodeLabel(edge.target)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteEdge(edge.id); }}
+                      className="p-1 rounded hover:bg-red-100 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    {isExpanded
+                      ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                      : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    }
+                  </div>
+                </div>
+
+                {/* 상세 정보 */}
+                {isExpanded && (
+                  <div className={`px-3 pb-3 space-y-2 border-t ${isConflict ? 'border-red-100' : 'border-slate-100'}`}>
+                    <div className="pt-2">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">생성 출처</p>
+                      <p className="text-xs text-slate-600">
+                        {SOURCE_LABEL[edge.data?.source ?? ''] ?? edge.data?.source ?? '-'}
+                      </p>
+                    </div>
+                    {edge.data?.validationCriterion && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">검증 기준</p>
+                        <p className="text-xs text-slate-600">{edge.data.validationCriterion}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
