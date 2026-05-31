@@ -50,6 +50,10 @@ compose-down:
 seed-fixture backend="http://localhost:8080/api":
     cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run python "{{justfile_directory()}}/scripts/seed-fixture.py" --backend {{backend}}
 
+# 실제 Notion OAuth 로그인(브라우저) 후 초기 동기화를 backend 직접 호출로 검증. DG_SESSION 쿠키 필요(.env.local 또는 인라인 env). --list로 페이지 둘러보기, --name·--root로 생성·동기화.
+sync-live *args:
+    cd "{{justfile_directory()}}/tests" && {{dotenv-run}} uv run python "{{justfile_directory()}}/scripts/sync-live.py" {{args}}
+
 # 시스템 테스트 — application alive·부팅·env wiring. 로컬 compose 자동 띄움.
 test-system:
     #!/usr/bin/env sh
