@@ -34,7 +34,7 @@ class OpenAiConflictDetector(
             responseFormat = ConflictDetectionResponseSchema.responseFormat(),
         )
         val response = restClient.post()
-            .uri("/v1/chat/completions")
+            .uri { it.path("/chat/completions").build() }
             .contentType(MediaType.APPLICATION_JSON)
             .body(request)
             .retrieve()
