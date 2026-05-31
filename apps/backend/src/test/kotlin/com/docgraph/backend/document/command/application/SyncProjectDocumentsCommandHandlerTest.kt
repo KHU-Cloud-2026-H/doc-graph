@@ -139,6 +139,10 @@ class SyncProjectDocumentsCommandHandlerTest {
             name = "Project",
             notionRootPageId = "root-page",
             members = emptyList(),
+            memberCount = 0,
+            documentCount = 0L,
+            unresolvedConflictCount = 0L,
+            lastNotionChangedAt = null,
         )
         every { searchCategoriesByProject.search(1L) } returns emptyList()
         every { projectRepository.findById(1L) } returns null
@@ -175,6 +179,10 @@ class SyncProjectDocumentsCommandHandlerTest {
             name = "Project",
             notionRootPageId = "root-page",
             members = emptyList(),
+            memberCount = 0,
+            documentCount = 0L,
+            unresolvedConflictCount = 0L,
+            lastNotionChangedAt = null,
         )
         every { searchCategoriesByProject.search(1L) } returns emptyList()
         every { projectRepository.findById(1L) } returns null
