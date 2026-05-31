@@ -77,6 +77,23 @@ class ProposalApprovedEventListenerTest {
         verify(exactly = 0) { publisher.publishEvent(any<NotionWriteSucceededEvent>()) }
     }
 
+    @Test
+    fun `Notion 쓰기 실패(throw) — 이벤트 미발행, Conflict 유지`() {
+        every { findConflictFindingById.find(500L) } returns ConflictFindingDetail(
+            findingId = 500L,
+            targetDocumentId = 20L,
+            targetBlockId = "block-x",
+            newText = "new",
+        )
+        stubTokenChain(documentId = 20L, approvedBy = 1L, token = "token-1")
+        every { notionDocumentClient.patchBlockText("block-x", "new", null, "token-1") } throws
+            IllegalStateException("Notion 쓰기 권한 오류")
+
+        listener.on(ProposalApprovedEvent(conflictFindingId = 500L, approvedBy = 1L, occurredAt = now))
+
+        verify(exactly = 0) { publisher.publishEvent(any<NotionWriteSucceededEvent>()) }
+    }
+
     // 리스너의 resolveAccessToken: document → project → workspace → connection → decrypt 경로를 stub.
     private fun stubTokenChain(documentId: Long, approvedBy: Long, token: String) {
         val document = mockk<Document> { every { projectId } returns 30L }
