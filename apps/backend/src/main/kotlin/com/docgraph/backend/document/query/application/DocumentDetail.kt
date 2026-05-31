@@ -20,6 +20,8 @@ data class DocumentDetail(
     val assigneeMemberId: Long?,
     @Schema(description = "Notion 원본의 마지막 수정 시각 (미동기화 시 null)")
     val notionLastEditedAt: OffsetDateTime?,
+    @Schema(description = "저장된 block 텍스트를 합친 값")
+    val flatText: String?,
     @Schema(description = "블록 row 목록")
     val blocks: List<Block>,
 )

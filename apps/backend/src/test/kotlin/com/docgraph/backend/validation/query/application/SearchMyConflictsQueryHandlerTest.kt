@@ -109,7 +109,6 @@ class SearchMyConflictsQueryHandlerTest {
             DocumentReference(40L, 1L, "S40", DocumentType.PLANNING),
             DocumentReference(41L, 2L, "S41", DocumentType.REQUIREMENTS),
         )
-        // project summaries
         every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
             ProjectRef(1L, 7L, "P1"),
             ProjectRef(2L, 8L, "P2"),
@@ -175,6 +174,7 @@ class SearchMyConflictsQueryHandlerTest {
         val result = handler.search(MyConflictStatusFilter.IGNORED, PageRequest.of(0, 20))
 
         assertEquals(MyConflictStatus.IGNORED, result.content[0].status)
+        assertEquals(9L, result.content[0].workspaceId)
         assertEquals(ignoredAt, result.content[0].ignoredAt)
     }
 

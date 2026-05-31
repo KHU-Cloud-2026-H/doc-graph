@@ -63,5 +63,9 @@ auth:
   oauth:
     success-redirect-uri: ${AUTH_OAUTH_SUCCESS_REDIRECT_URI}
 
+notion:
+  api:
+    base-url: ${NOTION_API_BASE_URL:https://api.notion.com}
+
 cors:
   allowed-origin: ${CORS_ALLOWED_ORIGIN}

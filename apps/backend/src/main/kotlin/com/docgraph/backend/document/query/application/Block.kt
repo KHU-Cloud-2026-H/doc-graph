@@ -5,5 +5,6 @@ data class Block(
     val parentBlockId: String?,
     val type: String,
     val text: String?,
+    val previousText: String?,
     val order: Int,
 )
