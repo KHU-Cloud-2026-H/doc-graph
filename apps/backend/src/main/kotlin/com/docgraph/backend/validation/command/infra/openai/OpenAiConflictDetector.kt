@@ -1,9 +1,10 @@
 package com.docgraph.backend.validation.command.infra.openai
 
+import com.docgraph.backend.validation.command.domain.AiUsage
 import com.docgraph.backend.validation.command.domain.ConflictDetectionInput
 import com.docgraph.backend.validation.command.domain.ConflictDetectionResponseException
+import com.docgraph.backend.validation.command.domain.ConflictDetectionResult
 import com.docgraph.backend.validation.command.domain.ConflictDetector
-import com.docgraph.backend.validation.command.domain.DetectedConflict
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.validation.command.domain.RevalidationInput
 import org.springframework.beans.factory.annotation.Qualifier
@@ -21,7 +22,7 @@ class OpenAiConflictDetector(
     private val props: OpenAiProperties,
 ) : ConflictDetector {
 
-    override fun detect(input: ConflictDetectionInput): List<DetectedConflict> {
+    override fun detect(input: ConflictDetectionInput): ConflictDetectionResult {
         val messages = when (input) {
             is FirstValidationInput -> ConflictDetectionPromptBuilder.buildFirstValidation(
                 input.sourceBlocks, input.targetBlocks, input.criterion,
@@ -46,10 +47,14 @@ class OpenAiConflictDetector(
             ?: throw ConflictDetectionResponseException("OpenAI 응답 본문이 비어 있음")
         val content = response.choices.firstOrNull()?.message?.content
             ?: throw ConflictDetectionResponseException("OpenAI 응답에 choices가 없음")
-        return try {
+        val conflicts = try {
             parser.parse(content)
         } catch (e: JacksonException) {
             throw ConflictDetectionResponseException("OpenAI 응답 스키마 불일치 — 파싱 실패", e)
         }
+        val usage = response.usage?.let { u ->
+            response.model?.let { m -> AiUsage(m, u.promptTokens, u.completionTokens, u.totalTokens) }
+        }
+        return ConflictDetectionResult(conflicts, usage)
     }
 }
