@@ -8,8 +8,11 @@ import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
+import com.docgraph.backend.validation.command.domain.AiUsage
+import com.docgraph.backend.validation.command.domain.AiUsageRecordRepository
 import com.docgraph.backend.validation.command.domain.ConflictDetectionInput
 import com.docgraph.backend.validation.command.domain.ConflictDetectionResponseException
+import com.docgraph.backend.validation.command.domain.ConflictDetectionResult
 import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
@@ -42,6 +45,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ListenerFakeFindEdgeByIdQuery : FindEdgeByIdQuery {
@@ -58,9 +62,9 @@ class FakeConflictDetector : ConflictDetector {
     @Volatile var behavior: (ConflictDetectionInput) -> List<DetectedConflict> = { emptyList() }
     val invocations = AtomicInteger(0)
 
-    override fun detect(input: ConflictDetectionInput): List<DetectedConflict> {
+    override fun detect(input: ConflictDetectionInput): ConflictDetectionResult {
         invocations.incrementAndGet()
-        return behavior(input)
+        return ConflictDetectionResult(behavior(input), AiUsage("test-model", 11, 22, 33))
     }
 }
 
@@ -100,6 +104,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
     private val findEdge: ListenerFakeFindEdgeByIdQuery,
     private val findDocument: ListenerFakeFindDocumentByIdQuery,
     private val detector: FakeConflictDetector,
+    private val aiUsageRecordRepository: AiUsageRecordRepository,
 ) {
 
     @BeforeEach
@@ -107,6 +112,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         txTemplate.executeWithoutResult {
             em.createQuery("DELETE FROM ConflictFinding").executeUpdate()
             em.createQuery("DELETE FROM Conflict").executeUpdate()
+            em.createQuery("DELETE FROM AiUsageRecord").executeUpdate()
             em.createQuery("DELETE FROM ValidationTask").executeUpdate()
         }
         detector.invocations.set(0)
@@ -131,6 +137,15 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         assertEquals(1, detector.invocations.get())
         assertEquals(1L, conflictCount())
         assertEquals(1L, findingCount())
+
+        waitFor { aiUsageRecordRepository.findByValidationTaskId(task.id) != null }
+        val usage = aiUsageRecordRepository.findByValidationTaskId(task.id)
+        assertNotNull(usage)
+        assertEquals(1L, usage.projectId)
+        assertEquals("test-model", usage.model)
+        assertEquals(11, usage.promptTokens)
+        assertEquals(22, usage.completionTokens)
+        assertEquals(33, usage.totalTokens)
     }
 
     @Test

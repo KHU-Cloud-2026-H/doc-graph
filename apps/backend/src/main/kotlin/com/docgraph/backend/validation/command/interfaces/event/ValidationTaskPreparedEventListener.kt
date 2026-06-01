@@ -5,12 +5,15 @@ import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.validation.command.application.CompleteValidationTaskCommand
 import com.docgraph.backend.validation.command.application.CompleteValidationTaskCommandHandler
+import com.docgraph.backend.validation.command.application.RecordAiUsageCommand
+import com.docgraph.backend.validation.command.application.RecordAiUsageCommandHandler
 import com.docgraph.backend.validation.command.application.ValidationTaskTransitionService
 import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.validation.command.domain.RevalidationInput
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import org.slf4j.LoggerFactory
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Recover
 import org.springframework.retry.annotation.Retryable
@@ -29,8 +32,11 @@ class ValidationTaskPreparedEventListener(
     private val findDocumentById: FindDocumentByIdQuery,
     private val detector: ConflictDetector,
     private val completeHandler: CompleteValidationTaskCommandHandler,
+    private val recordAiUsageHandler: RecordAiUsageCommandHandler,
     private val transition: ValidationTaskTransitionService,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Retryable(
@@ -76,8 +82,15 @@ class ValidationTaskPreparedEventListener(
                 criterion = edge.validationCriterion,
             )
         }
-        val findings = detector.detect(input)
-        completeHandler.handle(CompleteValidationTaskCommand(task.id, findings))
+        val result = detector.detect(input)
+        completeHandler.handle(CompleteValidationTaskCommand(task.id, result.conflicts))
+
+        // 사용량 관측은 best-effort: 적재 실패가 이미 완료된 검출 결과를 롤백/실패시키면 안 된다.
+        result.usage?.let { usage ->
+            runCatching {
+                recordAiUsageHandler.handle(RecordAiUsageCommand(task.id, edge.projectId, usage))
+            }.onFailure { log.warn("AI 사용량 적재 실패 — task={}", task.id, it) }
+        }
     }
 
     @Recover

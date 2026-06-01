@@ -584,6 +584,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 사용량 요약
+         * @description 프로젝트의 총 호출·토큰 합계와 모델별 분해.
+         */
+        get: operations["getAiUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/ai-usage/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 사용량 호출 이력
+         * @description 검증 작업별 토큰·모델 호출 이력.
+         */
+        get: operations["listAiUsageRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth2/authorization/notion": {
         parameters: {
             query?: never;
@@ -1588,6 +1628,128 @@ export interface components {
              * @enum {string}
              */
             documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
+        };
+        AiUsageByModel: {
+            /**
+             * @description 응답이 알려준 실제 model 버전
+             * @example gpt-4o-2024-08-06
+             */
+            model?: string;
+            /**
+             * Format: int64
+             * @description 호출 수
+             * @example 12
+             */
+            calls?: number;
+            /**
+             * Format: int64
+             * @description prompt 토큰 합계
+             * @example 14000
+             */
+            promptTokens?: number;
+            /**
+             * Format: int64
+             * @description completion 토큰 합계
+             * @example 3200
+             */
+            completionTokens?: number;
+            /**
+             * Format: int64
+             * @description 전체 토큰 합계
+             * @example 17200
+             */
+            totalTokens?: number;
+        };
+        AiUsageSummaryResponse: {
+            /**
+             * Format: int64
+             * @description 총 호출 수
+             * @example 30
+             */
+            totalCalls?: number;
+            /**
+             * Format: int64
+             * @description 총 prompt 토큰
+             * @example 36000
+             */
+            totalPromptTokens?: number;
+            /**
+             * Format: int64
+             * @description 총 completion 토큰
+             * @example 8000
+             */
+            totalCompletionTokens?: number;
+            /**
+             * Format: int64
+             * @description 총 토큰
+             * @example 44000
+             */
+            totalTokens?: number;
+            /** @description 모델별 분해 */
+            byModel?: components["schemas"]["AiUsageByModel"][];
+        };
+        AiUsageRecordResponse: {
+            /**
+             * Format: int64
+             * @description 사용량을 발생시킨 검증 작업 ID
+             * @example 1
+             */
+            validationTaskId?: number;
+            /**
+             * @description 응답이 알려준 실제 model 버전
+             * @example gpt-4o-2024-08-06
+             */
+            model?: string;
+            /**
+             * Format: int32
+             * @description prompt 토큰
+             * @example 1200
+             */
+            promptTokens?: number;
+            /**
+             * Format: int32
+             * @description completion 토큰
+             * @example 300
+             */
+            completionTokens?: number;
+            /**
+             * Format: int32
+             * @description 전체 토큰
+             * @example 1500
+             */
+            totalTokens?: number;
+            /**
+             * Format: date-time
+             * @description 호출 시각
+             */
+            createdAt?: string;
+        };
+        PageResponseAiUsageRecordResponse: {
+            content?: components["schemas"]["AiUsageRecordResponse"][];
+            /**
+             * Format: int64
+             * @description 전체 항목 수
+             * @example 100
+             */
+            totalElements?: number;
+            /**
+             * Format: int32
+             * @description 전체 페이지 수
+             * @example 5
+             */
+            totalPages?: number;
+            /**
+             * Format: int32
+             * @description 현재 페이지 (0-based)
+             * @example 0
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description 페이지 크기
+             * @example 20
+             */
+            size?: number;
         };
         InboxDocumentRef: {
             /** Format: int64 */
@@ -3148,6 +3310,53 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseConflictResponse"];
+                };
+            };
+        };
+    };
+    getAiUsageSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 사용량 요약 (없으면 0·빈 분해) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AiUsageSummaryResponse"];
+                };
+            };
+        };
+    };
+    listAiUsageRecords: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 호출 이력 page (없으면 빈 page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAiUsageRecordResponse"];
                 };
             };
         };

@@ -27,6 +27,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @Tag("component")
@@ -62,12 +63,12 @@ class OpenAiConflictDetectorContractTest {
             ),
         )
 
-        assertEquals(1, result.size)
-        assertEquals(listOf("s1"), result[0].sourceBlockIds)
-        assertEquals("t1", result[0].targetBlockId)
-        assertEquals("reason", result[0].rationale)
-        assertEquals("fix", result[0].newText)
-        assertEquals("제목", result[0].title)
+        assertEquals(1, result.conflicts.size)
+        assertEquals(listOf("s1"), result.conflicts[0].sourceBlockIds)
+        assertEquals("t1", result.conflicts[0].targetBlockId)
+        assertEquals("reason", result.conflicts[0].rationale)
+        assertEquals("fix", result.conflicts[0].newText)
+        assertEquals("제목", result.conflicts[0].title)
 
         wireMock.verify(
             postRequestedFor(urlEqualTo("/api/v1/chat/completions"))
@@ -93,7 +94,29 @@ class OpenAiConflictDetectorContractTest {
         )
 
         val result = detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
-        assertTrue(result.isEmpty())
+        assertTrue(result.conflicts.isEmpty())
+    }
+
+    @Test
+    fun `usage·model 파싱 — 응답의 실제 model 버전·토큰 수 반환`() {
+        wireMock.stubFor(
+            post(urlEqualTo("/api/v1/chat/completions"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(chatResponseBody("""{"conflicts":[]}"""))
+                )
+        )
+
+        val result = detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
+
+        val usage = result.usage
+        assertNotNull(usage)
+        assertEquals("gpt-4o-2024-08-06", usage.model)
+        assertEquals(120, usage.promptTokens)
+        assertEquals(30, usage.completionTokens)
+        assertEquals(150, usage.totalTokens)
     }
 
     @Test
@@ -177,9 +200,11 @@ class OpenAiConflictDetectorContractTest {
             {
               "id": "chatcmpl-test",
               "object": "chat.completion",
+              "model": "gpt-4o-2024-08-06",
               "choices": [
                 {"index": 0, "message": {"role": "assistant", "content": "$escaped"}, "finish_reason": "stop"}
-              ]
+              ],
+              "usage": {"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150}
             }
         """.trimIndent()
     }
