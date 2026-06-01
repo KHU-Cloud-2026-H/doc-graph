@@ -29,17 +29,6 @@ class DocumentChangeNoticeQueuedEventListenerTest {
     }
 
     @Test
-    fun `fetchFromNotion null → applyAndMarkSuccess 미호출`() {
-        val notice = pendingNotice(id = 2L)
-        every { handler.recordAttempt(2L) } returns notice
-        every { handler.fetchFromNotion(notice) } returns null
-
-        listener.on(DocumentChangeNoticeQueuedEvent(noticeId = 2L))
-
-        verify(exactly = 0) { handler.applyAndMarkSuccess(any(), any()) }
-    }
-
-    @Test
     fun `정상 흐름 — recordAttempt → fetchFromNotion → applyAndMarkSuccess 순 호출`() {
         val notice = pendingNotice(id = 3L)
         val result = mockk<NotionFetchResult>()
@@ -49,6 +38,13 @@ class DocumentChangeNoticeQueuedEventListenerTest {
         listener.on(DocumentChangeNoticeQueuedEvent(noticeId = 3L))
 
         verify(exactly = 1) { handler.applyAndMarkSuccess(notice, result) }
+    }
+
+    @Test
+    fun `recover — 예외 메시지로 handler markFailed 호출 (dead-letter)`() {
+        listener.recover(RuntimeException("notion 404"), DocumentChangeNoticeQueuedEvent(noticeId = 4L))
+
+        verify(exactly = 1) { handler.markFailed(4L, "notion 404") }
     }
 
     private fun pendingNotice(id: Long): DocumentChangeNotice =

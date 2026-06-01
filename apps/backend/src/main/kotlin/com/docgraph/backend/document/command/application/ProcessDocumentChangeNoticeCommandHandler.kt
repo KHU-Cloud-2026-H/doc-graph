@@ -15,7 +15,6 @@ import com.docgraph.backend.document.command.domain.NotionIcon
 import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.event.OutboxStatus
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +30,6 @@ class ProcessDocumentChangeNoticeCommandHandler(
     private val notionAccessTokenDecryptor: NotionAccessTokenDecryptor,
     private val publisher: ApplicationEventPublisher,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     fun recordAttempt(noticeId: Long): DocumentChangeNotice? {
@@ -41,24 +39,29 @@ class ProcessDocumentChangeNoticeCommandHandler(
         return noticeRepository.save(notice)
     }
 
-    fun fetchFromNotion(notice: DocumentChangeNotice): NotionFetchResult? {
+    // 예외를 삼키지 않는다: transient(5xx·429·timeout)은 리스너 @Retryable이 재시도하고,
+    // 영구 실패(비-429 4xx·파싱·빈 응답)는 @Recover가 markFailed로 dead-letter 전이한다.
+    fun fetchFromNotion(notice: DocumentChangeNotice): NotionFetchResult {
         val accessToken = resolveAccessToken(notice)
-        return try {
-            val page = notionDocumentClient.fetchPage(notice.notionPageId, accessToken)
-            val blocks = fetchBlockTree(notice.notionPageId, accessToken)
-            NotionFetchResult(
-                title = page.title,
-                rawJson = page.rawJson,
-                createdBy = page.createdBy,
-                lastEditedBy = page.lastEditedBy,
-                lastEditedTime = page.lastEditedTime,
-                icon = page.icon,
-                blocks = blocks,
-            )
-        } catch (e: Exception) {
-            log.warn("Notion API call failed for notice={} pageId={}", notice.id, notice.notionPageId, e)
-            null
-        }
+        val page = notionDocumentClient.fetchPage(notice.notionPageId, accessToken)
+        val blocks = fetchBlockTree(notice.notionPageId, accessToken)
+        return NotionFetchResult(
+            title = page.title,
+            rawJson = page.rawJson,
+            createdBy = page.createdBy,
+            lastEditedBy = page.lastEditedBy,
+            lastEditedTime = page.lastEditedTime,
+            icon = page.icon,
+            blocks = blocks,
+        )
+    }
+
+    @Transactional
+    fun markFailed(noticeId: Long, reason: String?) {
+        val notice = noticeRepository.findById(noticeId).orElse(null) ?: return
+        if (notice.status != OutboxStatus.PENDING) return
+        notice.markFailed(reason)
+        noticeRepository.save(notice)
     }
 
     @Transactional
