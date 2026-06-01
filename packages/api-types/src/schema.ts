@@ -1263,6 +1263,11 @@ export interface components {
              */
             status?: "PENDING" | "SUCCESS" | "FAILED";
             /**
+             * @description 실패 원인 분류 (status=FAILED일 때만 존재)
+             * @enum {string|null}
+             */
+            failureCategory?: "RATE_LIMITED" | "TIMEOUT" | "UPSTREAM_ERROR" | "INVALID_REQUEST" | "INVALID_RESPONSE" | "MISSING_REFERENCE" | "UNKNOWN" | null;
+            /**
              * Format: date-time
              * @description 생성 시각
              */
