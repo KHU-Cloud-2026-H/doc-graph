@@ -168,6 +168,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | `FindWorkspaceIdByMemberIdQuery` | project | 프로젝트 멤버 배정·타입 담당자 설정 시 멤버의 워크스페이스 검증 |
 | `FindWorkspaceMemberIdByUserIdQuery` | project | 사용자의 워크스페이스 멤버 자격·멤버 ID 식별(권한 검증·프로젝트 멤버 등록) |
 | `FindWorkspaceCreatorIdByIdQuery` | project, document | project는 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여; document는 Notion 페이지 브라우징 시 워크스페이스 생성자 게이트 |
+| `SearchWorkspaceMemberIdsByUserIdQuery` | validation | 인박스 라우팅 — 사용자가 속한 워크스페이스 멤버 ID 묶음 조회 |
 
 ---
 
@@ -211,6 +212,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | `SearchAdminProjectIdsByUserIdQuery` | validation, notification | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속; notification은 webhook 설정·조회 시 Project Admin 권한 검증 |
 | `SearchProjectIdsByWorkspaceIdsQuery` | workspace | 워크스페이스 카드 응답 조립 — workspace별 프로젝트 ID 묶음 조회 |
 | `SearchProjectRefsByIdsQuery` | validation, notification | 인박스 라우팅·충돌 알림 — 프로젝트 ID 묶음으로 이름 조회 |
+| `SearchAssignedDocumentTypesByUserIdQuery` | validation | 인박스 라우팅 — 사용자가 담당자 기본값으로 지정된 문서 타입 식별(type fallback) |
 
 ---
 
@@ -280,6 +282,8 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `SearchDocumentStatsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 문서 수·Notion 최근 변경 시각 조회 |
 | `SearchPageInfoByNotionPageIdsQuery` | project | 카드 응답 조립 — 루트 Notion 페이지 제목·아이콘 조회(프로젝트 아이콘 표시) |
 | `SearchDocumentReferencesByIdsQuery` | validation, notification | 인박스·충돌 알림 — 문서 ID 묶음으로 제목·프로젝트 조회 |
+| `SearchDocumentIdsByProjectAndTypesQuery` | validation | 인박스 라우팅 — 프로젝트·타입 조합으로 문서 ID 묶음 조회 |
+| `SearchDocumentNodesByProjectQuery` | graph | 프로젝트 그래프 노드 데이터(문서 노드) 조회 |
 
 ---
 
@@ -325,6 +329,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | 이름 | 트리거 | 소비자 | 처리 |
 | --- | --- | --- | --- |
 | `ValidationPairCreatedEvent` | 엣지 자동 생성·재평가 또는 제안 수락 후 검증 대상 쌍 확정 | validation | `ValidationTask(pending)` 영속화(검증 대기열 등록) |
+| `DependencyEdgeRemovedEvent` | 엣지 삭제 | validation | 해당 엣지의 미해소 Conflict 해소(cascade) |
 
 **도메인 간 인터페이스 — Query API**
 
@@ -335,6 +340,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `SearchEdgeIdsByProjectQuery` | validation | 프로젝트 검증 작업 목록 조회 시 엣지 ID 필터 |
 | `SearchEdgeIdsByProjectIdsQuery` | validation | 카드 미해소 충돌 카운트 조립 — 프로젝트 묶음의 엣지 ID 일괄 조회 |
 | `SearchEdgeIdsByTargetDocumentIdsQuery` | validation | 인박스 라우팅 — 사용자의 담당 문서로 향하는 엣지 식별 |
+| `SearchEdgeDetailsByIdsQuery` | validation | 인박스 — 엣지 ID 묶음으로 source/target 문서 ID 매핑 |
 
 ---
 
