@@ -10,6 +10,8 @@ import com.docgraph.backend.document.command.domain.NotionBlock
 import com.docgraph.backend.document.command.domain.NotionDocumentClient
 import com.docgraph.backend.document.command.domain.NotionPage
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.graph.command.application.ProposeEdgeCommand
+import com.docgraph.backend.graph.command.application.ProposeEdgeCommandHandler
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommand
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommandHandler
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Tag("unit")
 class SyncProjectDocumentsCommandHandlerTest {
@@ -38,8 +41,9 @@ class SyncProjectDocumentsCommandHandlerTest {
     private val notionDocumentClient = mockk<NotionDocumentClient>()
     private val documentRepository = mockk<DocumentRepository>()
     private val blockRepository = mockk<BlockRepository>()
-    private val graphRuleRepository = mockk<GraphRuleRepository>()
+    private val graphRuleRepository = mockk<GraphRuleRepository>(relaxed = true)
     private val registerDependencyEdgeHandler = mockk<RegisterDependencyEdgeCommandHandler>(relaxed = true)
+    private val proposeEdgeHandler = mockk<ProposeEdgeCommandHandler>(relaxed = true)
     private val projectRepository = mockk<ProjectRepository>()
     private val workspaceRepository = mockk<WorkspaceRepository>()
     private val notionConnectionRepository = mockk<NotionConnectionRepository>()
@@ -53,6 +57,7 @@ class SyncProjectDocumentsCommandHandlerTest {
         blockRepository = blockRepository,
         graphRuleRepository = graphRuleRepository,
         registerDependencyEdgeHandler = registerDependencyEdgeHandler,
+        proposeEdgeHandler = proposeEdgeHandler,
         projectRepository = projectRepository,
         workspaceRepository = workspaceRepository,
         notionConnectionRepository = notionConnectionRepository,
@@ -256,6 +261,72 @@ class SyncProjectDocumentsCommandHandlerTest {
         // root + accessible 2개 저장, forbidden은 skip
         verify(exactly = 2) { documentRepository.save(any()) }
         verify(exactly = 0) { notionDocumentClient.fetchBlockChildren("child-forbidden", any()) }
+    }
+
+    @Test
+    fun `링크 없는 룰 타입 조합 문서 쌍은 키워드 유사도로 연결 제안된다`() {
+        every { findProjectDetailById.find(1L, 9L) } returns ProjectDetail(
+            id = 1L,
+            name = "Project",
+            notionRootPageId = "root-page",
+            members = emptyList(),
+            memberCount = 0,
+            documentCount = 0L,
+            unresolvedConflictCount = 0L,
+            lastNotionChangedAt = null,
+        )
+        every { searchCategoriesByProject.search(1L) } returns listOf(
+            CategoryProjection("source-page", DocumentType.REQUIREMENTS),
+            CategoryProjection("target-page", DocumentType.DESIGN),
+        )
+        every { projectRepository.findById(1L) } returns null
+        every { documentRepository.findByProjectIdAndNotionPageId(any(), any()) } returns null
+
+        var nextId = 100L
+        every { documentRepository.save(any()) } answers { firstArg<Document>().also { it.id = nextId++ } }
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(any()) } returns emptyList()
+        every { blockRepository.deleteAll(any<Iterable<Block>>()) } returns Unit
+        every { blockRepository.saveAll(any<Iterable<Block>>()) } answers { firstArg<Iterable<Block>>().toList() }
+
+        // root가 두 페이지를 child_page로 포함 — 둘 사이 링크·멘션은 없음
+        every { notionDocumentClient.fetchPage("root-page", null) } returns page("root-page", "Root")
+        every { notionDocumentClient.fetchBlockChildren("root-page", null) } returns listOf(
+            block(id = "source-page", type = "child_page", childPageTitle = "Source"),
+            block(id = "target-page", type = "child_page", childPageTitle = "Target"),
+        )
+        every { notionDocumentClient.fetchPage("source-page", null) } returns page("source-page", "Source")
+        every { notionDocumentClient.fetchBlockChildren("source-page", null) } returns listOf(
+            block(id = "s-1", text = "공통 키워드 범위 일정"),
+        )
+        every { notionDocumentClient.fetchPage("target-page", null) } returns page("target-page", "Target")
+        every { notionDocumentClient.fetchBlockChildren("target-page", null) } returns listOf(
+            block(id = "t-1", text = "공통 키워드 디자인 색상"),
+        )
+        every {
+            graphRuleRepository.findAllByProjectIdAndTypePair(1L, DocumentType.REQUIREMENTS, DocumentType.DESIGN)
+        } returns listOf(
+            GraphRule(
+                id = 30L,
+                projectId = 1L,
+                sourceType = DocumentType.REQUIREMENTS,
+                targetType = DocumentType.DESIGN,
+                validationCriterion = "스펙 일치 여부",
+            ),
+        )
+
+        val proposalSlot = slot<ProposeEdgeCommand>()
+
+        handler.handle(SyncProjectDocumentsCommand(projectId = 1L, requestedBy = 9L))
+
+        // 링크가 없으므로 엣지 자동 생성은 0, 키워드 유사도 기반 제안만 발생
+        verify(exactly = 0) { registerDependencyEdgeHandler.handle(any()) }
+        verify(exactly = 1) { proposeEdgeHandler.handle(capture(proposalSlot)) }
+        assertEquals(1L, proposalSlot.captured.projectId)
+        assertEquals(101L, proposalSlot.captured.sourceDocumentId)
+        assertEquals(102L, proposalSlot.captured.targetDocumentId)
+        assertEquals(30L, proposalSlot.captured.ruleId)
+        assertEquals("스펙 일치 여부", proposalSlot.captured.validationCriterion)
+        assertTrue(proposalSlot.captured.similarityScore > 0.0)
     }
 
     private fun page(id: String, title: String): NotionPage = NotionPage(

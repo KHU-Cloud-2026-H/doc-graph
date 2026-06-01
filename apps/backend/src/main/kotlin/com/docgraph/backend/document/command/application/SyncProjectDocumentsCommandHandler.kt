@@ -13,10 +13,14 @@ import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.command.domain.NotionPage
 import com.docgraph.backend.document.query.application.DocumentType
 import com.docgraph.backend.document.query.application.IconType
+import com.docgraph.backend.graph.command.application.ProposeEdgeCommand
+import com.docgraph.backend.graph.command.application.ProposeEdgeCommandHandler
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommand
 import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeCommandHandler
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
+import com.docgraph.backend.graph.command.domain.GraphRule
 import com.docgraph.backend.graph.command.domain.GraphRuleRepository
+import com.docgraph.backend.graph.command.domain.KeywordSimilarity
 import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.project.query.application.FindProjectDetailByIdQuery
 import com.docgraph.backend.project.query.application.SearchCategoriesByProjectQuery
@@ -33,6 +37,7 @@ class SyncProjectDocumentsCommandHandler(
     private val blockRepository: BlockRepository,
     private val graphRuleRepository: GraphRuleRepository,
     private val registerDependencyEdgeHandler: RegisterDependencyEdgeCommandHandler,
+    private val proposeEdgeHandler: ProposeEdgeCommandHandler,
     private val projectRepository: ProjectRepository,
     private val workspaceRepository: WorkspaceRepository,
     private val notionConnectionRepository: NotionConnectionRepository,
@@ -55,7 +60,9 @@ class SyncProjectDocumentsCommandHandler(
             accessToken = accessToken,
         )
 
-        createEdges(command.projectId, synced.values.toList())
+        val syncedDocuments = synced.values.toList()
+        createEdges(command.projectId, syncedDocuments)
+        createProposals(command.projectId, syncedDocuments)
     }
 
     private fun syncReachablePages(
@@ -267,7 +274,56 @@ class SyncProjectDocumentsCommandHandler(
             }
         }
     }
+
+    /**
+     * Notion 링크·멘션으로 엣지가 만들어지지 않은 문서 쌍 중 룰 타입 조합에 맞는 후보를
+     * 키워드 유사도로 점수화해 source 문서당 상위 N개를 EdgeProposal로 제안한다.
+     */
+    private fun createProposals(projectId: Long, documents: List<SyncedDocument>) {
+        val byNotionPageId = documents.associateBy { notionPageKey(it.document.notionPageId) }
+        documents.forEach { source ->
+            val sourceType = source.document.type ?: return@forEach
+            val linkedDocumentIds = source.linkedPageIds
+                .mapNotNull { byNotionPageId[notionPageKey(it)]?.document?.id }
+                .toSet()
+
+            documents.asSequence()
+                .filter { it.document.id != source.document.id }
+                .filter { it.document.id !in linkedDocumentIds }
+                .mapNotNull { target ->
+                    val targetType = target.document.type ?: return@mapNotNull null
+                    val rule = graphRuleRepository
+                        .findAllByProjectIdAndTypePair(projectId, sourceType, targetType)
+                        .firstOrNull() ?: return@mapNotNull null
+                    val score = KeywordSimilarity.score(source.document.flatText, target.document.flatText)
+                    if (score < KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD) {
+                        return@mapNotNull null
+                    }
+                    ScoredCandidate(target = target, rule = rule, score = score)
+                }
+                .sortedByDescending { it.score }
+                .take(KeywordSimilarity.MAX_PROPOSALS_PER_SOURCE)
+                .forEach { candidate ->
+                    proposeEdgeHandler.handle(
+                        ProposeEdgeCommand(
+                            projectId = projectId,
+                            sourceDocumentId = source.document.id,
+                            targetDocumentId = candidate.target.document.id,
+                            ruleId = candidate.rule.id.takeIf { it != 0L },
+                            validationCriterion = candidate.rule.validationCriterion,
+                            similarityScore = candidate.score,
+                        ),
+                    )
+                }
+        }
+    }
 }
+
+private data class ScoredCandidate(
+    val target: SyncedDocument,
+    val rule: GraphRule,
+    val score: Double,
+)
 
 private data class SyncedDocument(
     val document: Document,

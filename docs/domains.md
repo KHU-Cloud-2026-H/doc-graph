@@ -67,7 +67,7 @@ sequenceDiagram
     else 부모 페이지 변경
         document->>graph: 타입 변경 통보
     end
-    graph->>graph: 엣지 생성·갱신,<br/>pg_trgm 키워드 매칭으로 연결 제안 생성
+    graph->>graph: 엣지 생성·갱신,<br/>키워드 유사도로 연결 제안 생성
     graph->>validation: ValidationPairCreatedEvent
     validation->>validation: ValidationTask(pending) 영속화
 ```
@@ -298,7 +298,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 **주요 흐름**
 - 타입·링크 정보 수신 시 룰 테이블 조회 → Notion 링크·멘션 있으면 엣지 자동 생성
-- Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 `pg_trgm` 키워드 매칭으로 상위 N개를 EdgeProposal로 생성
+- Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 키워드 유사도로 source 문서당 상위 N개를 EdgeProposal로 생성
 - 타입 변경 수신 시 기존 엣지·제안 중 룰과 불일치하는 항목 삭제, 새 룰에 따라 재평가
 - Admin이 EdgeProposal 수락 시 DependencyEdge로 전환 → 정합성 검증 대기열에 추가
 - Admin이 커스텀 엣지 추가 시 → 정합성 검증 대기열에 추가
