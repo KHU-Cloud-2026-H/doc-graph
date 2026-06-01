@@ -50,29 +50,34 @@ object ConflictDetectionPromptBuilder {
   },
   "inconsistencies": [
     {
-      "id": "INC-001",
-
       "severity": "치명적 | 경고",
 
       "category": "정책 충돌 | 스키마 불일치 | 워크플로우 충돌 | 네이밍 불일치 | 보안 충돌 | 데이터 타입 충돌 | 요구사항 드리프트 | 제거된 기능 참조 | 기타",
 
       "title": "<짧은 충돌 제목>",
 
-      "source": {
+      "source_evidence": {
+        "block_id": "<source block_id>",
         "reference": "<가능하면 섹션명 또는 제목>",
         "text": "<관련 원문 발췌>"
       },
 
-      "target": {
+      "target_conflict_block": {
+        "block_id": "<정합성이 깨진 target block_id>",
         "reference": "<가능하면 섹션명 또는 제목>",
-        "text": "<관련 원문 발췌>"
+        "text": "<충돌이 발생한 target 원문 발췌>"
+      },
+
+      "related_blocks": {
+        "source_block_ids": ["<source block_id>"],
+        "target_block_ids": ["<target block_id>"]
       },
 
       "reason": "<왜 충돌하는지에 대한 상세 설명>",
 
       "impact": "<실제 구현/운영/보안/비즈니스 측면에서 발생 가능한 영향>",
 
-      "fix_suggestion": "<구체적인 수정 제안>"
+      "new_text": "<target block을 그대로 대체할 최종 수정 텍스트>"
       }
     }
   ]
@@ -127,7 +132,7 @@ object ConflictDetectionPromptBuilder {
     private const val FIRST_VALIDATION_INTRO = """
 도메인 컨텍스트:
 - 두 문서는 의존 관계로 연결되어 있다. source 문서의 내용이 target 문서에 반영되어야 한다.
-- 검출된 충돌은 target 문서 담당자에게 전달된다. 담당자가 new_text를 승인하면 시스템이 target 문서의 해당 block을 new_text로 교체한다. 즉 출력은 그대로 적용될 패치다.
+- 검출된 충돌은 target 문서 담당자에게 전달된다. 
 
 입력:
 - source 측 전체 블록: source 문서의 모든 block이다.
@@ -143,7 +148,7 @@ object ConflictDetectionPromptBuilder {
 도메인 컨텍스트:
 - 두 문서는 의존 관계로 연결되어 있다. source 문서의 내용이 target 문서에 반영되어야 한다.
 - "정합성 충돌"이란 source 문서가 변경됐는데 target 문서가 그 변경을 따라가지 못한 상태다.
-- 검출된 충돌은 target 문서 담당자에게 전달된다. 담당자가 new_text를 승인하면 시스템이 target 문서의 해당 block을 new_text로 교체한다. 즉 출력은 그대로 적용될 패치다.
+- 검출된 충돌은 target 문서 담당자에게 전달된다. 
 
 입력:
 - source 측 변경 전 블록 / 변경 후 블록: source 문서의 직전 상태와 현재 상태다. 둘을 비교해 무엇이 어떻게 바뀌었는지 파악한다.
@@ -160,7 +165,7 @@ object ConflictDetectionPromptBuilder {
         targetBlocks: List<Block>,
         criterion: String,
     ): List<OpenAiChatMessage> = listOf(
-        OpenAiChatMessage(OpenAiChatMessage.ROLE_SYSTEM, systemContent()),
+        OpenAiChatMessage(OpenAiChatMessage.ROLE_SYSTEM, systemContent(FIRST_VALIDATION_INTRO)),
         OpenAiChatMessage(
             OpenAiChatMessage.ROLE_USER,
             buildString {
