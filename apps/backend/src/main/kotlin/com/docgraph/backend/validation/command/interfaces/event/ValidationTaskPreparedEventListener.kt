@@ -18,6 +18,9 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.HttpServerErrorException
+import org.springframework.web.client.ResourceAccessException
 
 @Component
 class ValidationTaskPreparedEventListener(
@@ -31,6 +34,14 @@ class ValidationTaskPreparedEventListener(
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Retryable(
+        // transient 실패만 재시도: 429(rate limit)·5xx·연결/읽기 타임아웃.
+        // 비-429 4xx(인증·잘못된 요청), 응답 파싱 실패, 조회 누락 등은 재호출해도
+        // 결과가 같으므로 재시도하지 않고 Recover로 직행한다.
+        retryFor = [
+            HttpServerErrorException::class,
+            HttpClientErrorException.TooManyRequests::class,
+            ResourceAccessException::class,
+        ],
         maxAttemptsExpression = "\${validation.task.detect.max-attempts:5}",
         backoff = Backoff(
             delayExpression = "\${validation.task.detect.retry-delay-ms:1000}",
@@ -71,6 +82,6 @@ class ValidationTaskPreparedEventListener(
 
     @Recover
     fun recover(ex: Throwable, event: ValidationTaskPreparedEvent) {
-        transition.markFailed(event.validationTaskId, ex.message)
+        transition.markFailed(event.validationTaskId, ValidationFailureClassifier.classify(ex), ex.message)
     }
 }

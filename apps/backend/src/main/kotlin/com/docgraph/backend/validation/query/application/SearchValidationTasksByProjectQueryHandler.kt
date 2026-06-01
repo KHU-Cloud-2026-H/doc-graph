@@ -35,6 +35,7 @@ class SearchValidationTasksByProjectQueryHandler(
                     OutboxStatus.SUCCESS -> ValidationStatus.SUCCESS
                     OutboxStatus.FAILED -> ValidationStatus.FAILED
                 },
+                failureCategory = row.failureCategory,
                 createdAt = row.createdAt,
             )
         }

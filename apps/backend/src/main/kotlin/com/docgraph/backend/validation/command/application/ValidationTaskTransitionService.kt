@@ -1,5 +1,6 @@
 package com.docgraph.backend.validation.command.application
 
+import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -16,8 +17,8 @@ class ValidationTaskTransitionService(
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun markFailed(taskId: Long, reason: String?) {
+    fun markFailed(taskId: Long, category: FailureCategory, reason: String?) {
         val task = repository.findById(taskId) ?: error("validation task not found: $taskId")
-        task.markFailed(reason)
+        task.markFailed(category, reason)
     }
 }

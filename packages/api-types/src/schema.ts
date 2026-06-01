@@ -791,58 +791,6 @@ export interface components {
              */
             email?: string;
         };
-        NotionActor: {
-            /**
-             * @description actor ID
-             * @example c7c11cca-1d73-471d-9b6e-bdef51470190
-             */
-            id?: string;
-            /**
-             * @description actor 타입 (person / bot)
-             * @example person
-             */
-            type?: string;
-        };
-        NotionEntity: {
-            /**
-             * @description 엔티티 ID (페이지 ID)
-             * @example abc1234567890def
-             */
-            id?: string;
-            /**
-             * @description 엔티티 타입
-             * @example page
-             */
-            type?: string;
-        };
-        NotionWebhookPayload: {
-            /** @description 웹훅 이벤트 고유 ID */
-            id?: string;
-            /**
-             * @description 이벤트 발생 시각 (ISO 8601)
-             * @example 2024-12-05T19:49:36.997Z
-             */
-            timestamp?: string;
-            /**
-             * @description 이벤트 타입 (page.content_updated / page.moved)
-             * @example page.content_updated
-             */
-            type?: string;
-            /** @description 워크스페이스 ID */
-            workspaceId?: string;
-            /** @description 웹훅 구독 ID */
-            subscriptionId?: string;
-            /** @description 이벤트를 트리거한 엔티티 */
-            entity?: components["schemas"]["NotionEntity"];
-            /** @description 이벤트 작성자 목록 */
-            authors?: components["schemas"]["NotionActor"][];
-            /**
-             * Format: int32
-             * @description 전달 시도 횟수 (최대 8회)
-             * @example 1
-             */
-            attemptNumber?: number;
-        };
         CreateRuleRequest: {
             /**
              * @description 출발 문서 타입
@@ -1275,6 +1223,11 @@ export interface components {
              */
             status?: "PENDING" | "SUCCESS" | "FAILED";
             /**
+             * @description 실패 원인 분류 (status=FAILED일 때만 존재)
+             * @enum {string|null}
+             */
+            failureCategory?: "RATE_LIMITED" | "TIMEOUT" | "UPSTREAM_ERROR" | "INVALID_REQUEST" | "INVALID_RESPONSE" | "MISSING_REFERENCE" | "UNKNOWN" | null;
+            /**
              * Format: date-time
              * @description 생성 시각
              */
@@ -1655,6 +1608,7 @@ export interface components {
             parentBlockId?: string | null;
             type?: string;
             text?: string | null;
+            previousText?: string | null;
             /** Format: int32 */
             order?: number;
         };
@@ -1922,6 +1876,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description 같은 워크스페이스에 같은 루트 페이지 프로젝트 이미 존재 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     inviteMember: {
@@ -1974,15 +1935,13 @@ export interface operations {
     receiveWebhook: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Notion-Signature"?: string;
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotionWebhookPayload"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

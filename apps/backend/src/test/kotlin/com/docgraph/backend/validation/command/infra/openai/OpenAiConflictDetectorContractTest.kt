@@ -1,6 +1,7 @@
 package com.docgraph.backend.validation.command.infra.openai
 
 import com.docgraph.backend.document.query.application.Block
+import com.docgraph.backend.validation.command.domain.ConflictDetectionResponseException
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.fixtures.OpenAiTestFixture
 import com.docgraph.backend.fixtures.SharedPostgresContainer
@@ -132,6 +133,40 @@ class OpenAiConflictDetectorContractTest {
             detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
         }
         assertEquals(401, ex.statusCode.value())
+    }
+
+    @Test
+    fun `스키마 불일치 content — ConflictDetectionResponseException 전파`() {
+        wireMock.stubFor(
+            post(urlEqualTo("/api/v1/chat/completions"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(chatResponseBody("""{"unexpected":"shape"}"""))
+                )
+        )
+
+        assertThrows(ConflictDetectionResponseException::class.java) {
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
+        }
+    }
+
+    @Test
+    fun `choices 없는 응답 — ConflictDetectionResponseException 전파`() {
+        wireMock.stubFor(
+            post(urlEqualTo("/api/v1/chat/completions"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"id":"x","object":"chat.completion","choices":[]}""")
+                )
+        )
+
+        assertThrows(ConflictDetectionResponseException::class.java) {
+            detector.detect(FirstValidationInput(emptyList(), emptyList(), "c"))
+        }
     }
 
     private fun block(id: String, text: String) = Block(id, null, "paragraph", text, null, 0)

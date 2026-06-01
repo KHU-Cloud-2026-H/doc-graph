@@ -184,6 +184,7 @@ class ValidationQueryRepository {
                     t.id,
                     t.edgeId,
                     t.status,
+                    t.failureCategory,
                     t.createdAt,
                 ),
             )
