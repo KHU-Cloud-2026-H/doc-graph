@@ -13,6 +13,7 @@ import com.docgraph.backend.project.command.domain.ProjectSyncTriggeredEvent
 import com.docgraph.backend.project.command.domain.ProjectMember
 import com.docgraph.backend.project.command.domain.ProjectMemberRepository
 import com.docgraph.backend.project.command.domain.ProjectMemberRole
+import com.docgraph.backend.project.command.domain.ProjectRegisteredEvent
 import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.workspace.command.domain.Workspace
 import com.docgraph.backend.workspace.command.domain.WorkspaceMember
@@ -99,6 +100,38 @@ class ProjectCommandControllerTest @Autowired constructor(
         assertEquals(1, members.size)
         val adminMember = members.first()
         assertEquals(ProjectMemberRole.ADMIN, adminMember.role)
+    }
+
+    @Test
+    fun `POST projects — validationEnabled 생략 시 ProjectRegisteredEvent enabled=true 발행`(events: ApplicationEvents) {
+        val (workspace, _) = seedWorkspaceWithCreator(creatorUserId = 1L)
+
+        mockMvc.post("/workspaces/${workspace.id}/projects") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateProjectRequest(name = "Default On", notionRootPageId = "page-default-on"),
+            )
+        }.andExpect { status { isOk() } }
+
+        val registered = events.stream(ProjectRegisteredEvent::class.java).toList()
+        assertEquals(1, registered.size)
+        assertEquals(true, registered.first().validationEnabled)
+    }
+
+    @Test
+    fun `POST projects — validationEnabled=false 시 ProjectRegisteredEvent enabled=false 발행`(events: ApplicationEvents) {
+        val (workspace, _) = seedWorkspaceWithCreator(creatorUserId = 1L)
+
+        mockMvc.post("/workspaces/${workspace.id}/projects") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateProjectRequest(name = "Start Off", notionRootPageId = "page-start-off", validationEnabled = false),
+            )
+        }.andExpect { status { isOk() } }
+
+        val registered = events.stream(ProjectRegisteredEvent::class.java).toList()
+        assertEquals(1, registered.size)
+        assertEquals(false, registered.first().validationEnabled)
     }
 
     @Test

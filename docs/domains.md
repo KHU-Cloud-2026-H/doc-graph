@@ -198,10 +198,11 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 
 | 이름 | 트리거 | 소비자 | 처리 |
 | --- | --- | --- | --- |
+| `ProjectRegisteredEvent` | 프로젝트 등록 | validation | 생성 시 검증 OFF로 지정되면 프로젝트 검증 setting 초기화 |
 | `ProjectSyncTriggeredEvent` | 초기/수동 동기화 트리거 | document | 프로젝트 루트 페이지 하위 트리 동기화 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | document | 프로젝트 소속 문서·블록 정리 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | graph | 프로젝트 소속 엣지·제안·룰 정리 |
-| `ProjectDiscardedEvent` | 프로젝트 삭제 | validation | 프로젝트 소속 검증 작업·충돌 정리 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | validation | 프로젝트 소속 검증 작업·충돌·검증 setting 정리 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | notification | 프로젝트 webhook 설정 정리 |
 
 **도메인 간 인터페이스 — Query API**
@@ -376,6 +377,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 - 동일 이벤트 재처리 시 중복 검증 방지 (idempotency)
 - 한 문서 쌍의 검증 실패가 다른 쌍에 영향을 주지 않아야 함 (실패 격리)
 - worker 실패 시 `ValidationTask`은 `pending` 또는 `failed`로 남아 retry · stale row 재처리 worker가 재시도
+- 프로젝트 단위로 검증을 비활성화할 수 있다 (LLM 비용 절감 opt-out, 기본 활성). 비활성 프로젝트는 변경 대상 쌍을 수신해도 `ValidationTask`를 생성하지 않는다 — 기존 충돌과 이미 대기 중인 작업은 유지된다. 생성 시점에도 `ProjectRegisteredEvent`로 비활성 지정 가능.
 
 **도메인 간 인터페이스 — Event**
 
@@ -401,7 +403,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 외부 알림 발송을 담당한다. `validation`으로부터 충돌 감지 이벤트를 수신한다.
 
 **주요 흐름**
-1. 프로젝트 Webhook URL 설정/조회 (`PUT`·`GET /projects/{id}/webhook`)
+1. 프로젝트 Webhook URL 설정·조회
 2. `validation`의 `ConflictDetectedEvent` 수신
 3. 프로젝트 Webhook URL로 알림 발송 (Slack·Discord 호환 포맷)
 
