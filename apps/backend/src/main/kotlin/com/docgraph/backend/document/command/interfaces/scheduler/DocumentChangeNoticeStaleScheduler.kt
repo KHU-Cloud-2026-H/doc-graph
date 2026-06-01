@@ -24,7 +24,7 @@ class DocumentChangeNoticeStaleScheduler(
     }
 
     companion object {
-        private val THRESHOLD: Duration = Duration.ofSeconds(30)
-        private const val INTERVAL_MS: Long = 30_000L
+        private val THRESHOLD: Duration = Duration.ofMinutes(5)
+        private const val INTERVAL_MS: Long = 5L * 60 * 1000
     }
 }

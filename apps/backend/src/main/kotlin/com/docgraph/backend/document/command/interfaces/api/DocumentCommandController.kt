@@ -2,23 +2,25 @@ package com.docgraph.backend.document.command.interfaces.api
 
 import com.docgraph.backend.document.command.domain.DocumentChangeKind
 import com.docgraph.backend.document.command.domain.DocumentChangeNotice
+import com.docgraph.backend.document.command.domain.DocumentChangeNoticeQueuedEvent
 import com.docgraph.backend.document.command.domain.DocumentChangeNoticeRepository
 import com.docgraph.backend.document.command.infra.notion.NotionWebhookProperties
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import tools.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import tools.jackson.databind.ObjectMapper
 import java.security.MessageDigest
 import java.time.OffsetDateTime
 import javax.crypto.Mac
@@ -30,6 +32,7 @@ import javax.crypto.spec.SecretKeySpec
 class DocumentCommandController(
     private val webhookProperties: NotionWebhookProperties,
     private val noticeRepository: DocumentChangeNoticeRepository,
+    private val publisher: ApplicationEventPublisher,
     @Qualifier("notionObjectMapper")
     private val objectMapper: ObjectMapper,
 ) {
@@ -72,7 +75,7 @@ class DocumentCommandController(
             return ResponseEntity.ok().build()
         }
 
-        noticeRepository.save(
+        val notice = noticeRepository.save(
             DocumentChangeNotice(
                 changeKind = changeKind,
                 notionEventId = payload.id,
@@ -87,6 +90,7 @@ class DocumentCommandController(
                 rawPayload = String(rawBody, Charsets.UTF_8),
             ),
         )
+        publisher.publishEvent(DocumentChangeNoticeQueuedEvent(notice.id))
 
         return ResponseEntity.ok().build()
     }

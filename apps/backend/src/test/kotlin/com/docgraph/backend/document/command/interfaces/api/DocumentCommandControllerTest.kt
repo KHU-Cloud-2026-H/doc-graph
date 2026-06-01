@@ -7,6 +7,7 @@ import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.ninjasquad.springmockk.MockkBean
 import jakarta.persistence.EntityManager
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -33,11 +34,11 @@ private fun webhookPayload(
       "id": "$id",
       "timestamp": "2026-05-08T00:00:00Z",
       "type": "$type",
-      "workspaceId": "ws-test",
-      "subscriptionId": "sub-test",
+      "workspace_id": "ws-test",
+      "subscription_id": "sub-test",
       "entity": {"id": "page-abc", "type": "page"},
       "authors": $authors,
-      "attemptNumber": 1
+      "attempt_number": 1
     }
 """.trimIndent()
 
@@ -75,6 +76,7 @@ class DocumentCommandControllerTest @Autowired constructor(
         assertEquals(DocumentChangeKind.CONTENT_UPDATED, notice.changeKind)
         assertEquals("page-abc", notice.notionPageId)
         assertEquals("ws-test", notice.notionWorkspaceId)
+        verify(timeout = 5_000) { processHandler.recordAttempt(notice.id) }
     }
 
     @Test
