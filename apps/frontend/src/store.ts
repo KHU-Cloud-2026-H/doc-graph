@@ -29,6 +29,8 @@ export interface IntegrityIssue {
   validationCriterion: string;   // API: EdgeResponse.validationCriterion (자연어 검증 기준)
 }
 
+export type DocumentType = 'meeting_notes' | 'planning' | 'requirements' | 'design' | 'research';
+
 export interface DocumentNode {
   id: number;
   title: string;
@@ -37,6 +39,7 @@ export interface DocumentNode {
   hasIssue?: boolean;
   issues?: IntegrityIssue[];
   contentHtml?: string;
+  type?: DocumentType | null;
 }
 
 interface Workspace {
@@ -90,6 +93,7 @@ export const useAppStore = create<AppState>((set) => ({
           id: 1,
           title: '기획 (Planning)',
           emoji: '💡',
+          type: 'planning',
           contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">기획 (Planning)</h1>
         <p class="mb-6">기획 단계의 문서들은 시스템이 해결하고자 하는 비즈니스 문제와 사용자 가치를 정의한다. 이는 이해관계자 간의 합의를 도출하고 개발의 방향성을 설정하는 기준 문서이다.</p>
@@ -288,6 +292,7 @@ export const useAppStore = create<AppState>((set) => ({
           id: 6,
           title: '회의록 (Meeting Notes)',
           emoji: '🗓️',
+          type: 'meeting_notes',
           contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">회의록 (Meeting Notes)</h1>
         <p class="mb-6">회의록은 애자일 팀의 커뮤니케이션 맥락과 의사결정의 이력을 추적하는 데 핵심적인 역할을 한다. 개발 과정에서 발생하는 정책의 변경과 타협점은 이 문서에 고스란히 담긴다.</p>
@@ -361,6 +366,7 @@ export const useAppStore = create<AppState>((set) => ({
           id: 11,
           title: '설계 (Design)',
           emoji: '💻',
+          type: 'design',
           contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">설계 (Design)</h1>
         <div class="space-y-2">
@@ -500,6 +506,7 @@ export const useAppStore = create<AppState>((set) => ({
           id: 16,
           title: 'QA 및 테스트 (QA/Testing)',
           emoji: '🔍',
+          type: 'research',
           contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">QA 및 테스트 (QA/Testing)</h1>
         <div class="space-y-2">
@@ -553,6 +560,7 @@ export const useAppStore = create<AppState>((set) => ({
           id: 21,
           title: '프론트엔드/UI 명세 (Frontend/UI Specification)',
           emoji: '🎨',
+          type: null,
           contentHtml: `
         <h1 class="text-3xl font-bold text-slate-900 mb-8 outline-none tracking-tight">프론트엔드/UI 명세 (Frontend/UI Specification)</h1>
         <div class="space-y-2">

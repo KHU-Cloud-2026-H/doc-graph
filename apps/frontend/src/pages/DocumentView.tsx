@@ -2,7 +2,7 @@ import { ExternalLink, CheckCircle, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { RightSidebar } from "../components/RightSidebar";
-import { useAppStore } from '../store';
+import { useAppStore, type DocumentType, type DocumentNode } from '../store';
 import type { IntegrityIssue } from '../store';
 import { formatRelativeTime } from '../lib/timeAgo';
 import { BlockRenderer } from "../features/document/BlockRenderer";
@@ -19,6 +19,16 @@ const findParentPage = (docs: any[], targetId: string): any | null => {
   }
   return null;
 };
+
+function resolveCategoryType(roots: DocumentNode[], docId: number): DocumentType | null {
+  const containsId = (node: DocumentNode, id: number): boolean =>
+    node.id === id || (node.children ?? []).some((c) => containsId(c, id));
+  const categories = roots[0]?.children ?? [];
+  for (const cat of categories) {
+    if (containsId(cat, docId)) return cat.type ?? null;
+  }
+  return null;
+}
 
 export const DocumentView = () => {
   const { docId: id, workspaceId, projectId } = useParams();
@@ -39,11 +49,12 @@ export const DocumentView = () => {
       return [...acc, doc];
     }, []);
   };
-  
+
   const allDocs = flattenDocs(documents);
   const activeDoc = allDocs.find((d) => d.id === Number(id)) || allDocs[0];
   const parentPage = id ? findParentPage(documents, id) : null;
-  
+  const categoryType = resolveCategoryType(documents, activeDoc?.id ?? -1);
+
   // lazy initialization: 마운트 시점의 URL을 직접 읽어 초기 상태 결정.
   // useState(() => ...) 형태는 StrictMode의 이중 실행에도 항상 같은 URL을 읽으므로 안전.
   const [showRightSidebar, setShowRightSidebar] = useState(
@@ -165,7 +176,7 @@ export const DocumentView = () => {
                 {activeDoc?.title}
               </h1>
 
-                {/* 메타데이터 영역
+              {/* 메타데이터 영역
                     변경 사항:
                     - 프로젝트: 클릭하면 카테고리 페이지로 이동(Link), 회색 배경(담당자와 동일), text-sm
                     - 담당자: 프로필 사진 제거, 7명 팀원 이름 나열
@@ -174,55 +185,52 @@ export const DocumentView = () => {
                                담당자 = DocumentDetail.assigneeMemberId(단수) + ProjectDetail.members[] 조합. 백엔드 협의 후보.
                                최근 수정 시각 = DocumentDetail.notionLastEditedAt. 자연어 표시는 dayjs.fromNow() 등으로 계산.
                                최근 수정자(이름)는 현재 API에 없음. 백엔드 추가 요청 후보. */}
-                <div className="mb-8 space-y-3 text-sm">
-                  <div className="flex items-center">
-                    <span className="w-32 text-slate-500">프로젝트</span>
-                    {projectName ? (
-                      <Link
-                        to={`/w/${workspaceId}/p/${projectId}/graph`}
-                        className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-900 hover:bg-slate-200 transition-colors"
-                      >
-                        <span className="text-sm">{projectName}</span>
-                      </Link>
-                    ) : (
-                      <span className="text-slate-500">—</span>
-                    )}
+              <div className="mb-8 space-y-3 text-sm">
+                <div className="flex items-center">
+                  <span className="w-32 text-slate-500">카테고리</span>
+                  {categoryType ? (
+                    <span className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                      <span className="text-sm">{categoryType}</span>
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">—</span>
+                  )}
+                </div>
+                <div className="flex items-start">
+                  <span className="w-32 text-slate-500 shrink-0 leading-6">담당자</span>
+                  <div className="flex items-center flex-wrap gap-1.5">
+                    {['박관우', '서영채', '신정환', '전현준', '이창민', '김연길', '이주안'].map((name) => (
+                      <div key={name} className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                        <span className="text-sm">{name}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-start">
-                    <span className="w-32 text-slate-500 shrink-0 leading-6">담당자</span>
-                    <div className="flex items-center flex-wrap gap-1.5">
-                      {['박관우', '서영채', '신정환', '전현준', '이창민', '김연길', '이주안'].map((name) => (
-                        <div key={name} className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                          <span className="text-sm">{name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {/* 최근 수정 줄 — 좌측 정렬을 위 두 줄 칩의 왼쪽 경계와 일치시키기 위해
+                </div>
+                {/* 최근 수정 줄 — 좌측 정렬을 위 두 줄 칩의 왼쪽 경계와 일치시키기 위해
                       "라벨 + 콘텐츠 div" 2단 구조로 변경 (기존 부모 gap-2가 정렬을 어긋나게 했음).
                       mock: lastEditedAt = 1시간 전 가짜 timestamp.
                       TODO(API): DocumentDetail.notionLastEditedAt 사용 + 최근 수정자 이름 (현재 API에 없음 — 백엔드 추가 요청 후보) */}
-                  <div className="flex items-center">
-                    <span className="w-32 text-slate-500 shrink-0">최근 수정</span>
-                    <div className="flex items-center flex-wrap gap-2">
-                      <div className="relative group">
-                        <span className="text-slate-900 cursor-default">2026년 5월 21일 14:30</span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                          {formatRelativeTime(new Date(Date.now() - 60 * 60 * 1000))}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                        </div>
+                <div className="flex items-center">
+                  <span className="w-32 text-slate-500 shrink-0">최근 수정</span>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <div className="relative group">
+                      <span className="text-slate-900 cursor-default">2026년 5월 21일 14:30</span>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                        {formatRelativeTime(new Date(Date.now() - 60 * 60 * 1000))}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                       </div>
-                      <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                        <span className="text-sm">박관우</span>
-                      </div>
+                    </div>
+                    <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                      <span className="text-sm">박관우</span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <hr className="border-slate-200 mb-8"/>
+              <hr className="border-slate-200 mb-8" />
             </>
 
-            <div 
+            <div
               className="text-base text-slate-700 space-y-6 outline-none leading-relaxed"
               onClick={(e) => {
                 const target = e.target as HTMLElement;
