@@ -6,11 +6,12 @@
 
 ## 사전 준비
 
-1. **백엔드 기동** — `just compose-up live` (ngrok 포함 — OAuth 로그인 도메인 제공).
-2. **로그인 → 세션 쿠키**
-   - 브라우저로 `https://<ngrok-domain>/api/oauth2/authorization/notion` 진입 → Notion 동의 화면에서 동기화할 페이지 선택·허용.
-   - devtools → Application → Cookies → ngrok 도메인 → `DG_SESSION` 값 복사 (httpOnly라 콘솔엔 안 보임).
-3. **환경변수** (`.env.local`에 넣거나 인라인 env로 전달 — 스크립트가 env에서 읽음):
+1. **백엔드 기동** — `just compose-up backend` (postgres + backend만, 실제 Notion API). 
+2. **프론트 기동** — `npm --workspace apps/frontend run dev` (Vite dev server `:5173`, `/api`는 `:8080`으로 proxy).
+3. **로그인 → 세션 쿠키**
+   - 브라우저로 `http://localhost:5173` 진입 → 로그인 → Notion 동의 화면에서 동기화할 페이지 선택·허용 → `/workspaces`로 복귀 (프론트가 mock이라 화면은 미완이지만 세션은 발급됨).
+   - devtools → Application → Cookies → `http://localhost:5173` → `DG_SESSION` 값 복사 (httpOnly라 콘솔엔 안 보임; 쿠키는 포트 무관이라 `:8080`에서도 동일 값).
+4. **환경변수** (`.env.local`에 넣거나 인라인 env로 전달 — 스크립트가 env에서 읽음):
    - `AI_OPENAI_API_KEY` — AI provider 키. `AI_OPENAI_BASE_URL`·`AI_OPENAI_MODEL`은 `.env` 기본값 사용 (다른 provider 쓰려면 둘도 override).
    - `DG_SESSION` — 2번에서 복사한 세션 쿠키 값 (TTL 있음, 만료 시 재로그인).
 
