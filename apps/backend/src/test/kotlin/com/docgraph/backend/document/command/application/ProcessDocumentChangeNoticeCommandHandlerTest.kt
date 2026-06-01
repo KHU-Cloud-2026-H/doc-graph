@@ -22,6 +22,7 @@ import org.springframework.context.ApplicationEventPublisher
 import java.time.OffsetDateTime
 import java.util.Optional
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 @Tag("unit")
@@ -71,6 +72,38 @@ class ProcessDocumentChangeNoticeCommandHandlerTest {
         every { noticeRepository.findById(99L) } returns Optional.empty()
 
         assertNull(handler.recordAttempt(99L))
+    }
+
+    @Test
+    fun `fetchFromNotion — Notion 호출 실패 시 예외 전파 (swallow 제거)`() {
+        val notice = pendingNotice()
+        every { notionConnectionRepository.findAllByNotionWorkspaceId("ws-1") } returns emptyList()
+        every { notionDocumentClient.fetchPage("page-1", null) } throws RuntimeException("notion down")
+
+        assertFailsWith<RuntimeException> { handler.fetchFromNotion(notice) }
+    }
+
+    @Test
+    fun `markFailed — PENDING notice → FAILED 전이 + reason 저장`() {
+        val notice = pendingNotice()
+        every { noticeRepository.findById(1L) } returns Optional.of(notice)
+        every { noticeRepository.save(notice) } returns notice
+
+        handler.markFailed(1L, "notion 404")
+
+        assertEquals(OutboxStatus.FAILED, notice.status)
+        assertEquals("notion 404", notice.failureReason)
+    }
+
+    @Test
+    fun `markFailed — 비-PENDING notice → 전이 없음 (성공 덮어쓰기 방지)`() {
+        val notice = pendingNotice().apply { markSuccess() }
+        every { noticeRepository.findById(1L) } returns Optional.of(notice)
+
+        handler.markFailed(1L, "late failure")
+
+        assertEquals(OutboxStatus.SUCCESS, notice.status)
+        verify(exactly = 0) { noticeRepository.save(any()) }
     }
 
     @Test
