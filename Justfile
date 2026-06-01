@@ -19,6 +19,11 @@ bootRun extra_profile="":
     COMPOSE_PROFILES="{{extra_profile}}" {{dotenv-run}} docker compose up -d --wait
     cd apps/backend && {{dotenv-run}} sh ./gradlew bootRun
 
+# 프론트엔드 로컬 개발(Vite). env는 Vite가 apps/frontend/.env(VITE_*)를 직접 로드 — dotenvx 미경유.
+# /api는 Vite proxy가 localhost:8080(bootRun)로 전달.
+dev-frontend:
+    npm --workspace apps/frontend run dev
+
 # 백엔드 테스트 — bootRun과 동일하게 dotenvx로 .env + .env.local 주입.
 # fixture 결정성은 TestPropertySource가 env 위 precedence로 강제.
 test-unit *gradleArgs:
