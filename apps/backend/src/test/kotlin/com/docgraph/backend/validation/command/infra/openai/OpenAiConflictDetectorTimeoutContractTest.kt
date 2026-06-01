@@ -32,7 +32,7 @@ class OpenAiConflictDetectorTimeoutContractTest {
     @Test
     fun `read timeout 초과 시 ResourceAccessException 전파`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -59,7 +59,7 @@ class OpenAiConflictDetectorTimeoutContractTest {
         @JvmStatic
         @DynamicPropertySource
         fun overrideBaseUrl(registry: DynamicPropertyRegistry) {
-            registry.add("ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
+            registry.add("ai.openai.base-url") { "http://localhost:${wireMock.port()}/api/v1" }
         }
     }
 }

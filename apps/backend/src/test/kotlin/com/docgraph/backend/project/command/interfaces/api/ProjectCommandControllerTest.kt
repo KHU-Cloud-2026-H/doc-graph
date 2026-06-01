@@ -129,6 +129,27 @@ class ProjectCommandControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `POST projects — 같은 워크스페이스에 같은 루트 페이지 재생성 → 409`() {
+        val (workspace, _) = seedWorkspaceWithCreator(creatorUserId = 1L)
+
+        mockMvc.post("/workspaces/${workspace.id}/projects") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateProjectRequest(name = "First", notionRootPageId = "page-dup"),
+            )
+        }.andExpect { status { isOk() } }
+
+        mockMvc.post("/workspaces/${workspace.id}/projects") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateProjectRequest(name = "Second", notionRootPageId = "page-dup"),
+            )
+        }.andExpect { status { isConflict() } }
+
+        assertEquals(1, projectRepository.findAllByWorkspaceId(workspace.id).size)
+    }
+
+    @Test
     fun `DELETE projects — happy, row 삭제 + ProjectDiscardedEvent 발행 + 204`(events: ApplicationEvents) {
         val (_, project) = seedWorkspaceAndProject(creatorUserId = 1L)
 

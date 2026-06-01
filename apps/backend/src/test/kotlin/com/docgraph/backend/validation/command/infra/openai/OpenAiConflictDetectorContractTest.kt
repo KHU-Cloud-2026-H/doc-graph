@@ -44,7 +44,7 @@ class OpenAiConflictDetectorContractTest {
     @Test
     fun `happy — DetectedConflict 배열 반환 + 요청 본문에 model·strict response_format 포함`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -69,7 +69,7 @@ class OpenAiConflictDetectorContractTest {
         assertEquals("제목", result[0].title)
 
         wireMock.verify(
-            postRequestedFor(urlEqualTo("/v1/chat/completions"))
+            postRequestedFor(urlEqualTo("/api/v1/chat/completions"))
                 .withHeader("Authorization", equalTo("Bearer test"))
                 .withRequestBody(matchingJsonPath("$.model", equalTo("test-model")))
                 .withRequestBody(matchingJsonPath("$.response_format.type", equalTo("json_schema")))
@@ -82,7 +82,7 @@ class OpenAiConflictDetectorContractTest {
     @Test
     fun `empty conflicts — emptyList 반환`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -98,7 +98,7 @@ class OpenAiConflictDetectorContractTest {
     @Test
     fun `429 Too Many Requests — HttpClientErrorException 전파 (호출자 retry 흡수)`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(aResponse().withStatus(429))
         )
 
@@ -111,7 +111,7 @@ class OpenAiConflictDetectorContractTest {
     @Test
     fun `5xx — HttpServerErrorException 전파`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(aResponse().withStatus(503))
         )
 
@@ -124,7 +124,7 @@ class OpenAiConflictDetectorContractTest {
     @Test
     fun `401 Unauthorized — HttpClientErrorException 전파 (key 오설정)`() {
         wireMock.stubFor(
-            post(urlEqualTo("/v1/chat/completions"))
+            post(urlEqualTo("/api/v1/chat/completions"))
                 .willReturn(aResponse().withStatus(401))
         )
 
@@ -134,7 +134,7 @@ class OpenAiConflictDetectorContractTest {
         assertEquals(401, ex.statusCode.value())
     }
 
-    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, 0)
+    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, null, 0)
 
     private fun chatResponseBody(content: String): String {
         val escaped = content.replace("\\", "\\\\").replace("\"", "\\\"")
@@ -161,7 +161,7 @@ class OpenAiConflictDetectorContractTest {
         @JvmStatic
         @DynamicPropertySource
         fun overrideBaseUrl(registry: DynamicPropertyRegistry) {
-            registry.add("ai.openai.base-url") { "http://localhost:${wireMock.port()}" }
+            registry.add("ai.openai.base-url") { "http://localhost:${wireMock.port()}/api/v1" }
         }
     }
 }

@@ -1,43 +1,39 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Plus, Users, Layers, FileText, Clock, AlertTriangle } from "lucide-react";
+import { useWorkspaces } from '../hooks/useWorkspaces';
+import { useInbox } from '../hooks/useInbox';
+import { useAuth } from '../hooks/useAuth';
 import { TopAppBar } from '../components/TopAppBar';
-import { InboxList, inboxActiveCount, type InboxFilter } from '../components/InboxList';
+import { InboxList, type InboxFilter } from '../components/InboxList';
 import { formatRelativeTime } from '../lib/timeAgo';
-
-// ── WorkspaceSummaryMock ──────────────────────────────────────────────────────
-// TODO(API): GET /workspaces → WorkspaceSummary[] 로 교체
-//            (id, name, memberCount, projectCount, documentCount,
-//             unresolvedConflictCount, lastNotionChangedAt 모두 API 제공)
-interface WorkspaceSummaryMock {
-  id: number;
-  name: string;
-  memberCount: number;
-  projectCount: number;
-  documentCount: number;
-  unresolvedConflictCount: number;
-  lastNotionChangedAt: string | null;
-}
-
-const MOCK_WORKSPACE_SUMMARIES: WorkspaceSummaryMock[] = [
-  {
-    id: 1,
-    name: '엔터프라이즈 근태관리 B2B SaaS 프로젝트',
-    memberCount: 7,
-    projectCount: 1,
-    documentCount: 25,
-    unresolvedConflictCount: 2,
-    lastNotionChangedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-];
 
 export const WorkspaceSelection = () => {
   const navigate = useNavigate();
+  const { workspaces, isLoading, isError } = useWorkspaces();
+  const { total: inboxTotal } = useInbox();
+  const { user } = useAuth();
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('ACTIVE');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">
+        워크스페이스를 불러오지 못했습니다.
+      </div>
+    )
+  }
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
-      <TopAppBar centerLabel="artboi@khu.ac.kr" />
+      <TopAppBar centerLabel={user?.email ?? ''} />
 
       <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 py-10">
         <div className="flex gap-16">
@@ -47,31 +43,31 @@ export const WorkspaceSelection = () => {
               <div className="flex items-center">
                 <h1 className="text-3xl font-bold text-slate-900">Workspaces</h1>
                 <span className="bg-slate-200 text-slate-600 text-xs py-0.5 px-2 rounded-full font-medium ml-2">
-                  {MOCK_WORKSPACE_SUMMARIES.length}
+                  {workspaces.length}
                 </span>
               </div>
-              <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm">
+              <button
+                onClick={() => { window.location.href = '/oauth2/authorization/notion'; }}
+                className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+              >
                 <Plus className="w-4 h-4" />
                 새 워크스페이스 연동
               </button>
             </div>
             <p className="text-slate-500 text-sm mb-6">Notion에서 연동된 모든 워크스페이스 목록입니다.</p>
             <div className="space-y-3">
-              {MOCK_WORKSPACE_SUMMARIES.map((ws) => (
+              {workspaces.map((ws) => (
                 <div
                   key={ws.id}
                   onClick={() => navigate(`/w/${ws.id}`)}
                   className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer relative"
                 >
-                  {/* 충돌 알약 */}
-                  {ws.unresolvedConflictCount > 0 && (
+                  {(ws.unresolvedConflictCount ?? 0) > 0 && (
                     <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-semibold">
                       <AlertTriangle className="w-3 h-3" />
                       충돌 {ws.unresolvedConflictCount}건
                     </span>
                   )}
-
-                  {/* 아이콘 + [이름 / 통계] */}
                   <div className="flex items-center gap-4">
                     <div className="bg-blue-100 text-blue-700 rounded-lg w-14 h-14 flex items-center justify-center text-2xl font-bold shrink-0">
                       {ws.name[0]}
@@ -112,10 +108,9 @@ export const WorkspaceSelection = () => {
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
                 <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {inboxActiveCount}
+                  {inboxTotal}
                 </span>
               </div>
-              {/* 필터 pills */}
               <div className="flex items-center gap-1.5">
                 {(
                   [

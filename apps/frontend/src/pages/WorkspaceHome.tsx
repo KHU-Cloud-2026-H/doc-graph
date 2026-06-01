@@ -1,73 +1,17 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Plus, UserPlus, CheckCircle2, X, Users, Layers, FileText, Clock, AlertTriangle } from 'lucide-react';
 import { TopAppBar } from '../components/TopAppBar';
 import { useState } from 'react';
+import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
+import { useProjects } from '../hooks/useProjects';
+import { apiClient } from '../lib/apiClient';
 
-// TODO(API): GET /workspaces/{id} → WorkspaceDetail.members[] (WorkspaceMemberSummary) 로 교체
-const MOCK_WORKSPACE_MEMBERS = [
-  { userId: 1, name: '박관우', email: 'kwanwoo@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
-  { userId: 2, name: '서영채', email: 'youngchae@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
-  { userId: 3, name: '신정환', email: 'junghwan@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
-  { userId: 4, name: '전현준', email: 'hyunjun@khu.ac.kr', joinedAt: '2026-03-01T09:00:00Z' },
-  { userId: 5, name: '이창민', email: 'changmin@khu.ac.kr', joinedAt: '2026-03-01T09:05:00Z' },
-  { userId: 6, name: '김연길', email: 'yeongil@khu.ac.kr', joinedAt: '2026-03-01T09:10:00Z' },
-  { userId: 7, name: '이주안', email: 'juwon@khu.ac.kr', joinedAt: '2026-03-01T09:15:00Z' },
-] as const;
-
-// joinedAt ISO string → "2026년 3월 1일" 형식
 const formatJoinedAt = (iso: string): string => {
   const d = new Date(iso);
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 };
 
-// ── WorkspaceDetail mock ──────────────────────────────────────────
-// TODO(API): GET /workspaces/{id} → WorkspaceDetail
-//            (memberCount, projectCount, documentCount) 로 교체
-const MOCK_WORKSPACE_DETAIL = {
-  id: 1,
-  memberCount: 7,
-  projectCount: 1,
-  documentCount: 25,
-} as const;
-
-// ── IconResponse (API 스키마 타입 그대로) ─────────────────────────
-interface IconResponse {
-  type: 'EMOJI' | 'EXTERNAL' | 'FILE';
-  value: string;
-}
-
-// ── ProjectSummaryMock ────────────────────────────────────────────
-// API의 ProjectSummary 필드명 그대로 사용.
-// notionRootPageIcon은 현재 API 미제공 → 백엔드에 ProjectSummary 응답에 추가 요청 예정.
-// TODO(API): GET /workspaces/{workspaceId}/projects → ProjectSummary[]
-//            (id, name, memberCount, documentCount, unresolvedConflictCount, lastNotionChangedAt)
-// TODO(API): notionRootPageIcon → ProjectSummary에 미포함, 백엔드 추가 요청 예정
-interface ProjectSummaryMock {
-  id: number;
-  workspaceId: number;
-  name: string;
-  memberCount: number;
-  documentCount: number;
-  unresolvedConflictCount: number;
-  lastNotionChangedAt: string | null;
-  notionRootPageIcon: IconResponse | null;
-}
-
-const MOCK_PROJECT_SUMMARIES: ProjectSummaryMock[] = [
-  {
-    id: 1,
-    workspaceId: 1,
-    name: 'WorkSync 도입 프로젝트',
-    memberCount: 7,
-    documentCount: 25,
-    unresolvedConflictCount: 2,
-    lastNotionChangedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    notionRootPageIcon: null,
-  },
-];
-
-// lastNotionChangedAt ISO → 상대 시간 문자열
 const formatRelativeTime = (iso: string | null | undefined): string => {
   if (!iso) return '동기화 전';
   const diff = Date.now() - new Date(iso).getTime();
@@ -83,30 +27,56 @@ const formatRelativeTime = (iso: string | null | undefined): string => {
 const WorkspaceHome = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
-  const { workspaces } = useAppStore();
+  const queryClient = useQueryClient();
+  const wsId = workspaceId ? Number(workspaceId) : undefined;
 
-  const workspace = workspaces.find((w) => w.id === Number(workspaceId));
+  const { workspace, isLoading: wsLoading } = useWorkspaceDetail(wsId);
+  const { projects, isLoading: projLoading } = useProjects(wsId);
 
-  const [members, setMembers] = useState([...MOCK_WORKSPACE_MEMBERS]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
-  // TODO(API): POST /workspaces/{id}/members (InviteMemberRequest: { email })
+  const inviteMutation = useMutation({
+    mutationFn: (email: string) =>
+      apiClient.POST(`/api/workspaces/${wsId}/members`, { email }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', wsId] });
+      setInviteSuccess(true);
+      setTimeout(() => {
+        setInviteSuccess(false);
+        setInviteEmail('');
+        setIsInviteOpen(false);
+      }, 1800);
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (memberId: number) =>
+      apiClient.DELETE(`/api/workspaces/${wsId}/members/${memberId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', wsId] });
+    },
+  });
+
   const handleInvite = () => {
     if (!inviteEmail.trim()) return;
-    setInviteSuccess(true);
-    setTimeout(() => {
-      setInviteSuccess(false);
-      setInviteEmail('');
-      setIsInviteOpen(false);
-    }, 1800);
+    inviteMutation.mutate(inviteEmail.trim());
   };
 
-  // TODO(API): DELETE /workspaces/{id}/members/{memberId}
   const handleRemoveMember = (userId: number) => {
-    setMembers((prev) => prev.filter((m) => m.userId !== userId));
+    removeMutation.mutate(userId);
   };
+
+  if (wsLoading || projLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const members = workspace?.members ?? [];
 
   return (
     <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
@@ -124,26 +94,26 @@ const WorkspaceHome = () => {
           </h1>
         </div>
 
-        {/* Section 2: 워크스페이스 홈 */}
+        {/* Section 2: 워크스페이스 홈 + 통계 */}
         <div className="flex items-center gap-3 mb-12 flex-wrap">
           <span className="text-base text-slate-500 font-medium">워크스페이스 홈</span>
 
           <span className="text-slate-300 select-none">·</span>
           <span className="flex items-center gap-1.5 text-sm text-slate-500">
             <Users className="w-3.5 h-3.5 shrink-0" />
-            {MOCK_WORKSPACE_DETAIL.memberCount}명의 멤버
+            {workspace?.memberCount ?? 0}명의 멤버
           </span>
 
           <span className="text-slate-300 select-none">·</span>
           <span className="flex items-center gap-1.5 text-sm text-slate-500">
             <Layers className="w-3.5 h-3.5 shrink-0" />
-            {MOCK_WORKSPACE_DETAIL.projectCount}개의 프로젝트
+            {workspace?.projectCount ?? 0}개의 프로젝트
           </span>
 
           <span className="text-slate-300 select-none">·</span>
           <span className="flex items-center gap-1.5 text-sm text-slate-500">
             <FileText className="w-3.5 h-3.5 shrink-0" />
-            {MOCK_WORKSPACE_DETAIL.documentCount}개의 페이지
+            {workspace?.documentCount ?? 0}개의 페이지
           </span>
         </div>
 
@@ -161,65 +131,60 @@ const WorkspaceHome = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-6">
-            {MOCK_PROJECT_SUMMARIES
-              .filter((p) => p.workspaceId === Number(workspaceId))
-              .map((project) => (
-                <div
-                  key={project.id}
-                  onClick={() => navigate(`/w/${workspaceId}/p/${project.id}/graph`)}
-                  className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col"
-                >
-                  {/* 상단: 아이콘 + 충돌 알약 */}
-                  <div className="flex items-start justify-between mb-3">
-
-                    {/* 루트 페이지 아이콘: EMOJI면 이모지, 없으면 첫 글자 fallback */}
-                    {project.notionRootPageIcon?.type === 'EMOJI' ? (
-                      <span className="text-3xl leading-none group-hover:scale-110 transition-transform origin-bottom-left inline-block">
-                        {project.notionRootPageIcon.value}
-                      </span>
-                    ) : project.notionRootPageIcon?.type === 'EXTERNAL' || project.notionRootPageIcon?.type === 'FILE' ? (
-                      <img
-                        src={project.notionRootPageIcon.value}
-                        alt=""
-                        className="w-10 h-10 rounded-lg object-cover group-hover:scale-110 transition-transform origin-bottom-left"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 rounded-lg text-lg font-bold group-hover:scale-110 transition-transform origin-bottom-left">
-                        {project.name[0]}
-                      </div>
-                    )}
-
-                    {/* 충돌 알약 (unresolvedConflictCount > 0 일 때만 표시) */}
-                    {(project.unresolvedConflictCount ?? 0) > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-semibold shrink-0">
-                        <AlertTriangle className="w-3 h-3" />
-                        충돌 {project.unresolvedConflictCount}건
-                      </span>
-                    )}
-                  </div>
-
-                  {/* 프로젝트 이름 */}
-                  <h3 className="text-base font-bold text-slate-900 mb-4 flex-1">{project.name}</h3>
-
-                  {/* 하단: 멤버 수 · 페이지 수 / 최근 변경 시각 */}
-                  <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        멤버 {project.memberCount}명
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3.5 h-3.5" />
-                        페이지 {project.documentCount}개
-                      </span>
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                onClick={() => navigate(`/w/${workspaceId}/p/${project.id}/graph`)}
+                className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col"
+              >
+                {/* 상단: 아이콘 + 충돌 알약 */}
+                <div className="flex items-start justify-between mb-3">
+                  {project.rootPageIcon?.type === 'EMOJI' ? (
+                    <span className="text-3xl leading-none group-hover:scale-110 transition-transform origin-bottom-left inline-block">
+                      {project.rootPageIcon.value}
+                    </span>
+                  ) : project.rootPageIcon?.type === 'EXTERNAL' || project.rootPageIcon?.type === 'FILE' ? (
+                    <img
+                      src={project.rootPageIcon.value}
+                      alt=""
+                      className="w-10 h-10 rounded-lg object-cover group-hover:scale-110 transition-transform origin-bottom-left"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 rounded-lg text-lg font-bold group-hover:scale-110 transition-transform origin-bottom-left">
+                      {project.name[0]}
                     </div>
-                    <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
-                      <Clock className="w-3.5 h-3.5" />
-                      {formatRelativeTime(project.lastNotionChangedAt)}
+                  )}
+
+                  {(project.unresolvedConflictCount ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-semibold shrink-0">
+                      <AlertTriangle className="w-3 h-3" />
+                      충돌 {project.unresolvedConflictCount}건
+                    </span>
+                  )}
+                </div>
+
+                {/* 프로젝트 이름 */}
+                <h3 className="text-base font-bold text-slate-900 mb-4 flex-1">{project.name}</h3>
+
+                {/* 하단: 멤버 수 · 페이지 수 / 최근 변경 시각 */}
+                <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" />
+                      멤버 {project.memberCount}명
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" />
+                      페이지 {project.documentCount}개
                     </span>
                   </div>
+                  <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    {formatRelativeTime(project.lastNotionChangedAt)}
+                  </span>
                 </div>
-              ))}
+              </div>
+            ))}
 
             <div
               onClick={() => navigate(`/w/${workspaceId}/new-project`)}
@@ -233,7 +198,6 @@ const WorkspaceHome = () => {
 
         {/* 워크스페이스 멤버 섹션 */}
         <section className="mt-14">
-          {/* 섹션 헤더 */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-slate-800">워크스페이스 멤버</h2>
             <button
@@ -245,7 +209,6 @@ const WorkspaceHome = () => {
             </button>
           </div>
 
-          {/* 멤버 테이블 */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -289,7 +252,6 @@ const WorkspaceHome = () => {
           >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative flex flex-col items-center gap-5">
 
-              {/* 닫기 버튼 */}
               <button
                 onClick={() => { setIsInviteOpen(false); setInviteEmail(''); setInviteSuccess(false); }}
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
@@ -297,12 +259,10 @@ const WorkspaceHome = () => {
                 <X className="w-5 h-5" />
               </button>
 
-              {/* 아이콘 */}
               <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
                 <UserPlus className="w-8 h-8 text-blue-600" />
               </div>
 
-              {/* 타이틀 */}
               <div className="text-center">
                 <h3 className="text-lg font-bold text-slate-900 leading-snug">
                   이 워크스페이스에서 함께할 멤버를 초대해보세요!
@@ -312,7 +272,6 @@ const WorkspaceHome = () => {
                 </p>
               </div>
 
-              {/* 이메일 입력 + 초대 버튼 */}
               <div className="w-full flex gap-2">
                 <input
                   type="email"
@@ -324,14 +283,13 @@ const WorkspaceHome = () => {
                 />
                 <button
                   onClick={handleInvite}
-                  disabled={!inviteEmail.trim() || inviteSuccess}
+                  disabled={!inviteEmail.trim() || inviteSuccess || inviteMutation.isPending}
                   className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   초대
                 </button>
               </div>
 
-              {/* 성공 메시지 */}
               {inviteSuccess && (
                 <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium bg-emerald-50 w-full justify-center py-2.5 rounded-lg">
                   <CheckCircle2 className="w-4 h-4" />

@@ -9,6 +9,9 @@ class ProjectWorkspaceNotFoundException(val workspaceId: Long) :
 class ProjectPermissionDeniedException(val workspaceId: Long, val userId: Long) :
     RuntimeException("user $userId has no permission on workspace $workspaceId")
 
+class ProjectDuplicateException(val workspaceId: Long, val notionRootPageId: String) :
+    RuntimeException("project for root page $notionRootPageId already exists in workspace $workspaceId")
+
 class ProjectMemberNotFoundException(val projectId: Long, val memberId: Long) :
     RuntimeException("project_member $memberId not in project $projectId")
 

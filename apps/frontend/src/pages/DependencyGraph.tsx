@@ -9,7 +9,7 @@ import {
 
 import '@xyflow/react/dist/style.css';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, GitBranch } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { DocumentNode } from '../features/graph/DocumentNode';
 import { ConflictEdge } from '../features/graph/ConflictEdge';
@@ -17,6 +17,7 @@ import { initialNodes, initialEdges } from '../features/graph/mockData';
 import type { AppEdge, DocumentFlowNode } from '../features/graph/mockData';
 
 import { GraphRightSidebar } from '../components/GraphRightSidebar';
+import { EdgeManagementSidebar } from '../components/EdgeManagementSidebar';
 import { useAppStore } from '../store';
 
 const nodeTypes = {
@@ -35,11 +36,8 @@ export const DependencyGraph = () => {
   const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? workspaceId;
   const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
   const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showEdgePanel, setShowEdgePanel] = useState(false);
 
-  // TODO: workspaceId를 URL params에서 읽어오도록 수정 필요
-  // 현재는 'sample-workspace'로 하드코딩되어 있음
-
-  // Bind the onClick handler directly to the edge data
   const edgesWithData: AppEdge[] = initialEdges.map((edge) => ({
     ...edge,
     data: {
@@ -65,16 +63,25 @@ export const DependencyGraph = () => {
             {workspaceName}
           </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>
-          <Link to={`/w/${workspaceId}/p/${projectId}`} className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">
+          <Link to={`/w/${workspaceId}/p/${projectId}/graph`} className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900">
             {projectName}
           </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>
           <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px]">Dependency Graph</span>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600">
-          <ExternalLink className="w-4 h-4" />
-          Edit in Notion
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setShowEdgePanel(true); setShowRightSidebar(false); }}
+            className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600"
+          >
+            <GitBranch className="w-4 h-4" />
+            엣지 관리
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600">
+            <ExternalLink className="w-4 h-4" />
+            Edit in Notion
+          </button>
+        </div>
       </header>
 
       {/* Graph Area */}
@@ -112,7 +119,30 @@ export const DependencyGraph = () => {
         </ReactFlow>
       </div>
 
-      {showRightSidebar && <GraphRightSidebar onClose={() => setShowRightSidebar(false)} />}
+      {showRightSidebar && (
+        <GraphRightSidebar onClose={() => setShowRightSidebar(false)} />
+      )}
+
+      {showEdgePanel && (
+        <EdgeManagementSidebar
+          edges={edges}
+          nodes={nodes}
+          onClose={() => setShowEdgePanel(false)}
+          onDeleteEdge={(id) => setEdges((eds) => eds.filter((e) => e.id !== id))}
+          onAddEdge={(sourceId, targetId) =>
+            setEdges((eds) => [
+              ...eds,
+              {
+                id: `e${sourceId}-${targetId}`,
+                source: sourceId,
+                target: targetId,
+                type: 'straight',
+                style: { stroke: '#1E293B', strokeWidth: 2 },
+              },
+            ])
+          }
+        />
+      )}
     </main>
   );
 };

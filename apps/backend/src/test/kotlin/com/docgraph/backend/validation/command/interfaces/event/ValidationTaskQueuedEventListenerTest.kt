@@ -149,7 +149,7 @@ class ValidationTaskQueuedEventListenerTest {
             if (id == edgeId) EdgeDetail(edgeId, 1L, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, emptyList())
+            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, null, emptyList())
         }
 
         val task = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeId))
@@ -185,7 +185,7 @@ class ValidationTaskQueuedEventListenerTest {
             }
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, null, null, null, emptyList())
+            DocumentDetail(id, "page-$id", "t-$id", DocumentType.MEETING_NOTES, null, null, null, null, null, emptyList())
         }
 
         val taskOk = repository.save(ValidationTask(validationPairId = UUID.randomUUID(), edgeId = edgeIdOk))

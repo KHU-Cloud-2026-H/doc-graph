@@ -45,4 +45,13 @@ class ValidationTaskTest {
         assertEquals(OutboxStatus.FAILED, task.status)
         assertNull(task.failureReason)
     }
+
+    @Test
+    fun `markFailed — 최대 길이 초과 reason은 컬럼 길이로 절단`() {
+        val task = ValidationTask(validationPairId = UUID.randomUUID(), edgeId = 100L)
+
+        task.markFailed("x".repeat(ValidationTask.FAILURE_REASON_MAX_LENGTH + 500))
+
+        assertEquals(ValidationTask.FAILURE_REASON_MAX_LENGTH, task.failureReason?.length)
+    }
 }

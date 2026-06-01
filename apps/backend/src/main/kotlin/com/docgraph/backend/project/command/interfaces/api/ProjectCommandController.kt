@@ -25,6 +25,7 @@ import com.docgraph.backend.project.command.application.TriggerProjectSyncComman
 import com.docgraph.backend.project.command.application.TriggerProjectSyncCommandHandler
 import com.docgraph.backend.project.command.domain.CategoryDuplicateException
 import com.docgraph.backend.project.command.domain.CategoryNotFoundException
+import com.docgraph.backend.project.command.domain.ProjectDuplicateException
 import com.docgraph.backend.project.command.domain.ProjectMemberDuplicateException
 import com.docgraph.backend.project.command.domain.ProjectMemberNotFoundException
 import com.docgraph.backend.project.command.domain.ProjectMemberRole
@@ -69,6 +70,7 @@ class ProjectCommandController(
         ApiResponse(responseCode = "200", description = "생성 완료 — project row id 반환"),
         ApiResponse(responseCode = "403", description = "호출자가 워크스페이스 생성자 아님", content = [Content(schema = Schema(implementation = Void::class))]),
         ApiResponse(responseCode = "404", description = "워크스페이스 없음", content = [Content(schema = Schema(implementation = Void::class))]),
+        ApiResponse(responseCode = "409", description = "같은 워크스페이스에 같은 루트 페이지 프로젝트 이미 존재", content = [Content(schema = Schema(implementation = Void::class))]),
     ])
     fun create(
         @PathVariable workspaceId: Long,
@@ -302,6 +304,7 @@ class ProjectCommandController(
         ResponseEntity.status(HttpStatus.FORBIDDEN).build()
 
     @ExceptionHandler(
+        ProjectDuplicateException::class,
         ProjectMemberDuplicateException::class,
         CategoryDuplicateException::class,
     )

@@ -123,5 +123,5 @@ class ConflictDetectionPromptBuilderTest {
         assertTrue(user.contains("변경 전") && user.contains("변경 후"), "전·후 섹션 구분")
     }
 
-    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, 0)
+    private fun block(id: String, text: String) = Block(id, null, "paragraph", text, null, 0)
 }

@@ -1,6 +1,7 @@
 package com.docgraph.backend.project.command.application
 
 import com.docgraph.backend.project.command.domain.Project
+import com.docgraph.backend.project.command.domain.ProjectDuplicateException
 import com.docgraph.backend.project.command.domain.ProjectMember
 import com.docgraph.backend.project.command.domain.ProjectMemberRepository
 import com.docgraph.backend.project.command.domain.ProjectMemberRole
@@ -30,6 +31,10 @@ class RegisterProjectCommandHandler(
 
         val workspaceMemberId = findWorkspaceMemberId.find(command.workspaceId, command.requesterUserId)
             ?: throw ProjectWorkspaceNotFoundException(command.workspaceId)
+
+        if (projectRepository.findByWorkspaceIdAndNotionRootPageId(command.workspaceId, command.notionRootPageId) != null) {
+            throw ProjectDuplicateException(command.workspaceId, command.notionRootPageId)
+        }
 
         val project = projectRepository.save(
             Project(

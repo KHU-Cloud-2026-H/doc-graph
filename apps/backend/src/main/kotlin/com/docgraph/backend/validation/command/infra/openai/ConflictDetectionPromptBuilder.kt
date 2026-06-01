@@ -7,7 +7,7 @@ object ConflictDetectionPromptBuilder {
     private const val ROLE = "역할: 너는 두 문서 사이의 정합성 충돌을 검출하는 어시스턴트다."
 
     private const val OUTPUT_RULES = """
-- 각 블록은 "[block_id: <id>] <text>" 형식으로 라벨링되어 있다. <id>는 Notion block id이며, 결과에서 *_block_id(s) 필드에는 반드시 이 id를 그대로 사용한다.
+- 각 블록은 "[block_id: <id>] before: <before_text> | after: <after_text>" 형식으로 라벨링되어 있다. <id>는 Notion block id이며, 결과에서 *_block_id(s) 필드에는 반드시 이 id를 그대로 사용한다.
 
 출력 규칙:
 - 반드시 제공된 JSON 스키마에 strict하게 맞춰 응답한다.
@@ -93,7 +93,9 @@ conflicts 각 항목 작성 규칙:
 
     private fun serialize(blocks: List<Block>): String =
         if (blocks.isEmpty()) "(없음)"
-        else blocks.joinToString("\n") { "[block_id: ${it.blockId}] ${flatten(it.text ?: "")}" }
+        else blocks.joinToString("\n") {
+            "[block_id: ${it.blockId}] before: ${flatten(it.previousText ?: "")} | after: ${flatten(it.text ?: "")}"
+        }
 
     private fun flatten(text: String): String =
         text.replace(Regex("\\s+"), " ").trim()
