@@ -19,11 +19,13 @@ SUGGESTION_TEXT = "출시일을 2주 미룬다 (요구사항 문서 반영)"
 
 
 def test_uc4_approve_finding_reflects_to_notion_and_resolves_conflict(
-    client, wiremock, auth_headers, seeder, inbox_has, wait_until
+    client, wiremock, auth_headers, seeder, inbox_has, wait_until, stub_ai
 ):
     """UC4 happy path: 제안 승인 → Notion PATCH → 재검증 → Conflict 비활성화."""
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc4", name="UC4 Workspace")
     project_id = seeder.project(workspace_id, name="UC4 Project")
+    # 제안 승인 → Notion 쓰기 어댑터가 쓸 access token (운영은 OAuth 콜백이 적재)
+    seeder.connection(notion_workspace_id="test-ws-uc4")
     source_doc_id = seeder.document(
         project_id, notion_page_id=SOURCE_PAGE_ID, title="UC4 Source",
         block_ids=[SOURCE_BLOCK_ID],
@@ -51,15 +53,25 @@ def test_uc4_approve_finding_reflects_to_notion_and_resolves_conflict(
     conflict_id = conflict["id"]
     finding_id = conflict["findings"][0]["id"]
 
+    # patchBlockText는 PATCH 전에 GET /v1/blocks/{id}로 블록 타입·수정시각을 확인한다.
+    wiremock.stub(
+        request={"method": "GET", "urlPattern": f"/v1/blocks/{TARGET_BLOCK_ID}"},
+        response={
+            "status": 200,
+            "jsonBody": {
+                "object": "block",
+                "id": TARGET_BLOCK_ID,
+                "type": "paragraph",
+                "paragraph": {"rich_text": []},
+            },
+        },
+    )
     # Notion PATCH stub (제안 반영) + 재검증 시 AI 응답(충돌 없음)
     wiremock.stub(
         request={"method": "PATCH", "urlPattern": f"/v1/blocks/{TARGET_BLOCK_ID}"},
         response={"status": 200, "jsonBody": {"object": "block", "id": TARGET_BLOCK_ID}},
     )
-    wiremock.stub(
-        request={"method": "POST", "urlPattern": "/.*/(chat/completions|messages)"},
-        response={"status": 200, "jsonBody": {"conflicts": []}},
-    )
+    stub_ai()
 
     # 검증 axis: 제안 승인
     approve = client.post(

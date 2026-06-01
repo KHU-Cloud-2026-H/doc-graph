@@ -12,7 +12,7 @@ TARGET_PAGE_ID = "77777777-7777-7777-7777-770000000002"
 
 
 def test_uc7_admin_adds_custom_edge_and_triggers_validation(
-    client, wiremock, auth_headers, seeder, wait_until
+    client, wiremock, auth_headers, seeder, wait_until, stub_ai
 ):
     """UC7 happy path: 직접 edge 생성 → graph에 등장 → 정합성 검증 트리거."""
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc7", name="UC7 Workspace")
@@ -24,10 +24,7 @@ def test_uc7_admin_adds_custom_edge_and_triggers_validation(
         project_id, notion_page_id=TARGET_PAGE_ID, title="UC7 Target",
     )
 
-    wiremock.stub(
-        request={"method": "POST", "urlPattern": "/.*/(chat/completions|messages)"},
-        response={"status": 200, "jsonBody": {"conflicts": []}},
-    )
+    stub_ai()
 
     create = client.post(
         f"/projects/{project_id}/edges",

@@ -169,7 +169,7 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         wireFakes(
             edgeId = 44L,
             sourceBlocks = listOf(
-                Block("s1", "이전 텍스트", "paragraph", "변경된 텍스트", null, 0),
+                Block("s1", null, "paragraph", "변경된 텍스트", "이전 텍스트", 0),
             ),
             targetBlocks = listOf(Block("t1", null, "paragraph", "target text", null, 0)),
         )
