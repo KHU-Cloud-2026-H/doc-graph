@@ -4,23 +4,124 @@ import com.docgraph.backend.document.query.application.Block
 
 object ConflictDetectionPromptBuilder {
 
-    private const val ROLE = "역할: 너는 두 문서 사이의 정합성 충돌을 검출하는 어시스턴트다."
+    private const val ROLE = """
+당신은 소프트웨어 프로젝트 문서 정합성 검증 전문가이다.
+
+당신의 역할은 두 개의 프로젝트 문서를 비교하여
+논리적, 의미적, 정책적, 데이터적, 워크플로우적 충돌을 탐지하는 것이다.
+
+다음과 같은 충돌을 탐지해야 한다:
+
+- 요구사항 충돌
+- 회의 결정사항 전파 누락
+- API/DB 스키마 불일치
+- 데이터 타입 불일치
+- 네이밍 컨벤션 불일치
+- 상태 머신 및 워크플로우 충돌
+- 권한(RBAC) 및 보안 정책 충돌
+- 프론트엔드/백엔드 데이터 불일치
+- 비즈니스 정책 충돌
+- 검증 규칙 충돌
+- 제거된 기능이 여전히 참조되는 문제
+- 의미적으로 상충되는 구현 가정
+
+단순 키워드 매칭이 아니라,
+문맥과 의미 기반으로 충돌 여부를 판단해야 한다.
+
+표현 방식이 달라도 실제 의미가 충돌하면 탐지해야 한다.
+"""
 
     private const val OUTPUT_RULES = """
-- 각 블록은 "[block_id: <id>] before: <before_text> | after: <after_text>" 형식으로 라벨링되어 있다. <id>는 Notion block id이며, 결과에서 *_block_id(s) 필드에는 반드시 이 id를 그대로 사용한다.
+-----------------------------------
+출력 규칙
+-----------------------------------
 
-출력 규칙:
-- 반드시 제공된 JSON 스키마에 strict하게 맞춰 응답한다.
-- 정합성 위반이 없으면 conflicts는 빈 배열이다.
+반드시 JSON 형식만 출력하라.
+설명 문장이나 Markdown은 절대 출력하지 마라.
 
-conflicts 각 항목 작성 규칙:
-- 항목의 단위는 target 측 단일 block이다. 한 항목은 정확히 하나의 target block을 가리킨다.
-- target_block_id: 정합성이 깨진 target 측 block의 id.
-- new_text: 그 target block을 통째로 교체해 정합성을 회복시킬 새 본문이다. block 전체에 들어갈 최종 텍스트이며, 부분 수정 지시·diff·주석·"~로 변경하세요" 같은 메타 안내가 아니다. 그대로 Notion block 본문이 된다.
-- source_block_ids: 그 target block과의 충돌 근거가 되는 source 측 block id 목록. 한 source block만 근거이면 1개, 여러 source block이 같은 target block에 영향을 주면 모두 나열한다.
-- rationale: 왜 정합성이 깨졌는지를 target 담당자가 이해할 수 있도록 자연어로 설명한다.
-- title: 이 충돌 사안을 한 문장으로 요약한 제목이다. rationale보다 짧게, 충돌의 본질을 한눈에 식별할 수 있도록 자연어 한 줄로 작성한다.
-- 같은 target_block_id에 대한 충돌 사안이 여러 측면에서 동시에 발생하더라도 하나의 항목으로 합친다. 즉 target block 1개당 항목은 최대 1건이다.
+출력 형식:
+
+
+{
+  "summary": {
+    "total_inconsistencies": <숫자>,
+    "critical_count": <숫자>,
+    "warning_count": <숫자>
+  },
+  "inconsistencies": [
+    {
+      "id": "INC-001",
+
+      "severity": "치명적 | 경고",
+
+      "category": "정책 충돌 | 스키마 불일치 | 워크플로우 충돌 | 네이밍 불일치 | 보안 충돌 | 데이터 타입 충돌 | 요구사항 드리프트 | 제거된 기능 참조 | 기타",
+
+      "title": "<짧은 충돌 제목>",
+
+      "source": {
+        "reference": "<가능하면 섹션명 또는 제목>",
+        "text": "<관련 원문 발췌>"
+      },
+
+      "target": {
+        "reference": "<가능하면 섹션명 또는 제목>",
+        "text": "<관련 원문 발췌>"
+      },
+
+      "reason": "<왜 충돌하는지에 대한 상세 설명>",
+
+      "impact": "<실제 구현/운영/보안/비즈니스 측면에서 발생 가능한 영향>",
+
+      "fix_suggestion": "<구체적인 수정 제안>"
+      }
+    }
+  ]
+}
+
+-----------------------------------
+중요 규칙
+-----------------------------------
+
+1. 표현 방식이 달라도 의미가 충돌하면 탐지하라.
+
+2. 근거 없는 충돌은 생성하지 마라.
+
+3. 실제 충돌이 없는 경우 억지로 만들어내지 마라.
+
+4. Recall보다 Precision을 우선하라.
+
+5. 단순 문체 차이는 무시하라.
+단, 구현 혼란을 유발하는 경우는 예외이다.
+
+6. 구현 레벨의 정합성을 우선적으로 검증하라.
+
+7. 다음 문서들은 모두 동등하게 중요한 기준 문서로 간주한다:
+- 회의록
+- PRD
+- API 명세
+- DB 스키마
+- QA 문서
+- 프론트엔드 명세
+- 아키텍처 문서
+
+단, 특정 문서에서 정책 변경/삭제가 명시된 경우에는 최신 결정사항으로 우선 취급한다.
+
+8. 기능 삭제/변경이 선언되었는데 다른 문서가 여전히 이를 참조한다면:
+- "요구사항 드리프트"
+또는
+- "제거된 기능 참조"
+로 분류하라.
+
+9. 충돌이 없는 경우 반드시 아래 형식만 반환하라:
+
+{
+    "summary": {
+    "total_inconsistencies": 0,
+    "critical_count": 0,
+    "warning_count": 0
+    },
+    "inconsistencies": []
+}
 """
 
     private const val FIRST_VALIDATION_INTRO = """
@@ -59,7 +160,7 @@ conflicts 각 항목 작성 규칙:
         targetBlocks: List<Block>,
         criterion: String,
     ): List<OpenAiChatMessage> = listOf(
-        OpenAiChatMessage(OpenAiChatMessage.ROLE_SYSTEM, systemContent(FIRST_VALIDATION_INTRO)),
+        OpenAiChatMessage(OpenAiChatMessage.ROLE_SYSTEM, systemContent()),
         OpenAiChatMessage(
             OpenAiChatMessage.ROLE_USER,
             buildString {
@@ -91,11 +192,12 @@ conflicts 각 항목 작성 규칙:
     private fun systemContent(intro: String): String =
         (ROLE + "\n\n" + intro.trim() + "\n\n" + OUTPUT_RULES.trim()).trim()
 
+    private fun systemContent(): String =
+        (ROLE + "\n\n" + OUTPUT_RULES.trim()).trim()
+
     private fun serialize(blocks: List<Block>): String =
         if (blocks.isEmpty()) "(없음)"
-        else blocks.joinToString("\n") {
-            "[block_id: ${it.blockId}] before: ${flatten(it.previousText ?: "")} | after: ${flatten(it.text ?: "")}"
-        }
+        else blocks.joinToString("\n") { "[block_id: ${it.blockId}] ${flatten(it.text ?: "")}" }
 
     private fun flatten(text: String): String =
         text.replace(Regex("\\s+"), " ").trim()
