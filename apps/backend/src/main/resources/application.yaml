@@ -66,6 +66,8 @@ auth:
 notion:
   api:
     base-url: ${NOTION_API_BASE_URL:https://api.notion.com}
+  webhook:
+    secret: ${NOTION_WEBHOOK_SECRET:}
 
 cors:
   allowed-origin: ${CORS_ALLOWED_ORIGIN}

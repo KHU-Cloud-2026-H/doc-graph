@@ -81,7 +81,12 @@ class SyncProjectDocumentsCommandHandler(
                 continue
             }
 
-            val page = notionDocumentClient.fetchPage(job.pageId, accessToken)
+            val page = try {
+                notionDocumentClient.fetchPage(job.pageId, accessToken)
+            } catch (e: Exception) {
+                // 접근 불가 페이지(404, 권한 없음 등) skip — 나머지 페이지는 계속 처리
+                continue
+            }
             val blocks = fetchBlockTree(page.id, accessToken)
             val type = categoryTypes[notionPageKey(page.id)] ?: job.inheritedType
             val flatText = blocks.mapNotNull { it.text ?: it.childPageTitle }

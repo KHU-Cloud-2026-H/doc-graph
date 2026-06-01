@@ -4,6 +4,7 @@ import com.docgraph.backend.document.query.application.Block
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -121,6 +122,31 @@ class ConflictDetectionPromptBuilderTest {
         assertTrue(user.contains("새 내용"), "변경 후 본문 포함")
         assertTrue(user.contains("[block_id: t1]") && user.contains("대상"))
         assertTrue(user.contains("변경 전") && user.contains("변경 후"), "전·후 섹션 구분")
+    }
+
+    @Test
+    fun `buildFirstValidation — 블록 라인 단일상태, before·after 라벨 없음`() {
+        val user = ConflictDetectionPromptBuilder.buildFirstValidation(
+            listOf(block("b1", "본문 X")), listOf(block("t1", "대상")), "c",
+        )[1].content
+        assertTrue(user.contains("[block_id: b1] 본문 X"), "source 단일상태 라인")
+        assertTrue(user.contains("[block_id: t1] 대상"), "target 단일상태 라인")
+        assertFalse(user.contains("before:"), "before: 라벨 없음")
+        assertFalse(user.contains("after:"), "after: 라벨 없음")
+    }
+
+    @Test
+    fun `buildRevalidation — 블록 라인 단일상태, diff는 섹션이 표현`() {
+        val user = ConflictDetectionPromptBuilder.buildRevalidation(
+            beforeBlocks = listOf(block("b1", "옛 내용")),
+            afterBlocks = listOf(block("b1", "새 내용")),
+            targetBlocks = listOf(block("t1", "대상")),
+            criterion = "c",
+        )[1].content
+        assertTrue(user.contains("[block_id: b1] 옛 내용"), "변경 전 단일상태 라인")
+        assertTrue(user.contains("[block_id: b1] 새 내용"), "변경 후 단일상태 라인")
+        assertFalse(user.contains("before:"), "라인 단위 before: 라벨 없음")
+        assertFalse(user.contains("after:"), "라인 단위 after: 라벨 없음")
     }
 
     private fun block(id: String, text: String) = Block(id, null, "paragraph", text, null, 0)
