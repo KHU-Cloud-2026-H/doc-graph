@@ -4,6 +4,9 @@ import com.docgraph.backend.document.command.application.ProcessDocumentChangeNo
 import com.docgraph.backend.document.command.domain.DocumentChangeKind
 import com.docgraph.backend.document.command.domain.DocumentChangeNoticeRepository
 import com.docgraph.backend.event.OutboxStatus
+import com.docgraph.backend.fixtures.NOTION_WEBHOOK_TEST_SECRET
+import com.docgraph.backend.fixtures.NotionWebhookHmacDisabled
+import com.docgraph.backend.fixtures.NotionWebhookHmacEnabled
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.ninjasquad.springmockk.MockkBean
 import jakarta.persistence.EntityManager
@@ -44,6 +47,7 @@ private fun webhookPayload(
 
 @Tag("component")
 @SpringBootTest
+@NotionWebhookHmacDisabled
 @AutoConfigureMockMvc
 @Import(SharedPostgresContainer::class)
 class DocumentCommandControllerTest @Autowired constructor(
@@ -156,7 +160,8 @@ class DocumentCommandControllerTest @Autowired constructor(
 }
 
 @Tag("component")
-@SpringBootTest(properties = ["notion.webhook.secret=hmac-test-secret"])
+@SpringBootTest
+@NotionWebhookHmacEnabled
 @AutoConfigureMockMvc
 @Import(SharedPostgresContainer::class)
 class DocumentCommandControllerHmacTest @Autowired constructor(
@@ -185,7 +190,7 @@ class DocumentCommandControllerHmacTest @Autowired constructor(
     @Test
     fun `올바른 HMAC 서명 — 200 OK`() {
         val body = webhookPayload(id = "evt-hmac-3")
-        val sig = "sha256=" + hmacSha256Hex("hmac-test-secret", body.toByteArray())
+        val sig = "sha256=" + hmacSha256Hex(NOTION_WEBHOOK_TEST_SECRET, body.toByteArray())
 
         mockMvc.post(WEBHOOK_PATH) {
             contentType = MediaType.APPLICATION_JSON
