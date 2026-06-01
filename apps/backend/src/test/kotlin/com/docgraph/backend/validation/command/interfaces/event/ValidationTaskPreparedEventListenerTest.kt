@@ -10,6 +10,8 @@ import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.validation.command.domain.ConflictDetectionInput
 import com.docgraph.backend.validation.command.domain.ConflictDetector
+import com.docgraph.backend.validation.command.domain.FirstValidationInput
+import com.docgraph.backend.validation.command.domain.RevalidationInput
 import com.docgraph.backend.validation.command.domain.ConflictFindingRepository
 import com.docgraph.backend.validation.command.domain.ConflictRepository
 import com.docgraph.backend.validation.command.domain.DetectedConflict
@@ -142,6 +144,45 @@ class ValidationTaskPreparedEventListenerTest @Autowired constructor(
         assertEquals("AI failure", reloaded.failureReason)
         assertEquals(2, detector.invocations.get(), "max-attempts=2 만큼 호출")
         assertEquals(0L, conflictCount())
+    }
+
+    @Test
+    fun `source 블록에 previousText 없음 → FirstValidationInput으로 AI 호출`() {
+        val task = newPendingTask(edgeId = 43L)
+        wireFakes(
+            edgeId = 43L,
+            sourceBlocks = listOf(Block("s1", null, "paragraph", "source text", null, 0)),
+            targetBlocks = listOf(Block("t1", null, "paragraph", "target text", null, 0)),
+        )
+        var capturedInput: ConflictDetectionInput? = null
+        detector.behavior = { input -> capturedInput = input; emptyList() }
+
+        testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
+
+        waitFor { taskRepository.findById(task.id)?.status == OutboxStatus.SUCCESS }
+        assertTrue(capturedInput is FirstValidationInput, "previousText 없으면 FirstValidationInput")
+    }
+
+    @Test
+    fun `source 블록에 previousText 있음 → RevalidationInput으로 AI 호출`() {
+        val task = newPendingTask(edgeId = 44L)
+        wireFakes(
+            edgeId = 44L,
+            sourceBlocks = listOf(
+                Block("s1", "이전 텍스트", "paragraph", "변경된 텍스트", null, 0),
+            ),
+            targetBlocks = listOf(Block("t1", null, "paragraph", "target text", null, 0)),
+        )
+        var capturedInput: ConflictDetectionInput? = null
+        detector.behavior = { input -> capturedInput = input; emptyList() }
+
+        testPublisher.publish(ValidationTaskPreparedEvent(task.id, OffsetDateTime.now()))
+
+        waitFor { taskRepository.findById(task.id)?.status == OutboxStatus.SUCCESS }
+        assertTrue(capturedInput is RevalidationInput, "previousText 있으면 RevalidationInput")
+        val reval = capturedInput as RevalidationInput
+        assertEquals("이전 텍스트", reval.sourceBeforeBlocks.first().text, "before = previousText")
+        assertEquals("변경된 텍스트", reval.sourceAfterBlocks.first().text, "after = 현재 text")
     }
 
     private fun newPendingTask(edgeId: Long): ValidationTask =

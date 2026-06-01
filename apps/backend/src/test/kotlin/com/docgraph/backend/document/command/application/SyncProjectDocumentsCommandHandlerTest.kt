@@ -224,6 +224,40 @@ class SyncProjectDocumentsCommandHandlerTest {
         assertEquals(linked.id, nested.parentDocumentId)
     }
 
+    @Test
+    fun `접근 불가 페이지(404 등) skip — 나머지 페이지는 정상 동기화`() {
+        every { findProjectDetailById.find(1L, 9L) } returns ProjectDetail(
+            id = 1L, name = "Project", notionRootPageId = "root-page",
+            members = emptyList(), memberCount = 0, documentCount = 0L,
+            unresolvedConflictCount = 0L, lastNotionChangedAt = null,
+        )
+        every { searchCategoriesByProject.search(1L) } returns emptyList()
+        every { projectRepository.findById(1L) } returns null
+        every { documentRepository.findByProjectIdAndNotionPageId(any(), any()) } returns null
+
+        var nextId = 100L
+        every { documentRepository.save(any()) } answers { firstArg<Document>().also { it.id = nextId++ } }
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(any()) } returns emptyList()
+        every { blockRepository.deleteAll(any<Iterable<Block>>()) } returns Unit
+        every { blockRepository.saveAll(any<Iterable<Block>>()) } answers { firstArg<Iterable<Block>>().toList() }
+
+        // root 페이지는 성공, child-accessible 페이지는 성공, child-forbidden 페이지는 404 던짐
+        every { notionDocumentClient.fetchPage("root-page", null) } returns page("root-page", "Root")
+        every { notionDocumentClient.fetchPage("child-accessible", null) } returns page("child-accessible", "Accessible Child")
+        every { notionDocumentClient.fetchPage("child-forbidden", null) } throws RuntimeException("404 Not Found")
+        every { notionDocumentClient.fetchBlockChildren("root-page", null) } returns listOf(
+            block("child-accessible", type = "child_page", childPageTitle = "Accessible"),
+            block("child-forbidden", type = "child_page", childPageTitle = "Forbidden"),
+        )
+        every { notionDocumentClient.fetchBlockChildren("child-accessible", null) } returns emptyList()
+
+        handler.handle(SyncProjectDocumentsCommand(projectId = 1L, requestedBy = 9L))
+
+        // root + accessible 2개 저장, forbidden은 skip
+        verify(exactly = 2) { documentRepository.save(any()) }
+        verify(exactly = 0) { notionDocumentClient.fetchBlockChildren("child-forbidden", any()) }
+    }
+
     private fun page(id: String, title: String): NotionPage = NotionPage(
         id = id,
         title = title,

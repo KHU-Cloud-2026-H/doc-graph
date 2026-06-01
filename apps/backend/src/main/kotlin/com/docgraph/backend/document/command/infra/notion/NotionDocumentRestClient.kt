@@ -7,9 +7,10 @@ import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.command.domain.NotionPage
 import com.docgraph.backend.document.command.domain.NotionPatchResult
 import com.docgraph.backend.document.command.domain.NotionSearchPage
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.json.JsonMapper
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.KotlinModule
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -24,6 +25,7 @@ class NotionDocumentClientConfig {
     @Bean
     fun notionObjectMapper(): ObjectMapper = JsonMapper.builder()
         .findAndAddModules()
+        .addModule(KotlinModule.Builder().build())
         .build()
 
     @Bean
