@@ -22,6 +22,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 프로젝트 정합성 검증 ON/OFF 조회 */
+        get: operations["getValidation"];
+        /**
+         * 프로젝트 정합성 검증 ON/OFF 설정
+         * @description OFF면 해당 프로젝트의 변경에 대해 AI 검증 작업을 생성하지 않는다(이미 대기 중인 작업·기존 충돌은 영향받지 않음). 기본값은 ON.
+         */
+        put: operations["updateValidation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/type-assignees": {
         parameters: {
             query?: never;
@@ -747,6 +768,13 @@ export interface components {
              */
             url?: string;
         };
+        UpdateProjectValidationRequest: {
+            /**
+             * @description 정합성 검증 활성 여부 — false면 AI 검증 작업 생성 중단
+             * @example false
+             */
+            enabled?: boolean;
+        };
         TypeAssigneeItem: {
             /**
              * @description 문서 타입
@@ -775,6 +803,11 @@ export interface components {
              * @example abc1234567890def
              */
             notionRootPageId?: string;
+            /**
+             * @description 정합성 검증 활성 여부 — false면 생성 시점부터 AI 검증 OFF로 시작 (기본 true)
+             * @example true
+             */
+            validationEnabled?: boolean;
         };
         IdResponse: {
             /**
@@ -1176,6 +1209,13 @@ export interface components {
              * @example https://hooks.slack.com/services/xxx/yyy/zzz
              */
             url?: string | null;
+        };
+        ProjectValidationResponse: {
+            /**
+             * @description 정합성 검증 활성 여부 (설정 부재 시 기본 true)
+             * @example true
+             */
+            enabled?: boolean;
         };
         PageResponseValidationTaskResponse: {
             content?: components["schemas"]["ValidationTaskResponse"][];
@@ -1730,6 +1770,66 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description 설정 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 완료 — 설정 부재 시 enabled true */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectValidationResponse"];
+                };
+            };
+            /** @description 프로젝트 없음 또는 호출자가 Project Admin 아님 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectValidationRequest"];
             };
         };
         responses: {
