@@ -1,5 +1,7 @@
 package com.docgraph.backend.validation.command.application
 
+import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
+import com.docgraph.backend.validation.command.domain.ProjectValidationSettingRepository
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskQueuedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
@@ -11,11 +13,20 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class EnqueueValidationTaskCommandHandler(
     private val repository: ValidationTaskRepository,
+    private val settingRepository: ProjectValidationSettingRepository,
+    private val findEdgeById: FindEdgeByIdQuery,
     private val publisher: ApplicationEventPublisher,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handle(command: EnqueueValidationTaskCommand) {
         repository.findByValidationPairId(command.validationPairId)?.let { return }
+
+        // 프로젝트 검증이 OFF면 enqueue하지 않는다(실제 AI 호출 0). edge를 못 정하면(race)
+        // fail-open으로 기존 동작 유지 — process handler가 미해소 edge를 markFailed 처리.
+        val edge = findEdgeById.find(command.edgeId)
+        if (edge != null && settingRepository.findByProjectId(edge.projectId)?.enabled == false) {
+            return
+        }
 
         val task = repository.save(
             ValidationTask(

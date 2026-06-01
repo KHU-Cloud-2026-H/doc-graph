@@ -5,4 +5,5 @@ data class RegisterProjectCommand(
     val requesterUserId: Long,
     val name: String,
     val notionRootPageId: String,
+    val validationEnabled: Boolean = true,
 )
