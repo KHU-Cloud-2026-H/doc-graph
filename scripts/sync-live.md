@@ -6,8 +6,8 @@
 
 ## 사전 준비
 
-1. **백엔드 기동** — `just compose-up backend` (postgres + backend만, 실제 Notion API). 
-2. **프론트 기동** — `npm --workspace apps/frontend run dev` (Vite dev server `:5173`, `/api`는 `:8080`으로 proxy).
+1. **백엔드 기동** — `just compose-up live` (postgres + backend + ngrok, 실제 Notion API). ngrok은 재현 ③(webhook) 수신용.
+2. **프론트 기동** — `just dev-frontend` (Vite dev server `:5173`, `/api`는 `:8080`으로 proxy).
 3. **로그인 → 세션 쿠키**
    - 브라우저로 `http://localhost:5173` 진입 → 로그인 → Notion 동의 화면에서 동기화할 페이지 선택·허용 → `/workspaces`로 복귀 (프론트가 mock이라 화면은 미완이지만 세션은 발급됨).
    - devtools → Application → Cookies → `http://localhost:5173` → `DG_SESSION` 값 복사 (httpOnly라 콘솔엔 안 보임; 쿠키는 포트 무관이라 `:8080`에서도 동일 값).
@@ -81,12 +81,10 @@ DG_SESSION=…                        # 로그인 후 복사 (TTL)
 
 재현 ②의 `Demo`(회의록1 → 설계서)에 이어, 실제 편집이 webhook → 변경 감지 → AI 검증 → 담당자 인박스로 흐르는지 본다. `--inspect` 직접 트리거 대신 실제 이벤트 경로.
 
-> 기존 `.env` Integration·ngrok으로는 webhook이 수신되지 않아, 이번 재현은 `.env.local`에서 본인 Integration(`NOTION_CLIENT_*`)·ngrok(`NGROK_*`)으로 override해 실행했다. 원인 미파악 — 확인 후 최신화.
+**ngrok·구독**:
 
-**ngrok·구독** — 이번 재현 구성:
-
-- `just bootRun live` — ngrok이 `host.docker.internal:8080`을 `https://{NGROK_STATIC_DOMAIN}`으로 노출. 수신 검사는 인스펙터 `http://localhost:{NGROK_HOST_PORT}`.
-- Notion integration(`NOTION_CLIENT_ID`) → Webhooks → Create a subscription → `https://{NGROK_STATIC_DOMAIN}/api/webhooks/notion` (경로 필수; 도메인 = 떠 있는 `NGROK_STATIC_DOMAIN`). 등록 시 `NOTION_WEBHOOK_SECRET` 빈 값(무서명 verification 200 통과) → backend 로그 `verification_token` 복사 → ⚠️ Verify로 확정 → `NOTION_WEBHOOK_SECRET`에 토큰 넣고 재기동(이후 `X-Notion-Signature` 검증).
+- `just compose-up live`가 백엔드를 공유 도메인 `https://{NGROK_STATIC_DOMAIN}`에 노출. 수신은 인스펙터 `http://localhost:{NGROK_HOST_PORT}`에서 확인.
+- 그 도메인의 `/api/webhooks/notion` subscription은 공유 integration에 이미 등록돼 있고 secret은 `.env`의 `NOTION_WEBHOOK_SECRET` — 재현 시 추가 작업 없음.
 
 **실행**:
 
