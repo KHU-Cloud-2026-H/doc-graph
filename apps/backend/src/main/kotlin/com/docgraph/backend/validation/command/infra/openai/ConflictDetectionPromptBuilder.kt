@@ -32,13 +32,11 @@ object ConflictDetectionPromptBuilder {
 """
 
     private const val OUTPUT_RULES = """
-<<<<<<< HEAD
 -----------------------------------
 출력 규칙
 -----------------------------------
-=======
+
 - 각 블록은 "[block_id: <id>] <text>" 형식으로 라벨링되어 있다. <id>는 Notion block id이며, 결과에서 *_block_id(s) 필드에는 반드시 이 id를 그대로 사용한다.
->>>>>>> dab5a545692a97c5779bf59dac86269af421790a
 
 반드시 JSON 형식만 출력하라.
 설명 문장이나 Markdown은 절대 출력하지 마라.

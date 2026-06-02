@@ -51,7 +51,7 @@ class OpenAiConflictDetectorContractTest {
                     aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(chatResponseBody("""{"conflicts":[{"source_block_ids":["s1"],"target_block_id":"t1","rationale":"reason","new_text":"fix","title":"제목"}]}"""))
+                        .withBody(chatResponseBody("""{"summary":{"total_inconsistencies":1,"critical_count":1,"warning_count":0},"inconsistencies":[{"severity":"치명적","category":"정책 충돌","title":"제목","source_evidence":{"block_id":"s1","reference":"ref","text":"src"},"target_conflict_block":{"block_id":"t1","reference":"ref","text":"tgt"},"related_blocks":{"source_block_ids":["s1"],"target_block_ids":["t1"]},"reason":"reason","impact":"imp","new_text":"fix"}]}"""))
                 )
         )
 
@@ -89,7 +89,7 @@ class OpenAiConflictDetectorContractTest {
                     aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(chatResponseBody("""{"conflicts":[]}"""))
+                        .withBody(chatResponseBody("""{"summary":{"total_inconsistencies":0,"critical_count":0,"warning_count":0},"inconsistencies":[]}"""))
                 )
         )
 
@@ -105,7 +105,7 @@ class OpenAiConflictDetectorContractTest {
                     aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(chatResponseBody("""{"conflicts":[]}"""))
+                        .withBody(chatResponseBody("""{"summary":{"total_inconsistencies":0,"critical_count":0,"warning_count":0},"inconsistencies":[]}"""))
                 )
         )
 
