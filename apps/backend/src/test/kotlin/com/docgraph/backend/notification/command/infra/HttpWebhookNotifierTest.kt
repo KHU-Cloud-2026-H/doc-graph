@@ -17,10 +17,13 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.TestPropertySource
 
 @Tag("component")
 @SpringBootTest
 @Import(SharedPostgresContainer::class)
+// 실 HttpWebhookNotifier를 wire(WireMock)로 검증 — 실 RestClient opt-in.
+@TestPropertySource(properties = ["adapter.http.real=true"])
 class HttpWebhookNotifierTest @Autowired constructor(
     private val notifier: WebhookNotifier,
 ) {

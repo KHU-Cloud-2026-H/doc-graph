@@ -1,6 +1,7 @@
 package com.docgraph.backend.notification.command.infra
 
 import com.docgraph.backend.notification.command.domain.WebhookNotifier
+import com.docgraph.backend.config.ConditionalOnRealHttpAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
@@ -11,6 +12,7 @@ import java.net.http.HttpClient
 import java.time.Duration
 
 @Component
+@ConditionalOnRealHttpAdapter
 class HttpWebhookNotifier(
     props: WebhookNotifierProperties,
 ) : WebhookNotifier {

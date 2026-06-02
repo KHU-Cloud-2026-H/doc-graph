@@ -3,6 +3,7 @@ package com.docgraph.backend.auth.command.infra.notion
 import com.docgraph.backend.auth.command.domain.NotionOAuthClient
 import com.docgraph.backend.auth.command.domain.NotionOAuthToken
 import com.docgraph.backend.auth.command.domain.NotionOAuthUser
+import com.docgraph.backend.config.ConditionalOnRealHttpAdapter
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.http.HttpHeaders
@@ -13,6 +14,7 @@ import org.springframework.web.client.body
 import java.util.Base64
 
 @Component
+@ConditionalOnRealHttpAdapter
 class NotionOAuthRestClient(
     private val registration: NotionOAuthRegistration,
 ) : NotionOAuthClient {

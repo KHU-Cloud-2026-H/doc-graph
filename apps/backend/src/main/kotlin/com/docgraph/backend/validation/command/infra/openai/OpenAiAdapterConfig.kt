@@ -1,5 +1,6 @@
 package com.docgraph.backend.validation.command.infra.openai
 
+import com.docgraph.backend.config.ConditionalOnRealHttpAdapter
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -13,6 +14,7 @@ import java.time.Duration
 class OpenAiAdapterConfig {
 
     @Bean
+    @ConditionalOnRealHttpAdapter
     fun openAiRestClient(props: OpenAiProperties): RestClient {
         val timeout = Duration.ofMillis(props.timeoutMs)
         val httpClient = HttpClient.newBuilder()
