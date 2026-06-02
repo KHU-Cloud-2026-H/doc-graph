@@ -1,10 +1,10 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { User, LogOut } from "lucide-react";
+import { useAuth, useLogout } from "../hooks/useAuth";
 
 // ── UserAvatar ────────────────────────────────────────────────────────────────
 // API의 UserResponse.avatarUrl (Notion 프로필 사진 URL)을 받아 표시.
 // avatarUrl이 null/undefined면 기본 아이콘(User) 표시.
-// TODO(API): GET /auth/me → UserResponse.avatarUrl 로 교체
 type AvatarSize = 'xs' | 'md' | 'lg';
 
 const sizeMap: Record<AvatarSize, string> = {
@@ -44,12 +44,6 @@ export const UserAvatar = ({
 };
 
 // ── UserProfilePopup ──────────────────────────────────────────────────────────
-// TODO(API): GET /auth/me → UserResponse { id, name, email, avatarUrl? } 로 교체
-const MOCK_CURRENT_USER = {
-    name: '김상민',
-    email: 'artboi@khu.ac.kr',
-    avatarUrl: null as string | null,
-};
 
 interface UserProfilePopupProps {
     isOpen: boolean;
@@ -100,6 +94,9 @@ export const UserProfilePopup = ({
         return () => document.removeEventListener('mousedown', handleMouseDown);
     }, [isOpen, onClose, anchorRef]);
 
+    const { user } = useAuth();
+    const logout = useLogout();
+
     if (!isOpen || !pos) return null;
 
     return (
@@ -110,20 +107,19 @@ export const UserProfilePopup = ({
         >
             {/* 프로필 정보 */}
             <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-100">
-                <UserAvatar avatarUrl={MOCK_CURRENT_USER.avatarUrl} size="lg" />
+                <UserAvatar avatarUrl={user?.avatarUrl} size="lg" />
                 <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">
-                        {MOCK_CURRENT_USER.name}
+                        {user?.name ?? ''}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">{MOCK_CURRENT_USER.email}</p>
+                    <p className="text-xs text-slate-500 truncate">{user?.email ?? ''}</p>
                 </div>
             </div>
 
             {/* 로그아웃 버튼 */}
-            {/* TODO(API): DELETE /auth/sessions 연동 */}
             <div className="px-2 py-2">
                 <button
-                    onClick={() => { onClose(); alert('로그아웃 되었습니다.'); }}
+                    onClick={() => { onClose(); logout.mutate(); }}
                     className="flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                     <LogOut className="w-4 h-4 text-slate-500" />

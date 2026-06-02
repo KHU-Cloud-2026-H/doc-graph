@@ -3,7 +3,7 @@ import { useAppStore } from "../store";
 import { ChevronDown, ChevronRight, Inbox, GitMerge, FileText, Layout, Home, Plus, ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { InboxPopup } from "./InboxPopup";
-import { inboxActiveCount } from "./InboxList";
+import { useInboxActiveCount } from "./InboxList";
 import { TopAppBar } from "./TopAppBar";
 import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
 
@@ -88,6 +88,7 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
 
 export const Sidebar = () => {
   const { documents, projects, workspaces, setCurrentProject, isSidebarOpen, toggleSidebar } = useAppStore();
+  const inboxActiveCount = useInboxActiveCount();
   const location = useLocation();
   const navigate = useNavigate();
   const { workspaceId, projectId } = useParams();

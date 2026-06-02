@@ -6,7 +6,7 @@ import { useAppStore, type DocumentType, type DocumentNode } from '../store';
 import type { IntegrityIssue } from '../store';
 import { formatRelativeTime } from '../lib/timeAgo';
 import { BlockRenderer } from "../features/document/BlockRenderer";
-import { MOCK_DOCUMENT_BLOCKS } from "../features/document/documentBlocks.mock";
+import { useDocument } from "../hooks/useDocument";
 
 const findParentPage = (docs: any[], targetId: string): any | null => {
   const numId = Number(targetId);
@@ -39,6 +39,7 @@ export const DocumentView = () => {
   const documents = useAppStore((state) => state.documents);
   const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? workspaceId;
   const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
+  const { document: docDetail } = useDocument(id ? Number(id) : undefined);
 
   // Flatten documents tree to find the active one
   const flattenDocs = (docs: any[]): any[] => {
@@ -213,13 +214,19 @@ export const DocumentView = () => {
                 <div className="flex items-center">
                   <span className="w-32 text-slate-500 shrink-0">최근 수정</span>
                   <div className="flex items-center flex-wrap gap-2">
-                    <div className="relative group">
-                      <span className="text-slate-900 cursor-default">2026년 5월 21일 14:30</span>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                        {formatRelativeTime(new Date(Date.now() - 60 * 60 * 1000))}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                    {docDetail?.notionLastEditedAt ? (
+                      <div className="relative group">
+                        <span className="text-slate-900 cursor-default">
+                          {new Date(docDetail.notionLastEditedAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                          {formatRelativeTime(new Date(docDetail.notionLastEditedAt))}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
                     <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
                       <span className="text-sm">박관우</span>
                     </div>
@@ -257,7 +264,7 @@ export const DocumentView = () => {
                 }
               }}
             >
-              <BlockRenderer blocks={MOCK_DOCUMENT_BLOCKS} />
+              <BlockRenderer blocks={docDetail?.blocks ?? []} />
             </div>
           </div>
         </div>
