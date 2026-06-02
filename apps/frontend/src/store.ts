@@ -18,6 +18,8 @@ import { create } from 'zustand';
 //      이전 mock은 필드명이 정반대였으나 API 매핑 혼동 방지를 위해 정정됨.
 export interface IntegrityIssue {
   id: string;
+  conflictId?: number;           // API: ConflictResponse.id
+  findingId?: number;            // API: ConflictFindingResponse.id
   status: 'ACTIVE' | 'IGNORED';    // API: ConflictResponse.status
   title: string;                 // API: ConflictResponse.title (충돌 사안 한 줄 요약 제목)
   rationale: string;             // API: ConflictFindingResponse.rationale (충돌 원인 AI 판정)

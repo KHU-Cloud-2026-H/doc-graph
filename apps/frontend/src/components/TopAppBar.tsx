@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Settings, Inbox } from "lucide-react";
 import { InboxPopup } from "./InboxPopup";
-import { inboxActiveCount } from "./InboxList";
+import { useInboxActiveCount } from "./InboxList";
 import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
 
 interface TopAppBarProps {
@@ -13,9 +13,8 @@ interface TopAppBarProps {
 const NOTION_LOGO =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Notion-logo.svg/3840px-Notion-logo.svg.png";
 
-const unreadCount = inboxActiveCount;
-
 export const TopAppBar = ({ centerLabel, centerIcon }: TopAppBarProps) => {
+  const unreadCount = useInboxActiveCount();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const inboxButtonRef = useRef<HTMLButtonElement>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);

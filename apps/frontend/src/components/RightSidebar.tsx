@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useState } from "react";
 import type { DocumentNode } from "../store";
 import { formatRelativeTime } from "../lib/timeAgo";
+import { useIgnoreConflict, useUnignoreConflict, useApproveConflict } from "../hooks/useConflictActions";
 
 interface RightSidebarProps {
   document: DocumentNode;
@@ -17,6 +18,10 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
   const [showIgnoredSection, setShowIgnoredSection] = useState(true);
   // 무시됨 카드 개별 펼치기 (기본: 접힘 → Set에 있으면 펼쳐진 상태)
   const [openedIgnored, setOpenedIgnored] = useState<Set<string>>(new Set());
+
+  const ignore = useIgnoreConflict();
+  const unignore = useUnignoreConflict();
+  const approve = useApproveConflict();
 
   const toggleCollapsed = (id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
@@ -155,10 +160,18 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                         TODO(API): "제안 적용하기" = POST /conflicts/{cid}/findings/{fid}/approve
                                    "무시하기" = POST /conflicts/{id}/ignore */}
                     <div className="flex items-center justify-end gap-2 pt-1">
-                      <button className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                      <button
+                        onClick={() => issue.conflictId !== undefined && ignore.mutate(issue.conflictId)}
+                        disabled={issue.conflictId === undefined || ignore.isPending}
+                        className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded transition-colors disabled:opacity-40"
+                      >
                         무시하기
                       </button>
-                      <button className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors">
+                      <button
+                        onClick={() => issue.conflictId !== undefined && issue.findingId !== undefined && approve.mutate({ conflictId: issue.conflictId, findingId: issue.findingId })}
+                        disabled={issue.conflictId === undefined || issue.findingId === undefined || approve.isPending}
+                        className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors disabled:opacity-40"
+                      >
                         제안 적용하기
                       </button>
                     </div>
@@ -218,9 +231,12 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                           <div className="px-4 pb-4 space-y-3 bg-white">
                             <p className="text-xs text-slate-500 leading-relaxed pt-3">{issue.rationale}</p>
                             <p className="text-xs text-slate-400 px-0.5">💡 {issue.validationCriterion}</p>
-                            {/* TODO(API): "무시 취소" = DELETE /conflicts/{id}/ignore */}
                             <div className="flex items-center justify-end pt-1">
-                              <button className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded transition-colors">
+                              <button
+                                onClick={() => issue.conflictId !== undefined && unignore.mutate(issue.conflictId)}
+                                disabled={issue.conflictId === undefined || unignore.isPending}
+                                className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded transition-colors disabled:opacity-40"
+                              >
                                 무시 취소
                               </button>
                             </div>
