@@ -28,77 +28,103 @@ class ConflictDetectionResponseSchemaTest {
     }
 
     @Test
-    fun `schema 루트 — object, additionalProperties false, required=conflicts`() {
+    fun `schema 루트 — object, additionalProperties false, required=summary·inconsistencies`() {
         val schema = schemaOf(ConflictDetectionResponseSchema.responseFormat())
         assertEquals("object", schema["type"])
         assertEquals(false, schema["additionalProperties"])
         @Suppress("UNCHECKED_CAST")
-        assertEquals(listOf("conflicts"), schema["required"] as List<String>)
+        assertEquals(listOf("summary", "inconsistencies"), schema["required"] as List<String>)
     }
 
     @Test
-    fun `conflicts — array of objects`() {
+    fun `summary — total·critical·warning count 모두 required integer`() {
+        @Suppress("UNCHECKED_CAST")
+        val summary = (schemaOf(ConflictDetectionResponseSchema.responseFormat())["properties"] as Map<String, Any>)["summary"] as Map<String, Any>
+        assertEquals("object", summary["type"])
+        @Suppress("UNCHECKED_CAST")
+        assertEquals(
+            setOf("total_inconsistencies", "critical_count", "warning_count"),
+            (summary["required"] as List<String>).toSet(),
+        )
+        @Suppress("UNCHECKED_CAST")
+        val props = summary["properties"] as Map<String, Any>
+        for (key in listOf("total_inconsistencies", "critical_count", "warning_count")) {
+            @Suppress("UNCHECKED_CAST")
+            assertEquals("integer", (props[key] as Map<String, Any>)["type"], "$key 는 integer")
+        }
+    }
+
+    @Test
+    fun `inconsistencies — array of objects`() {
         val schema = schemaOf(ConflictDetectionResponseSchema.responseFormat())
         @Suppress("UNCHECKED_CAST")
         val props = schema["properties"] as Map<String, Any>
         @Suppress("UNCHECKED_CAST")
-        val conflicts = props["conflicts"] as Map<String, Any>
-        assertEquals("array", conflicts["type"])
+        val inconsistencies = props["inconsistencies"] as Map<String, Any>
+        assertEquals("array", inconsistencies["type"])
         @Suppress("UNCHECKED_CAST")
-        val item = conflicts["items"] as Map<String, Any>
+        val item = inconsistencies["items"] as Map<String, Any>
         assertEquals("object", item["type"])
         assertEquals(false, item["additionalProperties"])
     }
 
     @Test
-    fun `conflict item — source_block_ids·target_block_id·rationale·new_text·title 모두 required`() {
-        val item = conflictItemOf(ConflictDetectionResponseSchema.responseFormat())
+    fun `inconsistency item — 9개 필드 모두 required`() {
+        val item = inconsistencyItemOf(ConflictDetectionResponseSchema.responseFormat())
         @Suppress("UNCHECKED_CAST")
         val required = (item["required"] as List<String>).toSet()
-        assertEquals(setOf("source_block_ids", "target_block_id", "rationale", "new_text", "title"), required)
+        assertEquals(
+            setOf(
+                "severity", "category", "title",
+                "source_evidence", "target_conflict_block", "related_blocks",
+                "reason", "impact", "new_text",
+            ),
+            required,
+        )
     }
 
     @Test
-    fun `source_block_ids — array of string`() {
-        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
-        @Suppress("UNCHECKED_CAST")
-        val src = props["source_block_ids"] as Map<String, Any>
-        assertEquals("array", src["type"])
-        @Suppress("UNCHECKED_CAST")
-        val items = src["items"] as Map<String, Any>
-        assertEquals("string", items["type"])
+    fun `inconsistency item — 단순 string 필드 타입`() {
+        val props = inconsistencyItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
+        for (key in listOf("severity", "category", "title", "reason", "impact", "new_text")) {
+            @Suppress("UNCHECKED_CAST")
+            assertEquals("string", (props[key] as Map<String, Any>)["type"], "$key 는 string")
+        }
     }
 
     @Test
-    fun `target_block_id — string`() {
-        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
-        @Suppress("UNCHECKED_CAST")
-        val tgt = props["target_block_id"] as Map<String, Any>
-        assertEquals("string", tgt["type"])
+    fun `source_evidence·target_conflict_block — block_id·reference·text string object`() {
+        val props = inconsistencyItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
+        for (key in listOf("source_evidence", "target_conflict_block")) {
+            @Suppress("UNCHECKED_CAST")
+            val evidence = props[key] as Map<String, Any>
+            assertEquals("object", evidence["type"], "$key 는 object")
+            @Suppress("UNCHECKED_CAST")
+            assertEquals(setOf("block_id", "reference", "text"), (evidence["required"] as List<String>).toSet())
+            @Suppress("UNCHECKED_CAST")
+            val ep = evidence["properties"] as Map<String, Any>
+            for (field in listOf("block_id", "reference", "text")) {
+                @Suppress("UNCHECKED_CAST")
+                assertEquals("string", (ep[field] as Map<String, Any>)["type"])
+            }
+        }
     }
 
     @Test
-    fun `rationale — string`() {
-        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
+    fun `related_blocks — source·target block_ids array of string`() {
+        val props = inconsistencyItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
         @Suppress("UNCHECKED_CAST")
-        val rat = props["rationale"] as Map<String, Any>
-        assertEquals("string", rat["type"])
-    }
-
-    @Test
-    fun `new_text — string`() {
-        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
+        val related = props["related_blocks"] as Map<String, Any>
+        assertEquals("object", related["type"])
         @Suppress("UNCHECKED_CAST")
-        val nt = props["new_text"] as Map<String, Any>
-        assertEquals("string", nt["type"])
-    }
-
-    @Test
-    fun `title — string`() {
-        val props = conflictItemPropsOf(ConflictDetectionResponseSchema.responseFormat())
-        @Suppress("UNCHECKED_CAST")
-        val title = props["title"] as Map<String, Any>
-        assertEquals("string", title["type"])
+        val rp = related["properties"] as Map<String, Any>
+        for (key in listOf("source_block_ids", "target_block_ids")) {
+            @Suppress("UNCHECKED_CAST")
+            val arr = rp[key] as Map<String, Any>
+            assertEquals("array", arr["type"], "$key 는 array")
+            @Suppress("UNCHECKED_CAST")
+            assertEquals("string", (arr["items"] as Map<String, Any>)["type"])
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -110,13 +136,13 @@ class ConflictDetectionResponseSchemaTest {
         jsonSchemaOf(rf)["schema"] as Map<String, Any>
 
     @Suppress("UNCHECKED_CAST")
-    private fun conflictItemOf(rf: Map<String, Any>): Map<String, Any> {
+    private fun inconsistencyItemOf(rf: Map<String, Any>): Map<String, Any> {
         val props = schemaOf(rf)["properties"] as Map<String, Any>
-        val conflicts = props["conflicts"] as Map<String, Any>
-        return conflicts["items"] as Map<String, Any>
+        val inconsistencies = props["inconsistencies"] as Map<String, Any>
+        return inconsistencies["items"] as Map<String, Any>
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun conflictItemPropsOf(rf: Map<String, Any>): Map<String, Any> =
-        conflictItemOf(rf)["properties"] as Map<String, Any>
+    private fun inconsistencyItemPropsOf(rf: Map<String, Any>): Map<String, Any> =
+        inconsistencyItemOf(rf)["properties"] as Map<String, Any>
 }

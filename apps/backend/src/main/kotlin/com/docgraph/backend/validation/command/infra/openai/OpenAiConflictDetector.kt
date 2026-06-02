@@ -7,6 +7,7 @@ import com.docgraph.backend.validation.command.domain.ConflictDetectionResult
 import com.docgraph.backend.validation.command.domain.ConflictDetector
 import com.docgraph.backend.validation.command.domain.FirstValidationInput
 import com.docgraph.backend.validation.command.domain.RevalidationInput
+import com.docgraph.backend.config.ConditionalOnRealHttpAdapter
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -15,6 +16,7 @@ import org.springframework.web.client.body
 import tools.jackson.core.JacksonException
 
 @Component
+@ConditionalOnRealHttpAdapter
 class OpenAiConflictDetector(
     @Qualifier("openAiRestClient")
     private val restClient: RestClient,

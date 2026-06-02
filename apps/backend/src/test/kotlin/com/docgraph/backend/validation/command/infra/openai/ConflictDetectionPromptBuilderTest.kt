@@ -40,10 +40,10 @@ class ConflictDetectionPromptBuilderTest {
     }
 
     @Test
-    fun `system content — target block 단위 + 같은 block 합침 안내`() {
+    fun `system content — 위반된 target block 각각에 대해 항목 생성 안내`() {
         val system = ConflictDetectionPromptBuilder.buildFirstValidation(emptyList(), emptyList(), "c")[0].content
-        assertTrue(system.contains("target") && system.contains("block"), "target block 단위 안내")
-        assertTrue(system.contains("합친다") || system.contains("하나"), "같은 target_block_id 사안은 1건으로 합침 안내")
+        assertTrue(system.contains("target_conflict_block"), "target_conflict_block 필드 안내")
+        assertTrue(system.contains("각각"), "위반된 target block 각각에 대해 conflict 항목 생성 안내")
     }
 
     @Test

@@ -75,10 +75,17 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// 단일 test JVM이 distinct Spring 컨텍스트(~42)를 무한 누적 → heap OOM. JVM을 N개 클래스마다 재시작해
+	// fork당 동시 생존 컨텍스트를 bound(default heap 수용). fork 내에선 cache.maxSize 유지라 eviction churn 없음.
+	setForkEvery(10)
 	systemProperty("spring.datasource.hikari.maximum-pool-size", "2")
 	// 컨테이너 공유 테스트 클래스(slice+component ≈ 40)가 컨텍스트 캐시 기본 한도(32)를 넘겨
 	// eviction → pool 개폐 churn으로 full `test` 실행 시 DB 커넥션 단절 flaky. 한도를 컨텍스트 수 위로.
 	systemProperty("spring.test.context.cache.maxSize", "64")
+	// 캐시된 컨텍스트마다 외부 HTTP 어댑터가 java.net.http.HttpClient(SelectorManager 스레드)를 생성·미회수해
+	// full `test`에서 누적 → OOM. 테스트 JVM은 실 어댑터를 끄고 stub을 쓰며,
+	// 실 어댑터를 wire로 검증하는 contract 테스트만 @TestPropertySource로 true override.
+	systemProperty("adapter.http.real", "false")
 }
 
 tasks.register<Test>("unitTest") {

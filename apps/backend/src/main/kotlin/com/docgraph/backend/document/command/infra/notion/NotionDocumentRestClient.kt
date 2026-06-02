@@ -11,6 +11,7 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
+import com.docgraph.backend.config.ConditionalOnRealHttpAdapter
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -29,6 +30,7 @@ class NotionDocumentClientConfig {
         .build()
 
     @Bean
+    @ConditionalOnRealHttpAdapter
     fun notionRestClient(properties: NotionDocumentProperties): RestClient {
         return RestClient.builder()
             .baseUrl(properties.baseUrl)
@@ -38,6 +40,7 @@ class NotionDocumentClientConfig {
 }
 
 @Component
+@ConditionalOnRealHttpAdapter
 class NotionDocumentRestClient(
     @Qualifier("notionRestClient")
     private val restClient: RestClient,
