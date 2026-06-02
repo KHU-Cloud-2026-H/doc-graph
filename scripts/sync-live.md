@@ -6,11 +6,12 @@
 
 ## 사전 준비
 
-1. **백엔드 기동** — `just compose-up live` (ngrok 포함 — OAuth 로그인 도메인 제공).
-2. **로그인 → 세션 쿠키**
-   - 브라우저로 `https://<ngrok-domain>/api/oauth2/authorization/notion` 진입 → Notion 동의 화면에서 동기화할 페이지 선택·허용.
-   - devtools → Application → Cookies → ngrok 도메인 → `DG_SESSION` 값 복사 (httpOnly라 콘솔엔 안 보임).
-3. **환경변수** (`.env.local`에 넣거나 인라인 env로 전달 — 스크립트가 env에서 읽음):
+1. **백엔드 기동** — `just compose-up backend` (postgres + backend만, 실제 Notion API). 
+2. **프론트 기동** — `npm --workspace apps/frontend run dev` (Vite dev server `:5173`, `/api`는 `:8080`으로 proxy).
+3. **로그인 → 세션 쿠키**
+   - 브라우저로 `http://localhost:5173` 진입 → 로그인 → Notion 동의 화면에서 동기화할 페이지 선택·허용 → `/workspaces`로 복귀 (프론트가 mock이라 화면은 미완이지만 세션은 발급됨).
+   - devtools → Application → Cookies → `http://localhost:5173` → `DG_SESSION` 값 복사 (httpOnly라 콘솔엔 안 보임; 쿠키는 포트 무관이라 `:8080`에서도 동일 값).
+4. **환경변수** (`.env.local`에 넣거나 인라인 env로 전달 — 스크립트가 env에서 읽음):
    - `AI_OPENAI_API_KEY` — AI provider 키. `AI_OPENAI_BASE_URL`·`AI_OPENAI_MODEL`은 `.env` 기본값 사용 (다른 provider 쓰려면 둘도 override).
    - `DG_SESSION` — 2번에서 복사한 세션 쿠키 값 (TTL 있음, 만료 시 재로그인).
 
@@ -75,3 +76,28 @@ DG_SESSION=…                        # 로그인 후 복사 (TTL)
    - 기대: 검증 `SUCCESS`, 충돌 1건 — "ND_COUNT 값이 source(2)와 target(1) 간 불일치", 제안 수정 = 설계서의 ND_COUNT를 2로.
 
 재실행 시 같은 루트로는 중복 생성이 막히므로 `just sync-live --delete {projectId}` 후 ② 반복.
+
+## 재현 ③ — webhook 실수신
+
+재현 ②의 `Demo`(회의록1 → 설계서)에 이어, 실제 편집이 webhook → 변경 감지 → AI 검증 → 담당자 인박스로 흐르는지 본다. `--inspect` 직접 트리거 대신 실제 이벤트 경로.
+
+> 기존 `.env` Integration·ngrok으로는 webhook이 수신되지 않아, 이번 재현은 `.env.local`에서 본인 Integration(`NOTION_CLIENT_*`)·ngrok(`NGROK_*`)으로 override해 실행했다. 원인 미파악 — 확인 후 최신화.
+
+**ngrok·구독** — 이번 재현 구성:
+
+- `just bootRun live` — ngrok이 `host.docker.internal:8080`을 `https://{NGROK_STATIC_DOMAIN}`으로 노출. 수신 검사는 인스펙터 `http://localhost:{NGROK_HOST_PORT}`.
+- Notion integration(`NOTION_CLIENT_ID`) → Webhooks → Create a subscription → `https://{NGROK_STATIC_DOMAIN}/api/webhooks/notion` (경로 필수; 도메인 = 떠 있는 `NGROK_STATIC_DOMAIN`). 등록 시 `NOTION_WEBHOOK_SECRET` 빈 값(무서명 verification 200 통과) → backend 로그 `verification_token` 복사 → ⚠️ Verify로 확정 → `NOTION_WEBHOOK_SECRET`에 토큰 넣고 재기동(이후 `X-Notion-Signature` 검증).
+
+**실행**:
+
+1. OAuth 로그인 `http://localhost:8080/api/oauth2/authorization/notion` → 재현 ②로 sync (연결·sync 전 편집은 orphan 처리).
+2. Notion UI에서 사람이 회의록1 편집·저장 (API·bot 편집은 무시).
+3. 인스펙터(200)·backend 로그로 수신 확인.
+4. `just sync-live --inspect {projectId}` 또는 `GET /api/me/conflicts`(담당자 인박스). 기대: 충돌 1건 ACTIVE.
+
+## 재현 ④ — 제안 수락 → Notion write
+
+②·③에서 검출된 충돌의 수정 제안을 승인하면 backend가 target 블록을 Notion에 써넣고 충돌이 해소된다 (검출 출처와 무관).
+
+- **승인** — `POST /api/conflicts/{conflictId}/findings/{findingId}/approve`, 본문 `{"expectedTargetNotionLastEditedAt": "{target 문서 notionLastEditedAt}"}` (값 불일치 시 409 stale). 인증은 `DG_SESSION` 쿠키.
+- **결과** — target 블록이 `finding.newText`로 갱신(예: 설계서 `ND_COUNT=1로 정한다.` → `ND_COUNT=2로 정한다.`), conflict `resolved` → 인박스에서 빠짐. write는 bot author라 그로 인한 webhook은 무시된다(루프 없음).

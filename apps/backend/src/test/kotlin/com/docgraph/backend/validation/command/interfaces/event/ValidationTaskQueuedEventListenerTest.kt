@@ -96,6 +96,10 @@ class ValidationTaskQueuedEventListenerTestConfig {
     @Bean @Primary
     fun fakeFindDocumentByIdQuery() = FakeFindDocumentByIdQuery()
 
+    // 실제 OpenAiConflictDetector(서버 없음) 대신 결정적 fake — 검출이 빈 결과로 즉시 성공.
+    @Bean @Primary
+    fun queuedFakeConflictDetector() = FakeConflictDetector()
+
     @Bean
     fun validationTaskPreparedProbe() = ValidationTaskPreparedProbe()
 
@@ -133,6 +137,7 @@ class ValidationTaskQueuedEventListenerTest {
     @BeforeEach
     fun reset() {
         txTemplate.executeWithoutResult {
+            em.createQuery("DELETE FROM AiUsageRecord").executeUpdate()
             em.createQuery("DELETE FROM ValidationTask").executeUpdate()
         }
         probe.reset()
@@ -141,7 +146,7 @@ class ValidationTaskQueuedEventListenerTest {
     }
 
     @Test
-    fun `정상 흐름 — 두 문서 조회 후 ValidationTaskPrepared 발행, status PENDING 유지`() {
+    fun `정상 흐름 — 두 문서 조회 후 ValidationTaskPrepared 발행, 검출까지 SUCCESS`() {
         val edgeId = 100L
         val sourceDocId = 200L
         val targetDocId = 300L
@@ -167,9 +172,10 @@ class ValidationTaskQueuedEventListenerTest {
         assertEquals(2, findEdge.callCount.get(), "FindEdge 2회 호출 기대 (Process handler + Prepared listener)")
         assertEquals(4, findDocument.callCount.get(), "FindDocument 4회 호출 기대 (Process + Prepared 각각 source+target)")
 
+        awaitTaskStatus(task.id, OutboxStatus.SUCCESS, Duration.ofSeconds(5))
         val updated = repository.findById(task.id)!!
-        assertEquals(OutboxStatus.PENDING, updated.status, "처리 직전 단계 — status PENDING 유지")
-        assertEquals(1, updated.attempts)
+        assertEquals(OutboxStatus.SUCCESS, updated.status, "검출(fake, 충돌 없음)까지 완료 → SUCCESS")
+        assertEquals(1, updated.attempts, "process 단계에서만 attempt 기록")
         assertNotNull(updated.lastAttemptAt)
     }
 
@@ -194,13 +200,12 @@ class ValidationTaskQueuedEventListenerTest {
         testPublisher.publish(ValidationTaskQueuedEvent(taskOk.id))
         testPublisher.publish(ValidationTaskQueuedEvent(taskFail.id))
 
+        // 두 task 모두 종결 상태까지 결정적으로 도달 — taskFail의 실패가 taskOk 완료를 막지 않음(REQUIRES_NEW 격리).
         awaitTaskStatus(taskFail.id, OutboxStatus.FAILED, Duration.ofSeconds(5))
-
-        // taskOk 처리 완료 시점은 latch와 별개 — async tx commit 대기 buffer
-        Thread.sleep(500)
+        awaitTaskStatus(taskOk.id, OutboxStatus.SUCCESS, Duration.ofSeconds(5))
 
         val updatedOk = repository.findById(taskOk.id)!!
-        assertEquals(OutboxStatus.PENDING, updatedOk.status, "정상 task가 격리 미준수로 영향 — REQUIRES_NEW 미적용 의심")
+        assertEquals(OutboxStatus.SUCCESS, updatedOk.status, "정상 task는 다른 task 실패와 무관하게 완료 — REQUIRES_NEW 격리")
         assertEquals(1, updatedOk.attempts)
     }
 

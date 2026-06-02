@@ -30,7 +30,7 @@ class DocumentChangeNotice(
     @Column(name = "last_attempt_at")
     override var lastAttemptAt: OffsetDateTime? = null,
 
-    @Column(name = "failure_reason", length = 1000)
+    @Column(name = "failure_reason", length = FAILURE_REASON_MAX_LENGTH)
     override var failureReason: String? = null,
 
     @Enumerated(EnumType.STRING)
@@ -87,6 +87,11 @@ class DocumentChangeNotice(
 
     fun markFailed(reason: String?) {
         status = OutboxStatus.FAILED
-        failureReason = reason
+        // 외부 API 에러 메시지(긴 본문)가 그대로 넘어올 수 있어 컬럼 길이로 절단.
+        failureReason = reason?.take(FAILURE_REASON_MAX_LENGTH)
+    }
+
+    companion object {
+        const val FAILURE_REASON_MAX_LENGTH = 1000
     }
 }

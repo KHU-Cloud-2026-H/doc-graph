@@ -2,6 +2,7 @@ package com.docgraph.backend.validation.query.application
 
 import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.graph.query.application.SearchEdgeIdsByProjectQuery
+import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.query.infra.ValidationQueryRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -37,7 +38,9 @@ class SearchValidationTasksByProjectQueryHandlerTest {
     @Test
     fun `ValidationTask가 ValidationTaskResponse로 정확히 매핑`() {
         val createdAt = OffsetDateTime.now()
-        val row = ValidationTaskRow(id = 5L, edgeId = 10L, status = OutboxStatus.PENDING, createdAt = createdAt)
+        val row = ValidationTaskRow(
+            id = 5L, edgeId = 10L, status = OutboxStatus.PENDING, failureCategory = null, createdAt = createdAt,
+        )
 
         every { searchEdgeIdsByProject.search(1L) } returns listOf(10L)
         every { validationQueryRepository.findValidationTasksByEdgeIds(listOf(10L), any()) } returns
@@ -50,12 +53,15 @@ class SearchValidationTasksByProjectQueryHandlerTest {
         assertEquals(5L, response.id)
         assertEquals(10L, response.edgeId)
         assertEquals(ValidationStatus.PENDING, response.status)
+        assertEquals(null, response.failureCategory)
         assertEquals(createdAt, response.createdAt)
     }
 
     @Test
     fun `OutboxStatus SUCCESS는 ValidationStatus SUCCESS로 매핑`() {
-        val row = ValidationTaskRow(id = 6L, edgeId = 10L, status = OutboxStatus.SUCCESS, createdAt = OffsetDateTime.now())
+        val row = ValidationTaskRow(
+            id = 6L, edgeId = 10L, status = OutboxStatus.SUCCESS, failureCategory = null, createdAt = OffsetDateTime.now(),
+        )
 
         every { searchEdgeIdsByProject.search(1L) } returns listOf(10L)
         every { validationQueryRepository.findValidationTasksByEdgeIds(listOf(10L), any()) } returns
@@ -67,8 +73,14 @@ class SearchValidationTasksByProjectQueryHandlerTest {
     }
 
     @Test
-    fun `OutboxStatus FAILED는 ValidationStatus FAILED로 매핑`() {
-        val row = ValidationTaskRow(id = 7L, edgeId = 10L, status = OutboxStatus.FAILED, createdAt = OffsetDateTime.now())
+    fun `OutboxStatus FAILED는 ValidationStatus FAILED + failureCategory 그대로 노출`() {
+        val row = ValidationTaskRow(
+            id = 7L,
+            edgeId = 10L,
+            status = OutboxStatus.FAILED,
+            failureCategory = FailureCategory.RATE_LIMITED,
+            createdAt = OffsetDateTime.now(),
+        )
 
         every { searchEdgeIdsByProject.search(1L) } returns listOf(10L)
         every { validationQueryRepository.findValidationTasksByEdgeIds(listOf(10L), any()) } returns
@@ -77,5 +89,6 @@ class SearchValidationTasksByProjectQueryHandlerTest {
         val result = handler.search(1L, PageRequest.of(0, 20))
 
         assertEquals(ValidationStatus.FAILED, result.content[0].status)
+        assertEquals(FailureCategory.RATE_LIMITED, result.content[0].failureCategory)
     }
 }

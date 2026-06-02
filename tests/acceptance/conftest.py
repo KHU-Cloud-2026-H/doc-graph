@@ -8,6 +8,7 @@ Seeder는 UC4~UC8 spec이 검증 대상 외 prerequisite을 acceptance fixture
 endpoint(/test/...)로 우회 생성할 때 사용한다.
 """
 
+import json
 import time
 
 import httpx
@@ -161,6 +162,18 @@ class Seeder:
         assert response.status_code in (200, 201)
         return response.json()["id"]
 
+    def connection(
+        self, *, notion_workspace_id: str, access_token: str = "fixture-access-token"
+    ) -> int:
+        """현재 user를 notion_workspace_id에 연결 — Notion read/write 어댑터가 쓸 access token 시드."""
+        response = self.client.post(
+            "/test/notion-connections",
+            headers=self.headers,
+            json={"notionWorkspaceId": notion_workspace_id, "accessToken": access_token},
+        )
+        assert response.status_code in (200, 201)
+        return response.json()["id"]
+
     def proposal(
         self,
         *,
@@ -236,6 +249,28 @@ def inbox_has(client):
         return any(item.get("id") == conflict_id for item in items)
 
     return _has
+
+
+@pytest.fixture
+def stub_ai(wiremock):
+    """AI 충돌 검출 stub — OpenAI chat completion 래핑(choices[].message.content)으로 envelope를 싣는다.
+
+    운영 어댑터는 `choices[0].message.content`를 JSON 문자열로 파싱하므로, 응답을 그대로
+    `{"conflicts": [...]}` 형태로 두면 역직렬화 단계에서 실패한다. conflict dict는 응답 스키마
+    필드(source_block_ids, target_block_id, rationale, new_text, title)를 갖춘다.
+    """
+    def _stub(conflicts: list[dict] | None = None) -> None:
+        content = json.dumps({"conflicts": conflicts or []}, ensure_ascii=False)
+        wiremock.stub(
+            request={"method": "POST", "urlPattern": "/.*/(chat/completions|messages)"},
+            response={
+                "status": 200,
+                "headers": {"Content-Type": "application/json"},
+                "jsonBody": {"choices": [{"message": {"role": "assistant", "content": content}}]},
+            },
+        )
+
+    return _stub
 
 
 @pytest.fixture

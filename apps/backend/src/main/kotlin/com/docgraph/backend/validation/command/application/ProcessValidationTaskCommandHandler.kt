@@ -3,6 +3,7 @@ package com.docgraph.backend.validation.command.application
 import com.docgraph.backend.document.query.application.FindDocumentByIdQuery
 import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
+import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
 import org.springframework.context.ApplicationEventPublisher
@@ -40,15 +41,19 @@ class ProcessValidationTaskCommandHandler(
         if (task.status != OutboxStatus.PENDING) return
 
         val edge = findEdgeById.find(task.edgeId) ?: run {
-            transition.markFailed(command.taskId, "edge not found: ${task.edgeId}")
+            transition.markFailed(command.taskId, FailureCategory.MISSING_REFERENCE, "edge not found: ${task.edgeId}")
             return
         }
         findDocumentById.find(edge.sourceDocumentId) ?: run {
-            transition.markFailed(command.taskId, "source document not found: ${edge.sourceDocumentId}")
+            transition.markFailed(
+                command.taskId, FailureCategory.MISSING_REFERENCE, "source document not found: ${edge.sourceDocumentId}",
+            )
             return
         }
         findDocumentById.find(edge.targetDocumentId) ?: run {
-            transition.markFailed(command.taskId, "target document not found: ${edge.targetDocumentId}")
+            transition.markFailed(
+                command.taskId, FailureCategory.MISSING_REFERENCE, "target document not found: ${edge.targetDocumentId}",
+            )
             return
         }
 
@@ -57,6 +62,8 @@ class ProcessValidationTaskCommandHandler(
 
     @Recover
     fun recover(ex: Throwable, command: ProcessValidationTaskCommand) {
-        transition.markFailed(command.taskId, ex.message)
+        // prep 단계는 AI 호출 이전이라 전송/응답 오류가 없다. 재시도 소진 후의 예외는
+        // 내부 오류이므로 UNKNOWN으로 기록한다.
+        transition.markFailed(command.taskId, FailureCategory.UNKNOWN, ex.message)
     }
 }

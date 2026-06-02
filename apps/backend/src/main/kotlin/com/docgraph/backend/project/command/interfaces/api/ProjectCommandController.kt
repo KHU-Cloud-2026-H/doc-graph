@@ -82,6 +82,7 @@ class ProjectCommandController(
                 requesterUserId = getCurrentUserId.get(),
                 name = request.name,
                 notionRootPageId = request.notionRootPageId,
+                validationEnabled = request.validationEnabled,
             ),
         )
         return ResponseEntity.ok(IdResponse(projectId))
@@ -321,6 +322,8 @@ data class CreateProjectRequest(
     val name: String,
     @Schema(description = "Notion 루트 페이지 ID", example = "abc1234567890def")
     val notionRootPageId: String,
+    @Schema(description = "정합성 검증 활성 여부 — false면 생성 시점부터 AI 검증 OFF로 시작 (기본 true)", example = "true")
+    val validationEnabled: Boolean = true,
 )
 
 data class AssignMemberRequest(

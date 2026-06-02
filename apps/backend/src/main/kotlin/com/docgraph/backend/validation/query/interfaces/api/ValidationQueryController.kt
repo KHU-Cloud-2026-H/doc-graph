@@ -1,9 +1,13 @@
 package com.docgraph.backend.validation.query.interfaces.api
 
 import com.docgraph.backend.web.PageResponse
+import com.docgraph.backend.validation.query.application.AiUsageRecordResponse
+import com.docgraph.backend.validation.query.application.AiUsageSummaryResponse
 import com.docgraph.backend.validation.query.application.ConflictResponse
+import com.docgraph.backend.validation.query.application.GetAiUsageSummaryByProjectQuery
 import com.docgraph.backend.validation.query.application.MyConflictRow
 import com.docgraph.backend.validation.query.application.MyConflictStatusFilter
+import com.docgraph.backend.validation.query.application.SearchAiUsageRecordsByProjectQuery
 import com.docgraph.backend.validation.query.application.SearchConflictsByProjectQuery
 import com.docgraph.backend.validation.query.application.SearchMyConflictsQuery
 import com.docgraph.backend.validation.query.application.SearchValidationTasksByProjectQuery
@@ -22,6 +26,8 @@ class ValidationQueryController(
     private val searchConflictsByProject: SearchConflictsByProjectQuery,
     private val searchValidationTasksByProject: SearchValidationTasksByProjectQuery,
     private val searchMyConflicts: SearchMyConflictsQuery,
+    private val getAiUsageSummaryByProject: GetAiUsageSummaryByProjectQuery,
+    private val searchAiUsageRecordsByProject: SearchAiUsageRecordsByProjectQuery,
 ) {
 
     @GetMapping("/projects/{id}/conflicts")
@@ -68,6 +74,29 @@ class ValidationQueryController(
         @RequestParam(defaultValue = "20") size: Int,
     ): ResponseEntity<PageResponse<ValidationTaskResponse>> {
         val result = searchValidationTasksByProject.search(id, PageRequest.of(page, size))
+        return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/projects/{id}/ai-usage")
+    @Operation(summary = "AI 사용량 요약", description = "프로젝트의 총 호출·토큰 합계와 모델별 분해.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "사용량 요약 (없으면 0·빈 분해)"),
+    ])
+    fun getAiUsageSummary(@PathVariable id: Long): ResponseEntity<AiUsageSummaryResponse> {
+        return ResponseEntity.ok(getAiUsageSummaryByProject.get(id))
+    }
+
+    @GetMapping("/projects/{id}/ai-usage/records")
+    @Operation(summary = "AI 사용량 호출 이력", description = "검증 작업별 토큰·모델 호출 이력.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "호출 이력 page (없으면 빈 page)"),
+    ])
+    fun listAiUsageRecords(
+        @PathVariable id: Long,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): ResponseEntity<PageResponse<AiUsageRecordResponse>> {
+        val result = searchAiUsageRecordsByProject.search(id, PageRequest.of(page, size))
         return ResponseEntity.ok(result)
     }
 }

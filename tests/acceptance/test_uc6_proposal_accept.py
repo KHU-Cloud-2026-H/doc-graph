@@ -16,7 +16,7 @@ TARGET_PAGE_ID = "66666666-6666-6666-6666-660000000002"
 
 
 def test_uc6_accept_proposal_converts_to_edge_and_triggers_validation(
-    client, wiremock, auth_headers, seeder, wait_until
+    client, wiremock, auth_headers, seeder, wait_until, stub_ai
 ):
     """UC6 happy path: 점선 proposal 수락 → 실선 edge 전환 → 정합성 검증 트리거."""
     workspace_id = seeder.workspace(notion_workspace_id="test-ws-uc6", name="UC6 Workspace")
@@ -34,10 +34,7 @@ def test_uc6_accept_proposal_converts_to_edge_and_triggers_validation(
     )
 
     # 정합성 검증 시 AI 응답 (충돌 없음)
-    wiremock.stub(
-        request={"method": "POST", "urlPattern": "/.*/(chat/completions|messages)"},
-        response={"status": 200, "jsonBody": {"conflicts": []}},
-    )
+    stub_ai()
 
     # 검증 axis: 제안 수락
     accept = client.post(

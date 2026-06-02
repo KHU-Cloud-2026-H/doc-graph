@@ -6,10 +6,12 @@ import com.docgraph.backend.project.command.domain.ProjectMember
 import com.docgraph.backend.project.command.domain.ProjectMemberRepository
 import com.docgraph.backend.project.command.domain.ProjectMemberRole
 import com.docgraph.backend.project.command.domain.ProjectPermissionDeniedException
+import com.docgraph.backend.project.command.domain.ProjectRegisteredEvent
 import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.project.command.domain.ProjectWorkspaceNotFoundException
 import com.docgraph.backend.workspace.query.application.FindWorkspaceCreatorIdByIdQuery
 import com.docgraph.backend.workspace.query.application.FindWorkspaceMemberIdByUserIdQuery
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -19,6 +21,7 @@ class RegisterProjectCommandHandler(
     private val projectMemberRepository: ProjectMemberRepository,
     private val findWorkspaceCreatorId: FindWorkspaceCreatorIdByIdQuery,
     private val findWorkspaceMemberId: FindWorkspaceMemberIdByUserIdQuery,
+    private val publisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun handle(command: RegisterProjectCommand): Long {
@@ -51,6 +54,7 @@ class RegisterProjectCommandHandler(
                 role = ProjectMemberRole.ADMIN,
             ),
         )
+        publisher.publishEvent(ProjectRegisteredEvent(project.id, command.validationEnabled))
         return project.id
     }
 }

@@ -67,7 +67,7 @@ sequenceDiagram
     else 부모 페이지 변경
         document->>graph: 타입 변경 통보
     end
-    graph->>graph: 엣지 생성·갱신,<br/>pg_trgm 키워드 매칭으로 연결 제안 생성
+    graph->>graph: 엣지 생성·갱신,<br/>키워드 유사도로 연결 제안 생성
     graph->>validation: ValidationPairCreatedEvent
     validation->>validation: ValidationTask(pending) 영속화
 ```
@@ -168,6 +168,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | `FindWorkspaceIdByMemberIdQuery` | project | 프로젝트 멤버 배정·타입 담당자 설정 시 멤버의 워크스페이스 검증 |
 | `FindWorkspaceMemberIdByUserIdQuery` | project | 사용자의 워크스페이스 멤버 자격·멤버 ID 식별(권한 검증·프로젝트 멤버 등록) |
 | `FindWorkspaceCreatorIdByIdQuery` | project, document | project는 프로젝트 등록 시 워크스페이스 생성자에게 Project Admin 자동 부여; document는 Notion 페이지 브라우징 시 워크스페이스 생성자 게이트 |
+| `SearchWorkspaceMemberIdsByUserIdQuery` | validation | 인박스 라우팅 — 사용자가 속한 워크스페이스 멤버 ID 묶음 조회 |
 
 ---
 
@@ -197,10 +198,11 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 
 | 이름 | 트리거 | 소비자 | 처리 |
 | --- | --- | --- | --- |
+| `ProjectRegisteredEvent` | 프로젝트 등록 | validation | 생성 시 검증 OFF로 지정되면 프로젝트 검증 setting 초기화 |
 | `ProjectSyncTriggeredEvent` | 초기/수동 동기화 트리거 | document | 프로젝트 루트 페이지 하위 트리 동기화 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | document | 프로젝트 소속 문서·블록 정리 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | graph | 프로젝트 소속 엣지·제안·룰 정리 |
-| `ProjectDiscardedEvent` | 프로젝트 삭제 | validation | 프로젝트 소속 검증 작업·충돌 정리 |
+| `ProjectDiscardedEvent` | 프로젝트 삭제 | validation | 프로젝트 소속 검증 작업·충돌·검증 setting 정리 |
 | `ProjectDiscardedEvent` | 프로젝트 삭제 | notification | 프로젝트 webhook 설정 정리 |
 
 **도메인 간 인터페이스 — Query API**
@@ -211,6 +213,7 @@ Notion OAuth 인증과 세션 관리를 담당한다. 별도 회원가입 플로
 | `SearchAdminProjectIdsByUserIdQuery` | validation, notification | 인박스 라우팅 — target 담당자 부재 시 Project Admin 귀속; notification은 webhook 설정·조회 시 Project Admin 권한 검증 |
 | `SearchProjectIdsByWorkspaceIdsQuery` | workspace | 워크스페이스 카드 응답 조립 — workspace별 프로젝트 ID 묶음 조회 |
 | `SearchProjectRefsByIdsQuery` | validation, notification | 인박스 라우팅·충돌 알림 — 프로젝트 ID 묶음으로 이름 조회 |
+| `SearchAssignedDocumentTypesByUserIdQuery` | validation | 인박스 라우팅 — 사용자가 담당자 기본값으로 지정된 문서 타입 식별(type fallback) |
 
 ---
 
@@ -280,6 +283,8 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `SearchDocumentStatsByProjectIdsQuery` | project, workspace | 카드 응답 조립 — 프로젝트별 문서 수·Notion 최근 변경 시각 조회 |
 | `SearchPageInfoByNotionPageIdsQuery` | project | 카드 응답 조립 — 루트 Notion 페이지 제목·아이콘 조회(프로젝트 아이콘 표시) |
 | `SearchDocumentReferencesByIdsQuery` | validation, notification | 인박스·충돌 알림 — 문서 ID 묶음으로 제목·프로젝트 조회 |
+| `SearchDocumentIdsByProjectAndTypesQuery` | validation | 인박스 라우팅 — 프로젝트·타입 조합으로 문서 ID 묶음 조회 |
+| `SearchDocumentNodesByProjectQuery` | graph | 프로젝트 그래프 노드 데이터(문서 노드) 조회 |
 
 ---
 
@@ -294,7 +299,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 
 **주요 흐름**
 - 타입·링크 정보 수신 시 룰 테이블 조회 → Notion 링크·멘션 있으면 엣지 자동 생성
-- Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 `pg_trgm` 키워드 매칭으로 상위 N개를 EdgeProposal로 생성
+- Notion 링크·멘션 없는 경우 룰 타입 조합 후보 중 키워드 유사도로 source 문서당 상위 N개를 EdgeProposal로 생성
 - 타입 변경 수신 시 기존 엣지·제안 중 룰과 불일치하는 항목 삭제, 새 룰에 따라 재평가
 - Admin이 EdgeProposal 수락 시 DependencyEdge로 전환 → 정합성 검증 대기열에 추가
 - Admin이 커스텀 엣지 추가 시 → 정합성 검증 대기열에 추가
@@ -325,6 +330,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | 이름 | 트리거 | 소비자 | 처리 |
 | --- | --- | --- | --- |
 | `ValidationPairCreatedEvent` | 엣지 자동 생성·재평가 또는 제안 수락 후 검증 대상 쌍 확정 | validation | `ValidationTask(pending)` 영속화(검증 대기열 등록) |
+| `DependencyEdgeRemovedEvent` | 엣지 삭제 | validation | 해당 엣지의 미해소 Conflict 해소(cascade) |
 
 **도메인 간 인터페이스 — Query API**
 
@@ -335,6 +341,7 @@ Notion 문서의 동기화와 타입 분류를 담당한다. 변경 감지 흐�
 | `SearchEdgeIdsByProjectQuery` | validation | 프로젝트 검증 작업 목록 조회 시 엣지 ID 필터 |
 | `SearchEdgeIdsByProjectIdsQuery` | validation | 카드 미해소 충돌 카운트 조립 — 프로젝트 묶음의 엣지 ID 일괄 조회 |
 | `SearchEdgeIdsByTargetDocumentIdsQuery` | validation | 인박스 라우팅 — 사용자의 담당 문서로 향하는 엣지 식별 |
+| `SearchEdgeDetailsByIdsQuery` | validation | 인박스 — 엣지 ID 묶음으로 source/target 문서 ID 매핑 |
 
 ---
 
@@ -370,6 +377,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 - 동일 이벤트 재처리 시 중복 검증 방지 (idempotency)
 - 한 문서 쌍의 검증 실패가 다른 쌍에 영향을 주지 않아야 함 (실패 격리)
 - worker 실패 시 `ValidationTask`은 `pending` 또는 `failed`로 남아 retry · stale row 재처리 worker가 재시도
+- 프로젝트 단위로 검증을 비활성화할 수 있다 (LLM 비용 절감 opt-out, 기본 활성). 비활성 프로젝트는 변경 대상 쌍을 수신해도 `ValidationTask`를 생성하지 않는다 — 기존 충돌과 이미 대기 중인 작업은 유지된다. 생성 시점에도 `ProjectRegisteredEvent`로 비활성 지정 가능.
 
 **도메인 간 인터페이스 — Event**
 
@@ -395,7 +403,7 @@ AI 기반 정합성 검증과 충돌 상태 관리를 담당한다. 담당자별
 외부 알림 발송을 담당한다. `validation`으로부터 충돌 감지 이벤트를 수신한다.
 
 **주요 흐름**
-1. 프로젝트 Webhook URL 설정/조회 (`PUT`·`GET /projects/{id}/webhook`)
+1. 프로젝트 Webhook URL 설정·조회
 2. `validation`의 `ConflictDetectedEvent` 수신
 3. 프로젝트 Webhook URL로 알림 발송 (Slack·Discord 호환 포맷)
 

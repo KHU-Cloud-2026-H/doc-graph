@@ -22,6 +22,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 프로젝트 정합성 검증 ON/OFF 조회 */
+        get: operations["getValidation"];
+        /**
+         * 프로젝트 정합성 검증 ON/OFF 설정
+         * @description OFF면 해당 프로젝트의 변경에 대해 AI 검증 작업을 생성하지 않는다(이미 대기 중인 작업·기존 충돌은 영향받지 않음). 기본값은 ON.
+         */
+        put: operations["updateValidation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/type-assignees": {
         parameters: {
             query?: never;
@@ -563,6 +584,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 사용량 요약
+         * @description 프로젝트의 총 호출·토큰 합계와 모델별 분해.
+         */
+        get: operations["getAiUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/ai-usage/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 사용량 호출 이력
+         * @description 검증 작업별 토큰·모델 호출 이력.
+         */
+        get: operations["listAiUsageRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth2/authorization/notion": {
         parameters: {
             query?: never;
@@ -747,6 +808,13 @@ export interface components {
              */
             url?: string;
         };
+        UpdateProjectValidationRequest: {
+            /**
+             * @description 정합성 검증 활성 여부 — false면 AI 검증 작업 생성 중단
+             * @example false
+             */
+            enabled?: boolean;
+        };
         TypeAssigneeItem: {
             /**
              * @description 문서 타입
@@ -775,6 +843,11 @@ export interface components {
              * @example abc1234567890def
              */
             notionRootPageId?: string;
+            /**
+             * @description 정합성 검증 활성 여부 — false면 생성 시점부터 AI 검증 OFF로 시작 (기본 true)
+             * @example true
+             */
+            validationEnabled?: boolean;
         };
         IdResponse: {
             /**
@@ -790,58 +863,6 @@ export interface components {
              * @example user@example.com
              */
             email?: string;
-        };
-        NotionActor: {
-            /**
-             * @description actor ID
-             * @example c7c11cca-1d73-471d-9b6e-bdef51470190
-             */
-            id?: string;
-            /**
-             * @description actor 타입 (person / bot)
-             * @example person
-             */
-            type?: string;
-        };
-        NotionEntity: {
-            /**
-             * @description 엔티티 ID (페이지 ID)
-             * @example abc1234567890def
-             */
-            id?: string;
-            /**
-             * @description 엔티티 타입
-             * @example page
-             */
-            type?: string;
-        };
-        NotionWebhookPayload: {
-            /** @description 웹훅 이벤트 고유 ID */
-            id?: string;
-            /**
-             * @description 이벤트 발생 시각 (ISO 8601)
-             * @example 2024-12-05T19:49:36.997Z
-             */
-            timestamp?: string;
-            /**
-             * @description 이벤트 타입 (page.content_updated / page.moved)
-             * @example page.content_updated
-             */
-            type?: string;
-            /** @description 워크스페이스 ID */
-            workspaceId?: string;
-            /** @description 웹훅 구독 ID */
-            subscriptionId?: string;
-            /** @description 이벤트를 트리거한 엔티티 */
-            entity?: components["schemas"]["NotionEntity"];
-            /** @description 이벤트 작성자 목록 */
-            authors?: components["schemas"]["NotionActor"][];
-            /**
-             * Format: int32
-             * @description 전달 시도 횟수 (최대 8회)
-             * @example 1
-             */
-            attemptNumber?: number;
         };
         CreateRuleRequest: {
             /**
@@ -1229,6 +1250,13 @@ export interface components {
              */
             url?: string | null;
         };
+        ProjectValidationResponse: {
+            /**
+             * @description 정합성 검증 활성 여부 (설정 부재 시 기본 true)
+             * @example true
+             */
+            enabled?: boolean;
+        };
         PageResponseValidationTaskResponse: {
             content?: components["schemas"]["ValidationTaskResponse"][];
             /**
@@ -1274,6 +1302,11 @@ export interface components {
              * @enum {string}
              */
             status?: "PENDING" | "SUCCESS" | "FAILED";
+            /**
+             * @description 실패 원인 분류 (status=FAILED일 때만 존재)
+             * @enum {string|null}
+             */
+            failureCategory?: "RATE_LIMITED" | "TIMEOUT" | "UPSTREAM_ERROR" | "INVALID_REQUEST" | "INVALID_RESPONSE" | "MISSING_REFERENCE" | "UNKNOWN" | null;
             /**
              * Format: date-time
              * @description 생성 시각
@@ -1596,6 +1629,128 @@ export interface components {
              */
             documentType?: "meeting_notes" | "planning" | "requirements" | "design" | "research";
         };
+        AiUsageByModel: {
+            /**
+             * @description 응답이 알려준 실제 model 버전
+             * @example gpt-4o-2024-08-06
+             */
+            model?: string;
+            /**
+             * Format: int64
+             * @description 호출 수
+             * @example 12
+             */
+            calls?: number;
+            /**
+             * Format: int64
+             * @description prompt 토큰 합계
+             * @example 14000
+             */
+            promptTokens?: number;
+            /**
+             * Format: int64
+             * @description completion 토큰 합계
+             * @example 3200
+             */
+            completionTokens?: number;
+            /**
+             * Format: int64
+             * @description 전체 토큰 합계
+             * @example 17200
+             */
+            totalTokens?: number;
+        };
+        AiUsageSummaryResponse: {
+            /**
+             * Format: int64
+             * @description 총 호출 수
+             * @example 30
+             */
+            totalCalls?: number;
+            /**
+             * Format: int64
+             * @description 총 prompt 토큰
+             * @example 36000
+             */
+            totalPromptTokens?: number;
+            /**
+             * Format: int64
+             * @description 총 completion 토큰
+             * @example 8000
+             */
+            totalCompletionTokens?: number;
+            /**
+             * Format: int64
+             * @description 총 토큰
+             * @example 44000
+             */
+            totalTokens?: number;
+            /** @description 모델별 분해 */
+            byModel?: components["schemas"]["AiUsageByModel"][];
+        };
+        AiUsageRecordResponse: {
+            /**
+             * Format: int64
+             * @description 사용량을 발생시킨 검증 작업 ID
+             * @example 1
+             */
+            validationTaskId?: number;
+            /**
+             * @description 응답이 알려준 실제 model 버전
+             * @example gpt-4o-2024-08-06
+             */
+            model?: string;
+            /**
+             * Format: int32
+             * @description prompt 토큰
+             * @example 1200
+             */
+            promptTokens?: number;
+            /**
+             * Format: int32
+             * @description completion 토큰
+             * @example 300
+             */
+            completionTokens?: number;
+            /**
+             * Format: int32
+             * @description 전체 토큰
+             * @example 1500
+             */
+            totalTokens?: number;
+            /**
+             * Format: date-time
+             * @description 호출 시각
+             */
+            createdAt?: string;
+        };
+        PageResponseAiUsageRecordResponse: {
+            content?: components["schemas"]["AiUsageRecordResponse"][];
+            /**
+             * Format: int64
+             * @description 전체 항목 수
+             * @example 100
+             */
+            totalElements?: number;
+            /**
+             * Format: int32
+             * @description 전체 페이지 수
+             * @example 5
+             */
+            totalPages?: number;
+            /**
+             * Format: int32
+             * @description 현재 페이지 (0-based)
+             * @example 0
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description 페이지 크기
+             * @example 20
+             */
+            size?: number;
+        };
         InboxDocumentRef: {
             /** Format: int64 */
             id?: number;
@@ -1655,6 +1810,7 @@ export interface components {
             parentBlockId?: string | null;
             type?: string;
             text?: string | null;
+            previousText?: string | null;
             /** Format: int32 */
             order?: number;
         };
@@ -1776,6 +1932,66 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description 설정 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 호출자가 Project Admin 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 완료 — 설정 부재 시 enabled true */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectValidationResponse"];
+                };
+            };
+            /** @description 프로젝트 없음 또는 호출자가 Project Admin 아님 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectValidationRequest"];
             };
         };
         responses: {
@@ -1922,6 +2138,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description 같은 워크스페이스에 같은 루트 페이지 프로젝트 이미 존재 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     inviteMember: {
@@ -1974,15 +2197,13 @@ export interface operations {
     receiveWebhook: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Notion-Signature"?: string;
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotionWebhookPayload"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -3089,6 +3310,53 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseConflictResponse"];
+                };
+            };
+        };
+    };
+    getAiUsageSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 사용량 요약 (없으면 0·빈 분해) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AiUsageSummaryResponse"];
+                };
+            };
+        };
+    };
+    listAiUsageRecords: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 호출 이력 page (없으면 빈 page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAiUsageRecordResponse"];
                 };
             };
         };

@@ -6,6 +6,7 @@ import com.docgraph.backend.document.query.application.FindDocumentByIdQuery
 import com.docgraph.backend.event.OutboxStatus
 import com.docgraph.backend.graph.query.application.EdgeDetail
 import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
+import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTask
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
@@ -59,7 +60,7 @@ class ProcessValidationTaskCommandHandlerTest {
         verify { findEdgeById.find(edgeId) }
         verify(exactly = 2) { findDocumentById.find(any()) }
         verify { publisher.publishEvent(any<ValidationTaskPreparedEvent>()) }
-        verify(exactly = 0) { transition.markFailed(any(), any()) }
+        verify(exactly = 0) { transition.markFailed(any(), any(), any()) }
     }
 
     @Test
@@ -84,7 +85,9 @@ class ProcessValidationTaskCommandHandlerTest {
 
         handler.handle(ProcessValidationTaskCommand(taskId))
 
-        verify { transition.markFailed(taskId, match { it != null && it.contains("edge not found") }) }
+        verify {
+            transition.markFailed(taskId, FailureCategory.MISSING_REFERENCE, match { it != null && it.contains("edge not found") })
+        }
         verify(exactly = 0) { findDocumentById.find(any()) }
         verify(exactly = 0) { publisher.publishEvent(any<ValidationTaskPreparedEvent>()) }
     }
@@ -99,7 +102,9 @@ class ProcessValidationTaskCommandHandlerTest {
 
         handler.handle(ProcessValidationTaskCommand(taskId))
 
-        verify { transition.markFailed(taskId, match { it != null && it.contains("source") }) }
+        verify {
+            transition.markFailed(taskId, FailureCategory.MISSING_REFERENCE, match { it != null && it.contains("source") })
+        }
         verify(exactly = 0) { publisher.publishEvent(any<ValidationTaskPreparedEvent>()) }
     }
 
@@ -114,7 +119,9 @@ class ProcessValidationTaskCommandHandlerTest {
 
         handler.handle(ProcessValidationTaskCommand(taskId))
 
-        verify { transition.markFailed(taskId, match { it != null && it.contains("target") }) }
+        verify {
+            transition.markFailed(taskId, FailureCategory.MISSING_REFERENCE, match { it != null && it.contains("target") })
+        }
         verify(exactly = 0) { publisher.publishEvent(any<ValidationTaskPreparedEvent>()) }
     }
 
@@ -129,7 +136,7 @@ class ProcessValidationTaskCommandHandlerTest {
             handler.handle(ProcessValidationTaskCommand(taskId))
         }
         assertEquals("transient", ex.message)
-        verify(exactly = 0) { transition.markFailed(any(), any()) }
+        verify(exactly = 0) { transition.markFailed(any(), any(), any()) }
         verify(exactly = 0) { publisher.publishEvent(any<ValidationTaskPreparedEvent>()) }
     }
 
@@ -139,6 +146,6 @@ class ProcessValidationTaskCommandHandlerTest {
 
         handler.recover(ex, ProcessValidationTaskCommand(1L))
 
-        verify { transition.markFailed(1L, "retry exhausted") }
+        verify { transition.markFailed(1L, FailureCategory.UNKNOWN, "retry exhausted") }
     }
 }

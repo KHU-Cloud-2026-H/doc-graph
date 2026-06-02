@@ -76,6 +76,9 @@ allOpen {
 tasks.withType<Test> {
 	useJUnitPlatform()
 	systemProperty("spring.datasource.hikari.maximum-pool-size", "2")
+	// 컨테이너 공유 테스트 클래스(slice+component ≈ 40)가 컨텍스트 캐시 기본 한도(32)를 넘겨
+	// eviction → pool 개폐 churn으로 full `test` 실행 시 DB 커넥션 단절 flaky. 한도를 컨텍스트 수 위로.
+	systemProperty("spring.test.context.cache.maxSize", "64")
 }
 
 tasks.register<Test>("unitTest") {
