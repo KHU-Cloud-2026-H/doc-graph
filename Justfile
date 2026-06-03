@@ -47,6 +47,10 @@ test-class class *gradleArgs:
 compose-up mode="mock":
     COMPOSE_PROFILES=backend,{{mode}} {{dotenv-run}} docker compose up --build
 
+# 서버 상주 배포 — backend profile만(ngrok·wiremock 제외), detached + restart 정책 overlay.
+compose-deploy:
+    COMPOSE_PROFILES=backend {{dotenv-run}} docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
 # 모든 profile 서비스를 내림 — COMPOSE_PROFILES='*'로 전 profile 활성화(profile 미지정 시 비-profile 서비스만 대상이라 backend/mock/live가 orphan으로 남는 문제 회피).
 compose-down:
     COMPOSE_PROFILES='*' {{dotenv-run}} docker compose down
