@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { TopAppBar } from '../components/TopAppBar';
 import { InboxList, type InboxFilter } from '../components/InboxList';
 import { formatRelativeTime } from '../lib/timeAgo';
+import { NOTION_LOGIN_URL } from '../lib/apiClient';
 
 export const WorkspaceSelection = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export const WorkspaceSelection = () => {
                 </span>
               </div>
               <button
-                onClick={() => { window.location.href = '/oauth2/authorization/notion'; }}
+                onClick={() => { window.location.href = NOTION_LOGIN_URL; }}
                 className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
               >
                 <Plus className="w-4 h-4" />

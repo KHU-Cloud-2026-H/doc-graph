@@ -1,6 +1,8 @@
+import { NOTION_LOGIN_URL } from '../../lib/apiClient'
+
 export default function LoginPage() {
   const handleLogin = () => {
-    window.location.href = '/api/oauth2/authorization/notion'
+    window.location.href = NOTION_LOGIN_URL
   }
 
   return (
