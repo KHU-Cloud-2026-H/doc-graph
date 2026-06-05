@@ -58,10 +58,16 @@ echo ">>> [3/5] 인프라 전체 apply (RDS 포함 시 10~15분 소요)"
 terraform -chdir="$TERRAFORM_DIR" apply -auto-approve
 echo ""
 
-# ── Step 4: ECS 서비스 강제 재배포 ───────────────────────────────────────────
+# ── Step 4: 프론트엔드 S3 업로드 ─────────────────────────────────────────────
+# API Gateway와 S3 버킷이 생성된 뒤 React 빌드 결과를 private bucket에 업로드한다.
+echo ">>> [4/6] Frontend build & S3 sync"
+"$SCRIPT_DIR/push-frontend.sh" "$PROFILE"
+echo ""
+
+# ── Step 5: ECS 서비스 강제 재배포 ───────────────────────────────────────────
 # terraform이 task definition을 변경하지 않은 경우(이미지 태그만 바뀐 경우 등)에도
 # ECS가 새 이미지를 pull하도록 강제 재배포를 트리거한다.
-echo ">>> [4/5] ECS 서비스 강제 재배포"
+echo ">>> [5/6] ECS 서비스 강제 재배포"
 aws ecs update-service \
   --cluster app-cluster \
   --service app-service \
@@ -73,13 +79,15 @@ aws ecs update-service \
 echo "✅ 재배포 요청 완료"
 echo ""
 
-# ── Step 5: 접속 정보 출력 ────────────────────────────────────────────────────
+# ── Step 6: 접속 정보 출력 ────────────────────────────────────────────────────
+APP_URL=$(terraform -chdir="$TERRAFORM_DIR" output -raw api_gateway_endpoint 2>/dev/null)
 SWAGGER_URL=$(terraform -chdir="$TERRAFORM_DIR" output -raw swagger_ui_url 2>/dev/null)
 ALB_DNS=$(terraform -chdir="$TERRAFORM_DIR" output -raw alb_dns_name 2>/dev/null)
 
 echo "========================================="
 echo " 배포 완료"
 echo "========================================="
+echo " App URL    : $APP_URL"
 echo " Swagger UI : $SWAGGER_URL"
 echo " ALB DNS    : $ALB_DNS"
 echo ""
