@@ -1,6 +1,6 @@
 resource "aws_secretsmanager_secret" "rds_password" {
   name                    = "docgraph/rds-password"
-  recovery_window_in_days = 0  # terraform destroy 시 즉시 삭제 — Learner Lab 재배포 대응
+  recovery_window_in_days = 0 # terraform destroy 시 즉시 삭제 — Learner Lab 재배포 대응
   tags                    = { Name = "docgraph/rds-password" }
 }
 

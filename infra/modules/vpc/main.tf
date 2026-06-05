@@ -2,7 +2,7 @@
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true  # Fargate 공인 IP 할당에 필요
+  enable_dns_hostnames = true # Fargate 공인 IP 할당에 필요
   enable_dns_support   = true
 
   tags = { Name = "main-vpc" }
@@ -23,7 +23,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnets[count.index]
   availability_zone       = var.azs[count.index]
-  map_public_ip_on_launch = true  # Fargate에 공인 IP 자동 할당 (NAT GW 없이 ECR pull 가능)
+  map_public_ip_on_launch = true # Fargate에 공인 IP 자동 할당 (NAT GW 없이 ECR pull 가능)
 
   tags = { Name = "public-${var.azs[count.index]}" }
 }
