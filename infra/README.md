@@ -1,5 +1,55 @@
 # infra
 
+## 2026-06-05 update: API Gateway + private S3 frontend
+
+The backend-only ALB entrypoint has been extended to a single HTTPS entrypoint
+through API Gateway.
+
+Current traffic flow:
+
+```text
+User / Notion
+  -> HTTPS API Gateway HTTP API ($default stage)
+     -> /api/*: VPC Link -> ALB HTTP:80 -> ECS Fargate Spring Boot -> RDS
+     -> /assets/* and SPA fallback: REST API S3 proxy -> private S3 React build bucket
+```
+
+Important constraints reflected in the Terraform:
+
+- CloudFront, Route 53, ACM, and ALB HTTPS listeners are still not used.
+- `sg-alb` no longer accepts internet ingress directly. HTTP:80 is allowed from
+  the API Gateway VPC Link security group only.
+- The React build bucket blocks all public access. Direct S3 object URLs should
+  return AccessDenied.
+- AWS HTTP API(v2) does not currently support S3 `GetObject` as a first-class
+  AWS service integration. To keep the public endpoint as an HTTP API while
+  serving private S3 objects, `modules/apigateway` creates a narrow REST API(v1)
+  S3 proxy and routes frontend requests to it from the HTTP API.
+- API Gateway uses the existing Learner Lab `LabRole` ARN for the S3 integration;
+  no IAM roles or policies are created by Terraform.
+
+New modules and scripts:
+
+- `modules/s3-frontend`: private S3 bucket for `apps/frontend/dist`.
+- `modules/apigateway`: HTTP API, VPC Link, `/api/{proxy+}` ALB route, and S3
+  frontend proxy wiring.
+- `scripts/push-frontend.sh`: builds `apps/frontend` and syncs `dist` to S3.
+
+New or changed outputs:
+
+- `api_gateway_endpoint`: main HTTPS URL for the app, Notion OAuth redirect, and
+  webhook registration.
+- `swagger_ui_url`: now uses `api_gateway_endpoint`.
+- `frontend_bucket_name`: target bucket for frontend deployment.
+
+Frontend deployment is included in `scripts/deploy.sh` after `terraform apply`.
+For frontend-only redeploys:
+
+```bash
+cd infra
+./scripts/push-frontend.sh my-lab
+```
+
 DocGraph AWS 인프라 (Terraform). AWS Learner Lab 환경에서 운영합니다.
 
 ## 현재 상태
