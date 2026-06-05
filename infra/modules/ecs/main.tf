@@ -15,8 +15,8 @@ resource "aws_ecs_task_definition" "app" {
   family                   = "app-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 1024  # 1 vCPU — Spring Boot 4 JVM 기동에 최소 필요
-  memory                   = 2048  # 2 GB — 512MB에서 JVM OOM으로 시작 실패
+  cpu                      = 1024 # 1 vCPU — Spring Boot 4 JVM 기동에 최소 필요
+  memory                   = 2048 # 2 GB — 512MB에서 JVM OOM으로 시작 실패
 
   execution_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
   task_role_arn      = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
@@ -32,22 +32,25 @@ resource "aws_ecs_task_definition" "app" {
     }]
 
     environment = [
-      { name = "DB_URL",                  value = "jdbc:postgresql://${var.rds_endpoint}/docgraph" },
-      { name = "DB_USERNAME",             value = "docgraph" },
+      { name = "DB_URL", value = "jdbc:postgresql://${var.rds_endpoint}/docgraph" },
+      { name = "DB_USERNAME", value = "docgraph" },
       { name = "NOTION_AUTHORIZATION_URI", value = "https://api.notion.com/v1/oauth/authorize" },
-      { name = "NOTION_TOKEN_URI",         value = "https://api.notion.com/v1/oauth/token" },
-      { name = "MANAGEMENT_SERVER_PORT",  value = "8080" },
-      { name = "JAVA_TOOL_OPTIONS",       value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" },
-      { name = "AI_OPENAI_BASE_URL",      value = var.ai_openai_base_url },
-      { name = "AI_OPENAI_MODEL",         value = var.ai_openai_model },
+      { name = "NOTION_TOKEN_URI", value = "https://api.notion.com/v1/oauth/token" },
+      { name = "MANAGEMENT_SERVER_PORT", value = "8080" },
+      { name = "JAVA_TOOL_OPTIONS", value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" },
+      { name = "AI_OPENAI_BASE_URL", value = var.ai_openai_base_url },
+      { name = "AI_OPENAI_MODEL", value = var.ai_openai_model },
+      { name = "AUTH_OAUTH_SUCCESS_REDIRECT_URI", value = var.auth_oauth_success_redirect_uri },
+      { name = "CORS_ALLOWED_ORIGIN", value = var.cors_allowed_origin },
+      { name = "NOTION_API_BASE_URL", value = var.notion_api_base_url },
     ]
 
     # 민감 값은 Secrets Manager ARN 참조 — 태스크 실행 시 ECS가 직접 주입
     secrets = [
-      { name = "DB_PASSWORD",              valueFrom = var.rds_password_secret_arn },
-      { name = "NOTION_CLIENT_ID",         valueFrom = var.notion_client_id_secret_arn },
-      { name = "NOTION_CLIENT_SECRET",     valueFrom = var.notion_client_secret_arn },
-      { name = "AI_OPENAI_API_KEY",        valueFrom = var.openai_api_key_secret_arn },
+      { name = "DB_PASSWORD", valueFrom = var.rds_password_secret_arn },
+      { name = "NOTION_CLIENT_ID", valueFrom = var.notion_client_id_secret_arn },
+      { name = "NOTION_CLIENT_SECRET", valueFrom = var.notion_client_secret_arn },
+      { name = "AI_OPENAI_API_KEY", valueFrom = var.openai_api_key_secret_arn },
     ]
 
     healthCheck = {
@@ -55,7 +58,7 @@ resource "aws_ecs_task_definition" "app" {
       interval    = 30
       timeout     = 10
       retries     = 3
-      startPeriod = 120  # Spring Boot + Flyway 기동 시간 확보
+      startPeriod = 120 # Spring Boot + Flyway 기동 시간 확보
     }
 
     logConfiguration = {
@@ -84,7 +87,7 @@ resource "aws_ecs_service" "app" {
   network_configuration {
     subnets          = var.public_subnet_ids
     security_groups  = [var.sg_id]
-    assign_public_ip = true  # NAT GW 없이 ECR pull 가능
+    assign_public_ip = true # NAT GW 없이 ECR pull 가능
   }
 
   load_balancer {
