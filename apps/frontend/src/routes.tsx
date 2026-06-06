@@ -9,8 +9,13 @@ import WorkspaceHome from './pages/WorkspaceHome';
 import WorkspaceSettings from './pages/WorkspaceSettings';
 import NewProjectWizard from './pages/NewProjectWizard';
 import ProjectSettings from './pages/ProjectSettings';
+import LandingPage from './pages/LandingPage';
 
 export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <LandingPage />,
+  },
   {
     element: <AuthGuard />,
     children: [
