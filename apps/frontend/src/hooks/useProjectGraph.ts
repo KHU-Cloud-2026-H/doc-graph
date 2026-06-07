@@ -60,11 +60,17 @@ function toFlowEdges(edges: EdgeResponse[], proposals: EdgeProposalResponse[]): 
   return [...flowEdges, ...proposalEdges]
 }
 
-export function useProjectGraph(projectId: number | undefined) {
+export function useProjectGraph(projectId: number | undefined, { polling = false }: { polling?: boolean } = {}) {
   const { data, isLoading, isError } = useQuery<ProjectGraphResponse>({
     queryKey: ['graph', projectId],
     queryFn: () => apiClient.GET<ProjectGraphResponse>(`/api/projects/${projectId}/graph`),
     enabled: projectId !== undefined,
+    // 노드가 없거나 polling 모드일 때 2초마다 재조회 (새 프로젝트 sync 대기)
+    refetchInterval: (query) => {
+      if (!polling) return false;
+      const nodes = query.state.data?.nodes ?? [];
+      return nodes.length === 0 ? 2000 : false;
+    },
   })
 
   const nodes = useMemo(() => toFlowNodes(data?.nodes ?? []), [data?.nodes])

@@ -43,7 +43,8 @@ export const DependencyGraph = () => {
   const [selectedEdge, setSelectedEdge] = useState<AppEdge | null>(null);
   const [pendingConnect, setPendingConnect] = useState<{ source: string; target: string } | null>(null);
 
-  const { nodes: apiNodes, edges: apiEdges } = useProjectGraph(numericProjectId);
+  // 노드가 없으면 sync 대기 중 — 최대 2초 간격으로 재조회
+  const { nodes: apiNodes, edges: apiEdges } = useProjectGraph(numericProjectId, { polling: true });
   const { project } = useProjectDetail(numericProjectId);
   const notionRootUrl = project?.notionRootPageId
     ? `https://notion.so/${project.notionRootPageId.replace(/-/g, '')}`

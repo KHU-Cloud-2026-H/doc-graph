@@ -5,6 +5,7 @@ import type { DocumentNode } from "../store";
 import { formatRelativeTime } from "../lib/timeAgo";
 import { useIgnoreConflict, useUnignoreConflict, useApproveConflict } from "../hooks/useConflictActions";
 import { useProjectSync } from "../hooks/useProjectSync";
+import { useLatestValidationTask } from "../hooks/useProjectDetail";
 
 interface RightSidebarProps {
   document: DocumentNode;
@@ -29,11 +30,8 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // mock: 마지막 검증 시각. 실제 연동 시 ValidationTaskResponse.createdAt 또는
-  // ConflictFindingResponse.detectedAt 기반으로 계산.
-  // TODO(API): 백엔드에 문서 단위 재검증 트리거 API 추가 필요 (현재는 /projects/{id}/sync 프로젝트 전체만).
-  const lastValidatedAt = new Date(Date.now() - 2 * 60 * 1000);
-  const validatedAgo = formatRelativeTime(lastValidatedAt);
+  const { lastValidatedAt } = useLatestValidationTask(projectId ? Number(projectId) : undefined);
+  const validatedAgo = lastValidatedAt ? formatRelativeTime(lastValidatedAt) : null;
 
   const activeIssues = (doc.issues ?? []).filter(i => i.status !== 'IGNORED');
   const ignoredIssues = (doc.issues ?? []).filter(i => i.status === 'IGNORED');
@@ -69,7 +67,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
           title="다시 검증하기"
         >
           <RefreshCw className={`w-3 h-3 ${sync.isPending ? 'animate-spin' : ''}`} />
-          <span>{sync.isPending ? '검증 중...' : `${validatedAgo} 갱신`}</span>
+          <span>{sync.isPending ? '검증 중...' : validatedAgo ? `${validatedAgo} 갱신` : '다시 검증'}</span>
         </button>
         <button
           onClick={onClose}

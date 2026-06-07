@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store';
-import { useProjectDetail, useProjectCategories, useProjectTypeAssignees } from '../hooks/useProjectDetail';
+import { useProjectDetail, useProjectCategories, useProjectTypeAssignees, useProjectValidation, useProjectAiUsage, useProjectRules } from '../hooks/useProjectDetail';
+import type { RuleDetail } from '../hooks/useProjectDetail';
 import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
 import { useNotionPageChildren, useNotionPageMetadata } from '../hooks/useNotionPages';
 import {
@@ -50,11 +51,21 @@ const ProjectSettings: React.FC = () => {
     project?.notionRootPageId ?? null,
   );
 
-  type TabId = 'info' | 'members' | 'categories' | 'assignees' | 'delete';
+  type TabId = 'info' | 'members' | 'categories' | 'assignees' | 'ai-usage' | 'rules' | 'delete';
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
-  // ── 탭 1: 루트 페이지 메타데이터 ───────────────────────────────
+  // ── 탭 1: 루트 페이지 메타데이터 + validation 토글 ──────────────
   const { page: rootPageMeta } = useNotionPageMetadata(numericWorkspaceId, project?.notionRootPageId);
+  const { enabled: validationEnabled, toggle: validationToggle } = useProjectValidation(numericProjectId);
+
+  // ── 탭 5: AI 사용량 ────────────────────────────────────────────
+  const { usage: aiUsage } = useProjectAiUsage(numericProjectId);
+
+  // ── 탭 6: 그래프 룰 ────────────────────────────────────────────
+  const { rules, addRule, deleteRule } = useProjectRules(numericProjectId);
+  const [newRuleSource, setNewRuleSource] = useState<string>('');
+  const [newRuleTarget, setNewRuleTarget] = useState<string>('');
+  const [newRuleCriterion, setNewRuleCriterion] = useState<string>('');
 
   // ── 탭 2 mutations ─────────────────────────────────────────────
   const deleteMember = useDeleteProjectMember(numericProjectId);
@@ -112,8 +123,9 @@ const ProjectSettings: React.FC = () => {
   }, [typeAssignees]);
 
   const handleSaveAssignees = () => {
+    // workspace_member.id 미노출 이슈로 non-null 값은 전송 불가 → null만 전송
     updateTypeAssignees.mutate(
-      DOCUMENT_TYPES.map((t) => ({ documentType: t, assigneeMemberId: assigneeDraft[t] })),
+      DOCUMENT_TYPES.map((t) => ({ documentType: t, assigneeMemberId: null })),
     );
   };
 
@@ -129,13 +141,150 @@ const ProjectSettings: React.FC = () => {
       <div className="flex items-center gap-4">
         <label className="w-40 text-sm text-slate-500 shrink-0">Notion 루트 페이지</label>
         <div className="flex-1 border border-slate-200 rounded-md px-3 h-9 flex items-center bg-slate-50 text-sm text-slate-800 cursor-not-allowed select-none gap-1.5 truncate">
-          {rootPageMeta?.icon?.type === 'EMOJI' && (
-            <span>{rootPageMeta.icon.value}</span>
-          )}
+          {rootPageMeta?.icon?.type === 'EMOJI' && <span>{rootPageMeta.icon.value}</span>}
           <span>{rootPageMeta?.title ?? project?.notionRootPageId ?? '—'}</span>
         </div>
       </div>
+      <div className="flex items-center gap-4">
+        <label className="w-40 text-sm text-slate-500 shrink-0">정합성 검증</label>
+        <button
+          onClick={() => validationToggle.mutate(!validationEnabled)}
+          disabled={validationToggle.isPending}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+            validationEnabled ? 'bg-blue-600' : 'bg-slate-200'
+          } disabled:opacity-50`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            validationEnabled ? 'translate-x-6' : 'translate-x-1'
+          }`} />
+        </button>
+        <span className="text-sm text-slate-500">{validationEnabled ? '활성' : '비활성'}</span>
+      </div>
     </div>
+  );
+
+  // ── 렌더: 탭 5 AI 사용량 ─────────────────────────────────────
+  const renderTabAiUsage = () => (
+    <div className="max-w-lg space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        {[
+          { label: '총 호출 수', value: aiUsage?.totalCalls ?? 0 },
+          { label: '총 토큰', value: (aiUsage?.totalTokens ?? 0).toLocaleString() },
+          { label: 'Prompt 토큰', value: (aiUsage?.totalPromptTokens ?? 0).toLocaleString() },
+          { label: 'Completion 토큰', value: (aiUsage?.totalCompletionTokens ?? 0).toLocaleString() },
+        ].map((item) => (
+          <div key={item.label} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <p className="text-xs text-slate-500 mb-1">{item.label}</p>
+            <p className="text-xl font-bold text-slate-900">{item.value}</p>
+          </div>
+        ))}
+      </div>
+      {(aiUsage?.byModel?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">모델별 분해</h3>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-2 px-2 text-slate-500 font-medium">모델</th>
+                <th className="text-right py-2 px-2 text-slate-500 font-medium">호출</th>
+                <th className="text-right py-2 px-2 text-slate-500 font-medium">토큰</th>
+              </tr>
+            </thead>
+            <tbody>
+              {aiUsage?.byModel?.map((m, i) => (
+                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2 px-2 font-mono text-xs text-slate-700">{m.model ?? '—'}</td>
+                  <td className="py-2 px-2 text-right text-slate-700">{m.calls ?? 0}</td>
+                  <td className="py-2 px-2 text-right text-slate-700">
+                    {((m.promptTokens ?? 0) + (m.completionTokens ?? 0)).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── 렌더: 탭 6 그래프 룰 ─────────────────────────────────────
+  const renderTabRules = () => (
+    <>
+      <div className="w-full overflow-x-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="h-10 px-2 text-left text-sm font-medium text-gray-700">출발 타입</th>
+              <th className="h-10 px-2 text-left text-sm font-medium text-gray-700">도착 타입</th>
+              <th className="h-10 px-2 text-left text-sm font-medium text-gray-700">검증 기준</th>
+              <th className="h-10 px-2 text-left text-sm font-medium text-gray-700">종류</th>
+              <th className="h-10 px-2 w-px"> </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.map((rule: RuleDetail) => (
+              <tr key={rule.id} className="border-b hover:bg-gray-50">
+                <td className="p-2 text-sm font-mono">{rule.sourceType}</td>
+                <td className="p-2 text-sm font-mono">{rule.targetType}</td>
+                <td className="p-2 text-sm text-slate-600 max-w-xs truncate">{rule.validationCriterion}</td>
+                <td className="p-2 text-sm">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${rule.isDefault ? 'bg-slate-100 text-slate-500' : 'bg-blue-100 text-blue-700'}`}>
+                    {rule.isDefault ? '기본' : '커스텀'}
+                  </span>
+                </td>
+                <td className="p-2 w-px">
+                  {!rule.isDefault && (
+                    <button
+                      onClick={() => deleteRule.mutate(rule.id)}
+                      disabled={deleteRule.isPending}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      <X size={14} className="text-white" strokeWidth={2.5} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rules.length === 0 && <p className="text-sm text-gray-400 text-center py-6">룰이 없습니다.</p>}
+      </div>
+
+      <div className="mt-6 border-t border-slate-200 pt-6 space-y-3 max-w-lg">
+        <h3 className="text-sm font-semibold text-slate-700">커스텀 룰 추가</h3>
+        <div className="flex gap-2">
+          <select value={newRuleSource} onChange={(e) => setNewRuleSource(e.target.value)}
+            className="flex-1 h-9 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">출발 타입</option>
+            {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={newRuleTarget} onChange={(e) => setNewRuleTarget(e.target.value)}
+            className="flex-1 h-9 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">도착 타입</option>
+            {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <input
+          type="text"
+          value={newRuleCriterion}
+          onChange={(e) => setNewRuleCriterion(e.target.value)}
+          placeholder="검증 기준 (예: 범위 일치 여부)"
+          className="w-full h-9 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          className={btnPrimary}
+          disabled={!newRuleSource || !newRuleTarget || !newRuleCriterion.trim() || addRule.isPending}
+          onClick={() => {
+            addRule.mutate(
+              { sourceType: newRuleSource, targetType: newRuleTarget, validationCriterion: newRuleCriterion.trim() },
+              { onSuccess: () => { setNewRuleSource(''); setNewRuleTarget(''); setNewRuleCriterion(''); } },
+            );
+          }}
+        >
+          {addRule.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin inline" />추가 중...</> : '룰 추가'}
+        </button>
+      </div>
+    </>
   );
 
   // ── 렌더: 탭 2 프로젝트 멤버 ─────────────────────────────────
@@ -365,6 +514,8 @@ const ProjectSettings: React.FC = () => {
                   { id: 'members' as const, label: '프로젝트 멤버' },
                   { id: 'categories' as const, label: '카테고리 등록' },
                   { id: 'assignees' as const, label: '카테고리별 담당자 지정' },
+                  { id: 'ai-usage' as const, label: 'AI 사용량' },
+                  { id: 'rules' as const, label: '그래프 룰' },
                   { id: 'delete' as const, label: '프로젝트 삭제' },
                 ] as const).map((tab) => (
                   <li key={tab.id}>
@@ -388,12 +539,16 @@ const ProjectSettings: React.FC = () => {
                 {activeTab === 'members' && '프로젝트 멤버'}
                 {activeTab === 'categories' && '카테고리 등록'}
                 {activeTab === 'assignees' && '카테고리별 담당자 지정'}
+                {activeTab === 'ai-usage' && 'AI 사용량'}
+                {activeTab === 'rules' && '그래프 룰'}
                 {activeTab === 'delete' && '프로젝트 삭제'}
               </h2>
               {activeTab === 'info' && renderTabInfo()}
               {activeTab === 'members' && renderTabMembers()}
               {activeTab === 'categories' && renderTabCategories()}
               {activeTab === 'assignees' && renderTabAssignees()}
+              {activeTab === 'ai-usage' && renderTabAiUsage()}
+              {activeTab === 'rules' && renderTabRules()}
               {activeTab === 'delete' && renderTabDelete()}
             </div>
           </div>
