@@ -42,7 +42,7 @@ function renderSiblings(
         <ul key={`ul-${group[0].blockId}`} className="my-3 list-disc pl-6 space-y-1">
           {group.map((n) => (
             <li key={n.blockId}>
-              {n.text}
+              <span className="whitespace-pre-wrap">{n.text}</span>
               {n.children.length > 0 && renderSiblings(n.children, notionPageIdToDocId, docBasePath)}
             </li>
           ))}
@@ -61,7 +61,7 @@ function renderSiblings(
         <ol key={`ol-${group[0].blockId}`} className="my-3 list-decimal pl-6 space-y-1">
           {group.map((n) => (
             <li key={n.blockId}>
-              {n.text}
+              <span className="whitespace-pre-wrap">{n.text}</span>
               {n.children.length > 0 && renderSiblings(n.children, notionPageIdToDocId, docBasePath)}
             </li>
           ))}
@@ -163,18 +163,18 @@ function renderBlock(node: BlockTreeNode): ReactNode {
 
   switch (type) {
     case "paragraph":
-      return <p>{text}</p>;
+      return <p className="whitespace-pre-wrap">{text}</p>;
     case "heading_1":
-      return <h1 className="text-3xl font-bold">{text}</h1>;
+      return <h1 className="text-3xl font-bold whitespace-pre-wrap">{text}</h1>;
     case "heading_2":
-      return <h2 className="text-2xl font-bold">{text}</h2>;
+      return <h2 className="text-2xl font-bold whitespace-pre-wrap">{text}</h2>;
     case "heading_3":
-      return <h3 className="text-xl font-semibold">{text}</h3>;
+      return <h3 className="text-xl font-semibold whitespace-pre-wrap">{text}</h3>;
     case "heading_4":
-      return <h4 className="text-lg font-semibold">{text}</h4>;
+      return <h4 className="text-lg font-semibold whitespace-pre-wrap">{text}</h4>;
     case "quote":
       return (
-        <blockquote className="border-l-4 border-slate-300 pl-4 text-slate-600 italic">
+        <blockquote className="border-l-4 border-slate-300 pl-4 text-slate-600 italic whitespace-pre-wrap">
           {text}
         </blockquote>
       );
@@ -192,7 +192,7 @@ function renderBlock(node: BlockTreeNode): ReactNode {
           <span className="flex items-center h-6 shrink-0">
             <Info className="w-4 h-4 text-slate-500" />
           </span>
-          <div>{text}</div>
+          <div className="whitespace-pre-wrap">{text}</div>
         </div>
       );
     case "to_do":
@@ -201,11 +201,11 @@ function renderBlock(node: BlockTreeNode): ReactNode {
           <span className="flex items-center h-6 shrink-0">
             <Square className="w-4 h-4 text-slate-400" />
           </span>
-          <span>{text}</span>
+          <span className="whitespace-pre-wrap">{text}</span>
         </div>
       );
     default:
-      if (text) return <p>{text}</p>;
+      if (text) return <p className="whitespace-pre-wrap">{text}</p>;
       return (
         <div className="text-sm text-slate-400 border border-dashed border-slate-200 rounded px-2 py-1">
           [{type} 블록 — 지원 예정]
