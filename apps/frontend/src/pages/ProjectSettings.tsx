@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { useProjectDetail, useProjectCategories, useProjectTypeAssignees } from '../hooks/useProjectDetail';
@@ -13,6 +13,7 @@ import {
   useDeleteProjectCategory,
   useUpdateTypeAssignees,
 } from '../hooks/useProjectSettingsMutations';
+import { useDeleteProject } from '../hooks/useDeleteProject';
 
 const DOCUMENT_TYPES = [
   'meeting_notes', 'planning', 'requirements', 'design', 'research',
@@ -31,6 +32,7 @@ const tdCls = 'p-2 align-middle text-sm whitespace-nowrap';
 
 const ProjectSettings: React.FC = () => {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
+  const navigate = useNavigate();
   const numericProjectId = projectId ? Number(projectId) : undefined;
   const numericWorkspaceId = workspaceId ? Number(workspaceId) : undefined;
 
@@ -48,7 +50,7 @@ const ProjectSettings: React.FC = () => {
     project?.notionRootPageId ?? null,
   );
 
-  type TabId = 'info' | 'members' | 'categories' | 'assignees';
+  type TabId = 'info' | 'members' | 'categories' | 'assignees' | 'delete';
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
   // ── 탭 1: 루트 페이지 메타데이터 ───────────────────────────────
@@ -57,6 +59,9 @@ const ProjectSettings: React.FC = () => {
   // ── 탭 2 mutations ─────────────────────────────────────────────
   const deleteMember = useDeleteProjectMember(numericProjectId);
   const updateRole = useUpdateProjectMemberRole(numericProjectId);
+
+  // ── 탭 5 삭제 mutation ────────────────────────────────────────
+  const deleteProject = useDeleteProject(numericProjectId);
 
   // ── 탭 3 로컬 상태 + mutations ─────────────────────────────────
   const addCategory = useAddProjectCategory(numericProjectId);
@@ -299,6 +304,40 @@ const ProjectSettings: React.FC = () => {
     );
   };
 
+  // ── 렌더: 탭 5 프로젝트 삭제 ───────────────────────
+  const renderTabDelete = () => {
+    const handleDelete = () => {
+      if (window.confirm('정말 삭제하시겠습니까?')) {
+        deleteProject.mutate(undefined, {
+          onSuccess: () => {
+            navigate(`/w/${numericWorkspaceId}`);
+          },
+        });
+      }
+    };
+
+    return (
+      <div className="max-w-lg space-y-4">
+        <div className="rounded-md border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-900">
+            프로젝트를 삭제하면 모든 문서, 그래프, 충돌 데이터가 영구 삭제됩니다.
+          </p>
+        </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleteProject.isPending}
+          className={`inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 
+            text-sm font-medium text-white hover:bg-red-700 
+            disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+        >
+          {deleteProject.isPending ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />삭제 중...</>
+          ) : '프로젝트 삭제'}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <main className="flex-1 flex flex-col h-screen overflow-hidden bg-white font-sans">
       <header className="h-14 flex items-center px-6 border-b border-slate-200 bg-white shrink-0">
@@ -326,15 +365,15 @@ const ProjectSettings: React.FC = () => {
                   { id: 'members' as const, label: '프로젝트 멤버' },
                   { id: 'categories' as const, label: '카테고리 등록' },
                   { id: 'assignees' as const, label: '카테고리별 담당자 지정' },
+                  { id: 'delete' as const, label: '프로젝트 삭제' },
                 ] as const).map((tab) => (
                   <li key={tab.id}>
                     <button
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        activeTab === tab.id
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${activeTab === tab.id
                           ? 'bg-slate-100 text-slate-900 font-medium'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -349,11 +388,13 @@ const ProjectSettings: React.FC = () => {
                 {activeTab === 'members' && '프로젝트 멤버'}
                 {activeTab === 'categories' && '카테고리 등록'}
                 {activeTab === 'assignees' && '카테고리별 담당자 지정'}
+                {activeTab === 'delete' && '프로젝트 삭제'}
               </h2>
               {activeTab === 'info' && renderTabInfo()}
               {activeTab === 'members' && renderTabMembers()}
               {activeTab === 'categories' && renderTabCategories()}
               {activeTab === 'assignees' && renderTabAssignees()}
+              {activeTab === 'delete' && renderTabDelete()}
             </div>
           </div>
         </div>
