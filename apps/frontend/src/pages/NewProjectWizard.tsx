@@ -75,36 +75,41 @@ const NewProjectWizard: React.FC = () => {
   const handleFinish = async () => {
     if (!wsId || !notionRootPageId || !projectName.trim()) return;
     setIsSubmitting(true);
+    let projectId: number | null = null;
     try {
-      // 1. 프로젝트 생성
-      const { id: projectId } = await createProject.mutateAsync({ name: projectName.trim(), notionRootPageId });
+      // 1. 프로젝트 생성 — 실패 시 중단
+      const result = await createProject.mutateAsync({ name: projectName.trim(), notionRootPageId });
+      projectId = result.id;
+    } catch {
+      setIsSubmitting(false);
+      return;
+    }
 
-      // 2. 카테고리 등록 (type 있는 것만)
+    // 2~4. 카테고리·담당자·sync — 실패해도 이동은 진행
+    try {
       const categoryEntries = Object.entries(categoryMap).filter(([, type]) => type !== null);
       await Promise.all(
         categoryEntries.map(([notionPageId, documentType]) =>
           apiClient.POST(`/api/projects/${projectId}/categories`, { notionPageId, documentType }),
         ),
       );
+    } catch { /* 카테고리 등록 실패는 무시 — 나중에 Project Settings에서 재설정 가능 */ }
 
-      // 3. 타입별 담당자 지정
+    try {
       const assigneePayload = DOCUMENT_TYPES.map(t => ({
         documentType: t,
         assigneeMemberId: typeAssignees[t],
       }));
       await apiClient.PUT(`/api/projects/${projectId}/type-assignees`, { assignees: assigneePayload });
+    } catch { /* 담당자 설정 실패 무시 */ }
 
-      // 4. 초기 동기화 트리거 (비동기 이벤트 — 완료 시점 알 수 없음)
+    try {
       await apiClient.POST(`/api/projects/${projectId}/sync`);
+    } catch { /* sync 실패 무시 — 그래프 화면에서 수동 sync 가능 */ }
 
-      // sync가 백그라운드에서 실행되는 동안 최소 대기 후 이동
-      await new Promise((r) => setTimeout(r, 3000));
-      navigate(`/w/${workspaceId}/p/${projectId}/graph`);
-    } catch {
-      // 에러는 조용히 처리 — 추후 toast 연결 가능
-    } finally {
-      setIsSubmitting(false);
-    }
+    // sync가 백그라운드에서 실행되는 동안 최소 대기 후 이동
+    await new Promise((r) => setTimeout(r, 3000));
+    navigate(`/w/${workspaceId}/p/${projectId}/graph`);
   };
 
   const availableMembers = workspaceMembers.filter(
