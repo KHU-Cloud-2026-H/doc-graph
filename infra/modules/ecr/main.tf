@@ -4,7 +4,7 @@ resource "aws_ecr_repository" "app" {
   force_delete         = true
 
   image_scanning_configuration {
-    scan_on_push = false  # Learner Lab 크레딧 절약
+    scan_on_push = false # Learner Lab 크레딧 절약
   }
 
   tags = { Name = "spring-boot-app" }

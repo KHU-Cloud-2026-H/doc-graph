@@ -1,6 +1,7 @@
 # 로컬 state 파일 (계정·리소스 정보 포함)
 terraform.tfstate
 terraform.tfstate.backup
+terraform.tfstate.*.backup
 
 # 변수값 파일 (비밀번호 포함)
 *.tfvars
