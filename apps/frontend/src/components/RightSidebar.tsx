@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { DocumentNode } from "../store";
 import { formatRelativeTime } from "../lib/timeAgo";
 import { useIgnoreConflict, useUnignoreConflict, useApproveConflict } from "../hooks/useConflictActions";
+import { useProjectSync } from "../hooks/useProjectSync";
 
 interface RightSidebarProps {
   document: DocumentNode;
@@ -22,6 +23,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
   const ignore = useIgnoreConflict();
   const unignore = useUnignoreConflict();
   const approve = useApproveConflict();
+  const sync = useProjectSync();
 
   const toggleCollapsed = (id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
@@ -61,11 +63,13 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
         {/* 검증 시각 버튼: X 버튼과 비슷한 사이즈, 호버 효과
             TODO(API): 클릭 시 실제 재검증 트리거. 현재 백엔드에 문서 단위 재검증 API 없음. */}
         <button
-          className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          onClick={() => projectId && sync.mutate(Number(projectId))}
+          disabled={!projectId || sync.isPending}
+          className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors disabled:opacity-40"
           title="다시 검증하기"
         >
-          <RefreshCw className="w-3 h-3" />
-          <span>{validatedAgo} 갱신</span>
+          <RefreshCw className={`w-3 h-3 ${sync.isPending ? 'animate-spin' : ''}`} />
+          <span>{sync.isPending ? '검증 중...' : `${validatedAgo} 갱신`}</span>
         </button>
         <button
           onClick={onClose}
@@ -98,63 +102,83 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
 
                 {!isCollapsed && (
                   <div className="px-4 pb-4 space-y-4">
-                    {/* 충돌 원인 파악 */}
-                    <div className="text-sm leading-relaxed">
-                      <span className="text-slate-900 font-semibold inline-block">충돌 원인 파악</span>
-                      <span className="inline-block ml-2 px-1.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 leading-none align-middle rounded-full relative -top-[1px]">AI</span>
-                      <p className="text-slate-600 mt-1">{issue.rationale}</p>
-                    </div>
+                    {/* 충돌 원인 파악 — rationale 있을 때만 */}
+                    {issue.rationale && (
+                      <div className="text-sm leading-relaxed">
+                        <span className="text-slate-900 font-semibold inline-block">충돌 원인 파악</span>
+                        <span className="inline-block ml-2 px-1.5 py-0.5 text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 leading-none align-middle rounded-full relative -top-[1px]">AI</span>
+                        <p className="text-slate-600 mt-1">{issue.rationale}</p>
+                      </div>
+                    )}
 
                     {/* 소스 문서 + 검증 기준 + 액션 버튼 */}
-                    <div className="space-y-2.5">
-                      <div className="border border-yellow-200 rounded-lg overflow-hidden">
-                        <Link
-                          to={`/w/${workspaceId}/p/${projectId}/docs/${issue.sourceDocumentId}`}
-                          className="bg-yellow-50 px-3 py-2 flex items-center justify-between gap-2 border-b border-yellow-100 hover:bg-yellow-100 transition-colors"
-                          title="원본 문서로 이동"
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <FileText className="w-4 h-4 text-yellow-700 shrink-0" />
-                            <span className="text-[13px] font-bold text-yellow-900 truncate">{issue.sourceDocumentTitle}</span>
-                          </div>
-                          <ExternalLink className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
-                        </Link>
-                        <div className="bg-white p-3">
-                          <p className="text-xs text-slate-700 leading-relaxed font-medium">{issue.sourceBlockText}</p>
+                    {issue.sourceDocumentTitle && (
+                      <div className="space-y-2.5">
+                        <div className="border border-yellow-200 rounded-lg overflow-hidden">
+                          {issue.sourceDocumentId ? (
+                            <Link
+                              to={`/w/${workspaceId}/p/${projectId}/docs/${issue.sourceDocumentId}`}
+                              className="bg-yellow-50 px-3 py-2 flex items-center justify-between gap-2 border-b border-yellow-100 hover:bg-yellow-100 transition-colors"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <FileText className="w-4 h-4 text-yellow-700 shrink-0" />
+                                <span className="text-[13px] font-bold text-yellow-900 truncate">{issue.sourceDocumentTitle}</span>
+                              </div>
+                              <ExternalLink className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
+                            </Link>
+                          ) : (
+                            <div className="bg-yellow-50 px-3 py-2 flex items-center gap-1.5 border-b border-yellow-100">
+                              <FileText className="w-4 h-4 text-yellow-700 shrink-0" />
+                              <span className="text-[13px] font-bold text-yellow-900">{issue.sourceDocumentTitle}</span>
+                            </div>
+                          )}
+                          {issue.sourceBlockText && (
+                            <div className="bg-white p-3">
+                              <p className="text-xs text-slate-700 leading-relaxed font-medium">{issue.sourceBlockText}</p>
+                            </div>
+                          )}
+                        </div>
+                        {issue.validationCriterion && (
+                          <p className="text-xs text-slate-500 leading-relaxed px-0.5">💡 {issue.validationCriterion}</p>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <button className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors">
+                            이 문서와의 연결 무시
+                          </button>
+                          <Link
+                            to={`/w/${workspaceId}/p/${projectId}/graph`}
+                            className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors flex items-center gap-1"
+                          >
+                            Dependency Graph
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </Link>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500 leading-relaxed px-0.5">💡 {issue.validationCriterion}</p>
-                      <div className="flex items-center gap-1.5">
-                        <button className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors">
-                          이 문서와의 연결 무시
-                        </button>
-                        <Link
-                          to={`/w/${workspaceId}/p/${projectId}/graph`}
-                          className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors flex items-center gap-1"
-                        >
-                          Dependency Graph
-                          <ExternalLink className="w-2.5 h-2.5" />
-                        </Link>
-                      </div>
-                    </div>
+                    )}
 
-                    {/* DocGraph AI 제안 + diff */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Lightbulb className="w-[18px] h-[18px] text-blue-600" />
-                        <span className="text-[13px] font-semibold text-slate-900">DocGraph AI 제안</span>
-                      </div>
-                      <div className="rounded-lg border border-slate-200 overflow-hidden text-[13px]">
-                        <div className="flex items-start gap-2 bg-red-50 text-slate-700 p-2.5 border-b border-slate-200">
-                          <span className="bg-red-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">-</span>
-                          <span className="whitespace-pre-wrap leading-relaxed">{issue.currentText}</span>
+                    {/* DocGraph AI 제안 + diff — currentText/newText 있을 때만 */}
+                    {(issue.currentText || issue.newText) && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <Lightbulb className="w-[18px] h-[18px] text-blue-600" />
+                          <span className="text-[13px] font-semibold text-slate-900">DocGraph AI 제안</span>
                         </div>
-                        <div className="flex items-start gap-2 bg-green-50 text-slate-700 p-2.5">
-                          <span className="bg-green-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">+</span>
-                          <span className="whitespace-pre-wrap leading-relaxed">{issue.newText}</span>
+                        <div className="rounded-lg border border-slate-200 overflow-hidden text-[13px]">
+                          {issue.currentText && (
+                            <div className="flex items-start gap-2 bg-red-50 text-slate-700 p-2.5 border-b border-slate-200">
+                              <span className="bg-red-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">-</span>
+                              <span className="whitespace-pre-wrap leading-relaxed">{issue.currentText}</span>
+                            </div>
+                          )}
+                          {issue.newText && (
+                            <div className="flex items-start gap-2 bg-green-50 text-slate-700 p-2.5">
+                              <span className="bg-green-600 text-white rounded-full flex items-center justify-center w-[18px] h-[18px] text-[12px] font-bold shrink-0 mt-0.5">+</span>
+                              <span className="whitespace-pre-wrap leading-relaxed">{issue.newText}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 하단 액션 버튼
                         TODO(API): "제안 적용하기" = POST /conflicts/{cid}/findings/{fid}/approve

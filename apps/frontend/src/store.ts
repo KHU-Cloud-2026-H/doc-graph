@@ -18,17 +18,17 @@ import { create } from 'zustand';
 //      이전 mock은 필드명이 정반대였으나 API 매핑 혼동 방지를 위해 정정됨.
 export interface IntegrityIssue {
   id: string;
-  conflictId?: number;           // API: ConflictResponse.id
-  findingId?: number;            // API: ConflictFindingResponse.id
-  status: 'ACTIVE' | 'IGNORED';    // API: ConflictResponse.status
-  title: string;                 // API: ConflictResponse.title (충돌 사안 한 줄 요약 제목)
-  rationale: string;             // API: ConflictFindingResponse.rationale (충돌 원인 AI 판정)
-  sourceDocumentId: number;      // API: ConflictResponse.sourceDocumentId (충돌의 근거가 된 다른 문서)
-  sourceDocumentTitle: string;   // API 미제공, mock 임시 (실연동 시 별도 조회 필요)
-  sourceBlockText: string;       // API: sourceBlockIds[]로 조회한 source 블록 본문 (mock 임시)
-  currentText: string;           // mock 한정: 보고 있는 문서(=target)의 충돌 블록 현재 본문
-  newText: string;               // API: ConflictFindingResponse.newText (해당 블록 수정 후 본문)
-  validationCriterion: string;   // API: EdgeResponse.validationCriterion (자연어 검증 기준)
+  conflictId?: number;
+  findingId?: number;
+  status: 'ACTIVE' | 'IGNORED';
+  title: string;
+  rationale?: string;
+  sourceDocumentId?: number;
+  sourceDocumentTitle?: string;
+  sourceBlockText?: string;
+  currentText?: string;
+  newText?: string;
+  validationCriterion?: string;
 }
 
 export type DocumentType = 'meeting_notes' | 'planning' | 'requirements' | 'design' | 'research';
@@ -68,6 +68,8 @@ interface AppState {
   currentWorkspaceId: number | null;
   currentProjectId: number | null;
   setCurrentProject: (projectId: number) => void;
+  setWorkspaces: (workspaces: Workspace[]) => void;
+  setProjects: (projects: Project[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -636,9 +638,11 @@ interface LeaveState {
       ]
     },
   ],
-  workspaces: [{ id: 1, name: '엔터프라이즈 근태관리 B2B SaaS 프로젝트' }],
-  projects: [{ id: 1, name: 'WorkSync 도입 프로젝트', workspaceId: 1, notionRootPageEmoji: '🏠' }],
-  currentWorkspaceId: 1,
-  currentProjectId: 1,
+  workspaces: [],
+  projects: [],
+  currentWorkspaceId: null,
+  currentProjectId: null,
   setCurrentProject: (projectId) => set(() => ({ currentProjectId: projectId })),
+  setWorkspaces: (workspaces) => set(() => ({ workspaces })),
+  setProjects: (projects) => set(() => ({ projects })),
 }));

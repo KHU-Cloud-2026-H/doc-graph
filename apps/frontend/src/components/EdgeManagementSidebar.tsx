@@ -8,7 +8,8 @@ type Props = {
   nodes: DocumentFlowNode[];
   onClose: () => void;
   onDeleteEdge: (edgeId: string) => void;
-  onAddEdge: (sourceId: string, targetId: string) => void;
+  onAddEdge: (sourceId: string, targetId: string, validationCriterion: string) => void;
+  pendingConnect?: { source: string; target: string } | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -17,10 +18,11 @@ const SOURCE_LABEL: Record<string, string> = {
   CUSTOM: '수동 추가',
 };
 
-export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onAddEdge }: Props) => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [sourceId, setSourceId] = useState('');
-  const [targetId, setTargetId] = useState('');
+export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onAddEdge, pendingConnect }: Props) => {
+  const [showAddForm, setShowAddForm] = useState(!!pendingConnect);
+  const [sourceId, setSourceId] = useState(pendingConnect?.source ?? '');
+  const [targetId, setTargetId] = useState(pendingConnect?.target ?? '');
+  const [validationCriterion, setValidationCriterion] = useState('');
   const [width, setWidth] = useState(420);
   const [expandedEdgeId, setExpandedEdgeId] = useState<string | null>(null);
   const isResizing = useRef(false);
@@ -51,19 +53,20 @@ export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onA
   const getNodeLabel = (nodeId: string) =>
     nodes.find((n) => n.id === nodeId)?.data.label ?? nodeId;
 
-  const managedEdges = edges;
-
   const handleAdd = () => {
-    if (!sourceId || !targetId || sourceId === targetId) return;
-    onAddEdge(sourceId, targetId);
+    if (!sourceId || !targetId || sourceId === targetId || !validationCriterion.trim()) return;
+    onAddEdge(sourceId, targetId, validationCriterion.trim());
     setSourceId('');
     setTargetId('');
+    setValidationCriterion('');
     setShowAddForm(false);
   };
 
   const toggleExpand = (edgeId: string) => {
     setExpandedEdgeId((prev) => (prev === edgeId ? null : edgeId));
   };
+
+  const managedEdges = edges.filter((e) => !e.id.startsWith('p-'));
 
   return (
     <aside
@@ -202,16 +205,28 @@ export const EdgeManagementSidebar = ({ edges, nodes, onClose, onDeleteEdge, onA
                 </option>
               ))}
             </select>
+            <input
+              type="text"
+              value={validationCriterion}
+              onChange={(e) => setValidationCriterion(e.target.value)}
+              placeholder="검증 기준 (예: 두 문서의 PG사 선택이 일치해야 함)"
+              className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <div className="flex gap-2">
               <button
-                onClick={() => { setShowAddForm(false); setSourceId(''); setTargetId(''); }}
+                onClick={() => {
+                  setShowAddForm(false);
+                  setSourceId('');
+                  setTargetId('');
+                  setValidationCriterion('');
+                }}
                 className="flex-1 py-2 rounded-lg border border-slate-200 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleAdd}
-                disabled={!sourceId || !targetId || sourceId === targetId}
+                disabled={!sourceId || !targetId || sourceId === targetId || !validationCriterion.trim()}
                 className="flex-1 py-2 rounded-lg bg-blue-600 text-xs text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 추가

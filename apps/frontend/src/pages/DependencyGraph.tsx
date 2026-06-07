@@ -1,10 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Controls,
   useNodesState,
   useEdgesState,
-  addEdge,
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
@@ -13,8 +12,9 @@ import { ExternalLink, GitBranch } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { DocumentNode } from '../features/graph/DocumentNode';
 import { ConflictEdge } from '../features/graph/ConflictEdge';
-import { initialNodes, initialEdges } from '../features/graph/mockData';
 import type { AppEdge, DocumentFlowNode } from '../features/graph/mockData';
+import { useProjectGraph } from '../hooks/useProjectGraph';
+import { useAddEdge, useDeleteEdge, useAcceptProposal, useRejectProposal } from '../hooks/useEdgeMutations';
 
 import { GraphRightSidebar } from '../components/GraphRightSidebar';
 import { EdgeManagementSidebar } from '../components/EdgeManagementSidebar';
@@ -28,31 +28,103 @@ const edgeTypes = {
   conflict: ConflictEdge,
 };
 
-
 export const DependencyGraph = () => {
   const workspaces = useAppStore((state) => state.workspaces);
   const projects = useAppStore((state) => state.projects);
   const { workspaceId, projectId } = useParams();
+  const numericProjectId = projectId ? Number(projectId) : undefined;
+
   const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? workspaceId;
-  const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
+  const projectName = projects.find((p) => p.id === numericProjectId)?.name ?? '';
+
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showEdgePanel, setShowEdgePanel] = useState(false);
+  const [selectedEdge, setSelectedEdge] = useState<AppEdge | null>(null);
+  const [pendingConnect, setPendingConnect] = useState<{ source: string; target: string } | null>(null);
 
-  const edgesWithData: AppEdge[] = initialEdges.map((edge) => ({
-    ...edge,
-    data: {
-      ...(edge.data ?? {}),
-      onClick: edge.id === 'e3-13' ? () => setShowRightSidebar(true) : undefined,
-    },
-  }));
+  const { nodes: apiNodes, edges: apiEdges } = useProjectGraph(numericProjectId);
+  const addEdge = useAddEdge(numericProjectId);
+  const deleteEdge = useDeleteEdge(numericProjectId);
+  const acceptProposal = useAcceptProposal(numericProjectId);
+  const rejectProposal = useRejectProposal(numericProjectId);
 
-  const [nodes, , onNodesChange] = useNodesState<DocumentFlowNode>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<AppEdge>(edgesWithData);
+  const [nodes, setNodes, onNodesChange] = useNodesState<DocumentFlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<AppEdge>([]);
 
-  const onConnect = useCallback(
-    (params: any) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
+  useEffect(() => { setNodes(apiNodes); }, [apiNodes, setNodes]);
+
+  useEffect(() => {
+    setEdges(apiEdges.map((edge) => ({
+      ...edge,
+      data: {
+        ...(edge.data ?? {}),
+        onClick: () => {
+          setSelectedEdge(edge);
+          setShowRightSidebar(true);
+          setShowEdgePanel(false);
+        },
+      },
+    })));
+  }, [apiEdges, setEdges]);
+
+  // ReactFlow 드래그 연결 → EdgeManagementSidebar pre-fill
+  const onConnect = useCallback((params: { source: string | null; target: string | null }) => {
+    if (!params.source || !params.target) return;
+    setPendingConnect({ source: params.source, target: params.target });
+    setShowEdgePanel(true);
+    setShowRightSidebar(false);
+  }, []);
+
+  // 직선 엣지 클릭 (일반·제안·충돌 전부)
+  const handleEdgeClick = useCallback((_: React.MouseEvent, edge: AppEdge) => {
+    setSelectedEdge(edge);
+    setShowRightSidebar(true);
+    setShowEdgePanel(false);
+  }, []);
+
+  const handleDeleteEdge = useCallback((edgeFlowId: string) => {
+    if (edgeFlowId.startsWith('e-')) {
+      const backendId = parseInt(edgeFlowId.slice(2), 10);
+      if (!isNaN(backendId)) {
+        deleteEdge.mutate(backendId);
+        return;
+      }
+    }
+    // proposal 엣지는 엣지 관리 패널에서 삭제 불가 (수락/거절로만 처리)
+  }, [deleteEdge]);
+
+  const handleAddEdge = useCallback((sourceId: string, targetId: string, validationCriterion: string) => {
+    addEdge.mutate({
+      sourceDocumentId: Number(sourceId),
+      targetDocumentId: Number(targetId),
+      validationCriterion,
+    }, {
+      onSuccess: () => setPendingConnect(null),
+    });
+  }, [addEdge]);
+
+  const handleAcceptProposal = useCallback(() => {
+    if (!selectedEdge?.id.startsWith('p-')) return;
+    const proposalId = parseInt(selectedEdge.id.slice(2), 10);
+    if (!isNaN(proposalId)) {
+      acceptProposal.mutate(proposalId, {
+        onSuccess: () => { setShowRightSidebar(false); setSelectedEdge(null); },
+      });
+    }
+  }, [selectedEdge, acceptProposal]);
+
+  const handleRejectProposal = useCallback(() => {
+    if (!selectedEdge?.id.startsWith('p-')) return;
+    const proposalId = parseInt(selectedEdge.id.slice(2), 10);
+    if (!isNaN(proposalId)) {
+      rejectProposal.mutate(proposalId, {
+        onSuccess: () => { setShowRightSidebar(false); setSelectedEdge(null); },
+      });
+    }
+  }, [selectedEdge, rejectProposal]);
+
+  const selectedSourceLabel = nodes.find((n) => n.id === selectedEdge?.source)?.data.label ?? '';
+  const selectedTargetLabel = nodes.find((n) => n.id === selectedEdge?.target)?.data.label ?? '';
 
   return (
     <main className="flex-1 flex flex-col h-full bg-slate-50 relative">
@@ -67,11 +139,11 @@ export const DependencyGraph = () => {
             {projectName}
           </Link>
           <span className="mx-1 text-[14px] opacity-40">/</span>
-          <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px]">Dependency Graph</span>
+          <span className="px-2 py-1 rounded text-slate-900 font-medium truncate max-w-[300px]">Dependency Graph</span>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setShowEdgePanel(true); setShowRightSidebar(false); }}
+            onClick={() => { setShowEdgePanel(true); setShowRightSidebar(false); setPendingConnect(null); }}
             className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600"
           >
             <GitBranch className="w-4 h-4" />
@@ -92,13 +164,14 @@ export const DependencyGraph = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onEdgeClick={handleEdgeClick}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           attributionPosition="bottom-right"
         >
           <Controls position="bottom-right" className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden mb-6 mr-6" showInteractive={false} />
-          
+
           <div className="absolute bottom-6 left-6 bg-white/95 border border-slate-200 rounded-xl p-4 shadow-lg z-20">
             <h4 className="text-xs font-semibold text-slate-800 mb-3">Graph Legend</h4>
             <div className="flex flex-col gap-2">
@@ -119,28 +192,27 @@ export const DependencyGraph = () => {
         </ReactFlow>
       </div>
 
-      {showRightSidebar && (
-        <GraphRightSidebar onClose={() => setShowRightSidebar(false)} />
+      {showRightSidebar && selectedEdge && (
+        <GraphRightSidebar
+          edge={selectedEdge}
+          sourceLabel={selectedSourceLabel}
+          targetLabel={selectedTargetLabel}
+          isAccepting={acceptProposal.isPending}
+          isRejecting={rejectProposal.isPending}
+          onAccept={handleAcceptProposal}
+          onReject={handleRejectProposal}
+          onClose={() => { setShowRightSidebar(false); setSelectedEdge(null); }}
+        />
       )}
 
       {showEdgePanel && (
         <EdgeManagementSidebar
           edges={edges}
           nodes={nodes}
-          onClose={() => setShowEdgePanel(false)}
-          onDeleteEdge={(id) => setEdges((eds) => eds.filter((e) => e.id !== id))}
-          onAddEdge={(sourceId, targetId) =>
-            setEdges((eds) => [
-              ...eds,
-              {
-                id: `e${sourceId}-${targetId}`,
-                source: sourceId,
-                target: targetId,
-                type: 'straight',
-                style: { stroke: '#1E293B', strokeWidth: 2 },
-              },
-            ])
-          }
+          pendingConnect={pendingConnect}
+          onClose={() => { setShowEdgePanel(false); setPendingConnect(null); }}
+          onDeleteEdge={handleDeleteEdge}
+          onAddEdge={handleAddEdge}
         />
       )}
     </main>

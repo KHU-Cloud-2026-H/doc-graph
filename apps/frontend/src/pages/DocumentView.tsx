@@ -7,6 +7,9 @@ import type { IntegrityIssue } from '../store';
 import { formatRelativeTime } from '../lib/timeAgo';
 import { BlockRenderer } from "../features/document/BlockRenderer";
 import { useDocument } from "../hooks/useDocument";
+import { useWorkspaceDetail } from "../hooks/useWorkspaceDetail";
+import { useProjectDocuments } from "../hooks/useProjectDocuments";
+import { useInbox } from "../hooks/useInbox";
 
 const findParentPage = (docs: any[], targetId: string): any | null => {
   const numId = Number(targetId);
@@ -36,10 +39,27 @@ export const DocumentView = () => {
   const navigate = useNavigate();
   const workspaces = useAppStore((state) => state.workspaces);
   const projects = useAppStore((state) => state.projects);
-  const documents = useAppStore((state) => state.documents);
   const workspaceName = workspaces.find((w) => w.id === Number(workspaceId))?.name ?? workspaceId;
   const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
   const { document: docDetail } = useDocument(id ? Number(id) : undefined);
+  const { workspace } = useWorkspaceDetail(workspaceId ? Number(workspaceId) : undefined);
+  const assignee = workspace?.members?.find(m => m.userId === docDetail?.assigneeMemberId);
+
+  // 실 문서 트리 (API)
+  const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);
+
+  // 현재 문서의 충돌 — inbox에서 targetDocument 기준 필터링
+  const { conflicts } = useInbox();
+  const docIssues: IntegrityIssue[] = conflicts
+    .filter((c) => c.targetDocument.id === Number(id))
+    .map((c) => ({
+      id: String(c.id),
+      status: c.status,
+      conflictId: c.id,
+      title: c.title,
+      sourceDocumentId: c.sourceDocument.id,
+      sourceDocumentTitle: c.sourceDocument.title,
+    }));
 
   // Flatten documents tree to find the active one
   const flattenDocs = (docs: any[]): any[] => {
@@ -52,7 +72,14 @@ export const DocumentView = () => {
   };
 
   const allDocs = flattenDocs(documents);
-  const activeDoc = allDocs.find((d) => d.id === Number(id)) || allDocs[0];
+  const activeDocBase = allDocs.find((d) => d.id === Number(id));
+  // docDetail(API)로 title/emoji 채우고 issues를 inbox 데이터로 덮어씀
+  const activeDoc: DocumentNode | undefined = activeDocBase
+    ? { ...activeDocBase, title: docDetail?.title ?? activeDocBase.title, issues: docIssues }
+    : docDetail
+      ? { id: Number(id), title: docDetail.title ?? '', emoji: undefined, issues: docIssues, children: [] }
+      : undefined;
+
   const parentPage = id ? findParentPage(documents, id) : null;
   const categoryType = resolveCategoryType(documents, activeDoc?.id ?? -1);
 
@@ -200,11 +227,13 @@ export const DocumentView = () => {
                 <div className="flex items-start">
                   <span className="w-32 text-slate-500 shrink-0 leading-6">담당자</span>
                   <div className="flex items-center flex-wrap gap-1.5">
-                    {['박관우', '서영채', '신정환', '전현준', '이창민', '김연길', '이주안'].map((name) => (
-                      <div key={name} className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                        <span className="text-sm">{name}</span>
+                    {assignee ? (
+                      <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                        <span className="text-sm">{assignee.name}</span>
                       </div>
-                    ))}
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
                   </div>
                 </div>
                 {/* 최근 수정 줄 — 좌측 정렬을 위 두 줄 칩의 왼쪽 경계와 일치시키기 위해

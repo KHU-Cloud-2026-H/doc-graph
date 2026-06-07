@@ -10,6 +10,7 @@ export interface InboxDocumentRef {
 export interface MyConflictRow {
   id: number
   edgeId: number
+  workspaceId: number
   projectId: number
   projectName: string
   sourceDocument: InboxDocumentRef

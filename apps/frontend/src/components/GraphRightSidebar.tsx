@@ -1,14 +1,51 @@
-import { X, AlertTriangle, FileText, Lightbulb, ExternalLink, ShieldCheck } from "lucide-react";
+import { X, AlertTriangle, FileText, ShieldCheck, GitBranch, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import type { AppEdge } from "../features/graph/mockData";
 
-export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
+const SOURCE_LABEL: Record<string, string> = {
+  NOTION_REFERENCE: 'Notion 링크/멘션',
+  PROPOSAL_ACCEPTED: '제안 수락',
+  CUSTOM: '수동 추가',
+};
+
+interface Props {
+  edge: AppEdge;
+  sourceLabel: string;
+  targetLabel: string;
+  isAccepting: boolean;
+  isRejecting: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+  onClose: () => void;
+}
+
+export const GraphRightSidebar = ({
+  edge,
+  sourceLabel,
+  targetLabel,
+  isAccepting,
+  isRejecting,
+  onAccept,
+  onReject,
+  onClose,
+}: Props) => {
   const { workspaceId, projectId } = useParams();
+  const isProposal = edge.id.startsWith('p-');
+  const isConflict = edge.data?.conflictStatus === 'CONFLICT';
+
   return (
     <aside className="w-[420px] h-full bg-white border-l border-slate-200 shadow-2xl flex flex-col shrink-0 z-50 font-sans absolute right-0 top-0">
+      {/* Header */}
       <div className="border-b border-slate-200 flex items-center justify-between h-14 px-4 shrink-0 bg-white">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-red-600" />
-          <h3 className="font-bold text-sm text-slate-900 tracking-tight">INTEGRITY ISSUES</h3>
+          {isProposal ? (
+            <GitBranch className="w-4 h-4 text-slate-500" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+          )}
+          <h3 className="font-bold text-sm text-slate-900 tracking-tight">
+            {isProposal ? 'EDGE PROPOSAL' : 'INTEGRITY ISSUE'}
+          </h3>
         </div>
         <button
           onClick={onClose}
@@ -18,109 +55,134 @@ export const GraphRightSidebar = ({ onClose }: { onClose: () => void }) => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5">
-        {/* Section 0: 검증 기준 */}
-        <div className="mb-8">
+      <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        {/* 관련 문서 */}
+        <div>
           <div className="flex items-center gap-2 mb-3">
-            <h4 className="text-sm font-semibold text-slate-900">검증 기준</h4>
-            <ShieldCheck className="w-4 h-4 text-slate-600" />
+            <h4 className="text-sm font-semibold text-slate-900">관련 문서</h4>
           </div>
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <p className="text-sm text-slate-700 leading-relaxed">
-              PG사 선택 기준이 모든 관련 문서에서 일치해야 합니다.
-            </p>
-          </div>
-        </div>
-
-        {/* Section 1: AI 충돌 원인 파악 */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <h4 className="text-sm font-semibold text-slate-900">충돌 원인 파악</h4>
-            <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded">AI</span>
-          </div>
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h2 className="text-base font-bold text-slate-900 mb-1.5">결정사항 전파 누락</h2>
-            <p className="text-sm font-semibold text-slate-800 leading-relaxed">
-              최근 주간 회의록에서 수수료 최적화 이슈로 Toss Payments를 우선 연동하는 것으로 결정되었습니다.
-            </p>
-          </div>
-        </div>
-
-        {/* Section 2: 문서 대조 분석 */}
-        <div className="mb-8">
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">문서 대조 분석</h4>
-          <div className="space-y-4">
-
-            {/* PRD Document */}
-            <div className="border border-red-200 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-red-50 px-3 py-2 flex items-center justify-between border-b border-red-100">
+          <div className="space-y-2">
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="bg-slate-50 px-3 py-2 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-red-600" />
-                  <span className="text-xs font-bold text-red-900">[PRD] v2.0 결제 시스템 요구사항</span>
+                  <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-700">출발 문서</span>
                 </div>
-                <Link to={`/w/${workspaceId}/p/${projectId}/docs/prd`} className="text-[10px] font-bold text-red-600 hover:underline flex items-center gap-0.5">
-                  바로가기 <ExternalLink className="w-3 h-3" />
+                <Link
+                  to={`/w/${workspaceId}/p/${projectId}/docs/${edge.source}`}
+                  className="text-[10px] font-bold text-blue-600 hover:underline"
+                >
+                  바로가기 →
                 </Link>
               </div>
-              <div className="bg-white p-3">
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  "PG사 연동 시 기존 인프라와의 호환성을 고려하여 KCP를 최우선으로 적용하여 개발을 진행한다."
-                </p>
+              <div className="bg-white px-3 py-2.5">
+                <p className="text-xs text-slate-800 font-medium">{sourceLabel || edge.source}</p>
               </div>
             </div>
 
-            {/* Meeting Notes Document */}
-            <div className="border border-amber-200 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-amber-50 px-3 py-2 flex items-center justify-between border-b border-amber-100">
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="bg-slate-50 px-3 py-2 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="text-xs font-bold text-amber-900">[주간회의록] 4월 4주차 백엔드 싱크</span>
+                  <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-700">도착 문서</span>
                 </div>
-                <Link to={`/w/${workspaceId}/p/${projectId}/docs/meet-urgent`} className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-0.5">
-                  바로가기 <ExternalLink className="w-3 h-3" />
+                <Link
+                  to={`/w/${workspaceId}/p/${projectId}/docs/${edge.target}`}
+                  className="text-[10px] font-bold text-blue-600 hover:underline"
+                >
+                  바로가기 →
                 </Link>
               </div>
-              <div className="bg-white p-3">
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  "...백엔드 연동 관련하여 수수료 최적화 및 빠른 정산 주기를 확보하기 위해 Toss Payments를 우선적으로 연동하기로 결정함."
-                </p>
+              <div className="bg-white px-3 py-2.5">
+                <p className="text-xs text-slate-800 font-medium">{targetLabel || edge.target}</p>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Section 3: DocGraph AI 제안 */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <h4 className="text-sm font-semibold text-slate-900">DocGraph AI 제안</h4>
-            <Lightbulb className="w-4 h-4 text-blue-600" />
+        {/* 검증 기준 */}
+        {edge.data?.validationCriterion && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">검증 기준</h4>
+              <ShieldCheck className="w-4 h-4 text-slate-600" />
+            </div>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-700 leading-relaxed">{edge.data.validationCriterion}</p>
+            </div>
           </div>
+        )}
 
-          <div className="rounded-lg border border-slate-200 overflow-hidden text-xs font-mono shadow-sm">
-            <div className="bg-red-50 text-red-800 px-3 py-2.5 flex gap-3 items-start">
-              <span className="text-red-400 select-none font-bold mt-0.5">-</span>
-              <span className="leading-relaxed">PG사 연동 시 기존 인프라와의 호환성을 고려하여 KCP를 최우선으로 적용하여 개발을 진행한다.</span>
+        {/* 엣지 정보 */}
+        <div>
+          <h4 className="text-sm font-semibold text-slate-900 mb-3">엣지 정보</h4>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <span className="text-xs text-slate-500">생성 출처</span>
+              <span className="text-xs font-medium text-slate-700">
+                {SOURCE_LABEL[edge.data?.source ?? ''] ?? edge.data?.source ?? '-'}
+              </span>
             </div>
-            <div className="bg-green-50 text-green-800 px-3 py-2.5 flex gap-3 items-start border-t border-slate-200">
-              <span className="text-green-500 select-none font-bold mt-0.5">+</span>
-              <span className="leading-relaxed">PG사 연동 시 수수료 최적화 및 정산 주기를 고려하여 Toss Payments를 최우선으로 적용하여 개발을 진행한다.</span>
+            <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <span className="text-xs text-slate-500">충돌 상태</span>
+              <span className={`text-xs font-bold ${isConflict ? 'text-red-600' : 'text-emerald-600'}`}>
+                {isConflict ? '충돌 감지됨' : '정상'}
+              </span>
             </div>
+            {isProposal && (
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-xs text-slate-500">유형</span>
+                <span className="text-xs font-medium text-blue-600">AI 추론 제안</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Section 4: Buttons */}
+      {/* Footer Actions */}
       <div className="border-t border-slate-200 p-4 bg-white mt-auto shrink-0 flex flex-col gap-2.5">
-        {/* TODO: API 연동 시 실제 수정 제안 적용 로직 구현 필요 */}
-        <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-sm transition-colors flex items-center justify-center gap-2">
-          제안 적용하기
-        </button>
+        {isProposal ? (
+          <>
+            <button
+              onClick={onAccept}
+              disabled={isAccepting || isRejecting}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-md shadow-sm transition-colors flex items-center justify-center gap-2"
+            >
+              {isAccepting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              {isAccepting ? '수락 중...' : '제안 수락'}
+            </button>
+            <button
+              onClick={onReject}
+              disabled={isAccepting || isRejecting}
+              className="w-full py-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 disabled:opacity-50 text-slate-700 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-2"
+            >
+              {isRejecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              {isRejecting ? '거절 중...' : '제안 거절'}
+            </button>
+          </>
+        ) : (
+          <button
+            disabled
+            title="백엔드 구현 예정"
+            className="w-full py-2.5 bg-slate-100 text-slate-400 text-xs font-bold rounded-md cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            제안 적용하기 (준비 중)
+          </button>
+        )}
         <Link
-          to={`/w/${workspaceId}/p/${projectId}/docs/prd`}
+          to={`/w/${workspaceId}/p/${projectId}/docs/${edge.source}`}
           className="w-full py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-md transition-colors flex items-center justify-center"
         >
-          원본 문서 열기
+          출발 문서 열기
         </Link>
       </div>
     </aside>

@@ -6,6 +6,8 @@ import { InboxPopup } from "./InboxPopup";
 import { useInboxActiveCount } from "./InboxList";
 import { TopAppBar } from "./TopAppBar";
 import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
+import { useProjectDocuments } from "../hooks/useProjectDocuments";
+import { useAuth } from "../hooks/useAuth";
 
 
 const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) => {
@@ -87,11 +89,13 @@ const DocumentTreeItem = ({ node, level = 0 }: { node: any; level?: number }) =>
 };
 
 export const Sidebar = () => {
-  const { documents, projects, workspaces, setCurrentProject, isSidebarOpen, toggleSidebar } = useAppStore();
+  const { projects, workspaces, setCurrentProject, isSidebarOpen, toggleSidebar } = useAppStore();
   const inboxActiveCount = useInboxActiveCount();
   const location = useLocation();
   const navigate = useNavigate();
   const { workspaceId, projectId } = useParams();
+  const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);
+  const { user } = useAuth();
   const isGraphActive = location.pathname === `/w/${workspaceId}/p/${projectId}/graph`;
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -320,8 +324,8 @@ export const Sidebar = () => {
           onClick={() => setIsProfileOpen(!isProfileOpen)}
           className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm hover:bg-slate-100 text-slate-700 transition-colors mt-1 font-medium"
         >
-          <UserAvatar size="xs" />
-          <span className="text-[14px]">김상민</span>
+          <UserAvatar avatarUrl={user?.avatarUrl} size="xs" />
+          <span className="text-[14px]">{user?.name ?? ''}</span>
         </button>
         <UserProfilePopup
           isOpen={isProfileOpen}
