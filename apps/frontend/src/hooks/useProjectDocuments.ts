@@ -15,7 +15,7 @@ function toDocumentTree(docs: DocumentSummary[]): DocumentNode[] {
   for (const d of docs) {
     if (d.id == null) continue
     const emoji = d.icon?.type === 'EMOJI' ? d.icon.value : undefined
-    map.set(d.id, { id: d.id, title: d.title ?? '', emoji, children: [] })
+    map.set(d.id, { id: d.id, title: d.title ?? '', emoji, notionPageId: d.notionPageId, children: [] })
   }
 
   const roots: DocumentNode[] = []

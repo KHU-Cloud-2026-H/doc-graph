@@ -37,6 +37,7 @@ export interface DocumentNode {
   id: number;
   title: string;
   emoji?: string;
+  notionPageId?: string;
   children?: DocumentNode[];
   hasIssue?: boolean;
   issues?: IntegrityIssue[];

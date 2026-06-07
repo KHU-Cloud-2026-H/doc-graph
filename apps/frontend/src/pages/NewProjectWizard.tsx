@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import StepIndicator from '../components/wizard/StepIndicator';
-import { useNotionPages, useNotionPageChildren } from '../hooks/useNotionPages';
+import { useNotionRootPages, useNotionPageChildren } from '../hooks/useNotionPages';
 import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
 import { useCreateProject } from '../hooks/useProjectSettingsMutations';
 import { apiClient } from '../lib/apiClient';
@@ -35,7 +35,7 @@ const NewProjectWizard: React.FC = () => {
   const navigate = useNavigate();
   const wsId = workspaceId ? Number(workspaceId) : undefined;
 
-  const { pages: notionRootPages } = useNotionPages(wsId);
+  const { pages: notionRootPages } = useNotionRootPages(wsId);
   const { workspace } = useWorkspaceDetail(wsId);
   const workspaceMembers: WorkspaceMember[] = (workspace?.members ?? []).map(m => ({
     id: m.userId ?? 0,
@@ -94,10 +94,12 @@ const NewProjectWizard: React.FC = () => {
       }));
       await apiClient.PUT(`/api/projects/${projectId}/type-assignees`, { assignees: assigneePayload });
 
-      // 4. 초기 동기화
+      // 4. 초기 동기화 트리거 (비동기 이벤트 — 완료 시점 알 수 없음)
       await apiClient.POST(`/api/projects/${projectId}/sync`);
 
-      navigate(`/w/${workspaceId}`);
+      // sync가 백그라운드에서 실행되는 동안 최소 대기 후 이동
+      await new Promise((r) => setTimeout(r, 3000));
+      navigate(`/w/${workspaceId}/p/${projectId}/graph`);
     } catch {
       // 에러는 조용히 처리 — 추후 toast 연결 가능
     } finally {

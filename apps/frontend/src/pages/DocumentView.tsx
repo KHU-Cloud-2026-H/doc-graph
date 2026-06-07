@@ -83,6 +83,13 @@ export const DocumentView = () => {
   const parentPage = id ? findParentPage(documents, id) : null;
   const categoryType = resolveCategoryType(documents, activeDoc?.id ?? -1);
 
+  // child_page 블록 → 내부 문서 ID 매핑 (notionPageId 기준)
+  const notionPageIdToDocId = new Map<string, number>(
+    allDocs
+      .filter((d) => d.notionPageId)
+      .map((d) => [d.notionPageId as string, d.id as number])
+  );
+
   // lazy initialization: 마운트 시점의 URL을 직접 읽어 초기 상태 결정.
   // useState(() => ...) 형태는 StrictMode의 이중 실행에도 항상 같은 URL을 읽으므로 안전.
   const [showRightSidebar, setShowRightSidebar] = useState(
@@ -191,10 +198,15 @@ export const DocumentView = () => {
               Saved
             </div>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600">
+          <a
+            href={docDetail?.notionPageId ? `https://notion.so/${docDetail.notionPageId.replace(/-/g, '')}` : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600 ${!docDetail?.notionPageId ? 'pointer-events-none opacity-40' : ''}`}
+          >
             <ExternalLink className="w-4 h-4" />
             Edit in Notion
-          </button>
+          </a>
         </header>
 
         <div className="flex-1 overflow-y-auto px-8 py-12 flex justify-center">
@@ -293,7 +305,11 @@ export const DocumentView = () => {
                 }
               }}
             >
-              <BlockRenderer blocks={docDetail?.blocks ?? []} />
+              <BlockRenderer
+                blocks={docDetail?.blocks ?? []}
+                notionPageIdToDocId={notionPageIdToDocId}
+                docBasePath={`/w/${workspaceId}/p/${projectId}/docs`}
+              />
             </div>
           </div>
         </div>

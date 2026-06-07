@@ -18,6 +18,7 @@ import { useAddEdge, useDeleteEdge, useAcceptProposal, useRejectProposal } from 
 
 import { GraphRightSidebar } from '../components/GraphRightSidebar';
 import { EdgeManagementSidebar } from '../components/EdgeManagementSidebar';
+import { useProjectDetail } from '../hooks/useProjectDetail';
 import { useAppStore } from '../store';
 
 const nodeTypes = {
@@ -43,6 +44,10 @@ export const DependencyGraph = () => {
   const [pendingConnect, setPendingConnect] = useState<{ source: string; target: string } | null>(null);
 
   const { nodes: apiNodes, edges: apiEdges } = useProjectGraph(numericProjectId);
+  const { project } = useProjectDetail(numericProjectId);
+  const notionRootUrl = project?.notionRootPageId
+    ? `https://notion.so/${project.notionRootPageId.replace(/-/g, '')}`
+    : undefined;
   const addEdge = useAddEdge(numericProjectId);
   const deleteEdge = useDeleteEdge(numericProjectId);
   const acceptProposal = useAcceptProposal(numericProjectId);
@@ -149,10 +154,15 @@ export const DependencyGraph = () => {
             <GitBranch className="w-4 h-4" />
             엣지 관리
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600">
+          <a
+            href={notionRootUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-1.5 px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 transition-colors text-xs font-medium text-slate-600 ${!notionRootUrl ? 'pointer-events-none opacity-40' : ''}`}
+          >
             <ExternalLink className="w-4 h-4" />
             Edit in Notion
-          </button>
+          </a>
         </div>
       </header>
 

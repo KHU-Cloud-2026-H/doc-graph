@@ -4,7 +4,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { useProjectDetail, useProjectCategories, useProjectTypeAssignees } from '../hooks/useProjectDetail';
 import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
-import { useNotionPageChildren } from '../hooks/useNotionPages';
+import { useNotionPageChildren, useNotionPageMetadata } from '../hooks/useNotionPages';
 import {
   useDeleteProjectMember,
   useUpdateProjectMemberRole,
@@ -50,6 +50,9 @@ const ProjectSettings: React.FC = () => {
 
   type TabId = 'info' | 'members' | 'categories' | 'assignees';
   const [activeTab, setActiveTab] = useState<TabId>('info');
+
+  // ── 탭 1: 루트 페이지 메타데이터 ───────────────────────────────
+  const { page: rootPageMeta } = useNotionPageMetadata(numericWorkspaceId, project?.notionRootPageId);
 
   // ── 탭 2 mutations ─────────────────────────────────────────────
   const deleteMember = useDeleteProjectMember(numericProjectId);
@@ -119,9 +122,12 @@ const ProjectSettings: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <label className="w-40 text-sm text-slate-500 shrink-0">Notion 루트 페이지 ID</label>
-        <div className="flex-1 border border-slate-200 rounded-md px-3 h-9 flex items-center bg-slate-50 text-xs text-slate-600 cursor-not-allowed select-none font-mono truncate">
-          {project?.notionRootPageId ?? '—'}
+        <label className="w-40 text-sm text-slate-500 shrink-0">Notion 루트 페이지</label>
+        <div className="flex-1 border border-slate-200 rounded-md px-3 h-9 flex items-center bg-slate-50 text-sm text-slate-800 cursor-not-allowed select-none gap-1.5 truncate">
+          {rootPageMeta?.icon?.type === 'EMOJI' && (
+            <span>{rootPageMeta.icon.value}</span>
+          )}
+          <span>{rootPageMeta?.title ?? project?.notionRootPageId ?? '—'}</span>
         </div>
       </div>
     </div>
