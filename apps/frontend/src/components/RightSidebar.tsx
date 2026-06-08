@@ -190,7 +190,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                         무시하기
                       </button>
                       <button
-                        onClick={() => issue.conflictId !== undefined && issue.findingId !== undefined && approve.mutate({ conflictId: issue.conflictId, findingId: issue.findingId })}
+                        onClick={() => issue.conflictId !== undefined && issue.findingId !== undefined && approve.mutate({ conflictId: issue.conflictId, findingId: issue.findingId, expectedTargetNotionLastEditedAt: issue.targetNotionLastEditedAt ?? null, targetDocumentId: doc.id, targetBlockId: issue.targetBlockId, newText: issue.newText })}
                         disabled={issue.conflictId === undefined || issue.findingId === undefined || approve.isPending}
                         className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors disabled:opacity-40"
                       >

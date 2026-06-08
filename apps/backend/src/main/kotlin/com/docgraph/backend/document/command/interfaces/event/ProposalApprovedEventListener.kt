@@ -2,6 +2,8 @@ package com.docgraph.backend.document.command.interfaces.event
 
 import com.docgraph.backend.auth.command.domain.NotionConnectionRepository
 import com.docgraph.backend.auth.command.infra.NotionAccessTokenDecryptor
+import com.docgraph.backend.document.command.application.ApplyApprovedBlockTextCommand
+import com.docgraph.backend.document.command.application.ApplyApprovedBlockTextCommandHandler
 import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.command.domain.NotionDocumentClient
 import com.docgraph.backend.document.command.domain.NotionPatchResult
@@ -27,6 +29,7 @@ class ProposalApprovedEventListener(
     private val notionConnectionRepository: NotionConnectionRepository,
     private val notionAccessTokenDecryptor: NotionAccessTokenDecryptor,
     private val notionDocumentClient: NotionDocumentClient,
+    private val applyApprovedBlockText: ApplyApprovedBlockTextCommandHandler,
     private val publisher: ApplicationEventPublisher,
 ) {
     @Async
@@ -52,6 +55,22 @@ class ProposalApprovedEventListener(
             return
         }
         if (result == NotionPatchResult.Success) {
+            // 봇 쓰기 webhook은 루프 방지로 무시되므로, 로컬 블록 스냅샷을 여기서 직접 맞춘다.
+            // best-effort: 스냅샷 갱신 실패가 충돌 해소(NotionWriteSucceeded)를 막지 않게 한다.
+            runCatching {
+                applyApprovedBlockText.handle(
+                    ApplyApprovedBlockTextCommand(
+                        targetDocumentId = finding.targetDocumentId,
+                        targetBlockId = finding.targetBlockId,
+                        newText = finding.newText,
+                    ),
+                )
+            }.onFailure {
+                logger.warn(
+                    "승인 반영 로컬 스냅샷 갱신 실패 — finding={} block={}: {}",
+                    finding.findingId, finding.targetBlockId, it.message,
+                )
+            }
             publisher.publishEvent(
                 NotionWriteSucceededEvent(
                     conflictFindingId = finding.findingId,

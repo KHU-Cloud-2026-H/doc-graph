@@ -167,6 +167,7 @@ class DocumentQueryRepository {
                     doc.projectId,
                     doc.title,
                     doc.type,
+                    doc.notionLastEditedAt,
                 ),
             )
             .from(doc)

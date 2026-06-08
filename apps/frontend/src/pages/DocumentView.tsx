@@ -69,6 +69,9 @@ export const DocumentView = () => {
       findingId: c.latestFindingId ?? undefined,
       title: c.title,
       rationale: c.rationale ?? undefined,
+      targetNotionLastEditedAt: c.targetDocument.notionLastEditedAt,
+      targetBlockId: c.targetBlockId ?? undefined,
+      newText: c.newText ?? undefined,
       sourceDocumentId: c.sourceDocument.id,
       sourceDocumentTitle: c.sourceDocument.title,
     }));
