@@ -15,6 +15,7 @@ import com.docgraph.backend.document.command.domain.NotionIcon
 import com.docgraph.backend.document.command.domain.NotionIconType
 import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.event.OutboxStatus
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,6 +31,7 @@ class ProcessDocumentChangeNoticeCommandHandler(
     private val notionAccessTokenDecryptor: NotionAccessTokenDecryptor,
     private val publisher: ApplicationEventPublisher,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     fun recordAttempt(noticeId: Long): DocumentChangeNotice? {
@@ -66,7 +68,15 @@ class ProcessDocumentChangeNoticeCommandHandler(
 
     @Transactional
     fun applyAndMarkSuccess(notice: DocumentChangeNotice, result: NotionFetchResult) {
-        val document = documentRepository.findByNotionPageId(notice.notionPageId).firstOrNull()
+        val matches = documentRepository.findByNotionPageId(notice.notionPageId)
+        if (matches.size > 1) {
+            // 정상 데이터에선 notionPageId → live document 1:1. 2건 이상이면 고아/중복 재발 신호.
+            log.warn(
+                "notionPageId={}에 document가 {}건 매칭됨 — 고아·중복 가능성. 첫 번째(documentId={})로 처리한다.",
+                notice.notionPageId, matches.size, matches.first().id,
+            )
+        }
+        val document = matches.firstOrNull()
         if (document == null) {
             notice.markFailed("document not found for notionPageId=${notice.notionPageId}")
             noticeRepository.save(notice)

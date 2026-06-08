@@ -1,5 +1,9 @@
 package com.docgraph.backend.document.command.application
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.docgraph.backend.auth.command.domain.NotionConnectionRepository
 import com.docgraph.backend.auth.command.infra.NotionAccessTokenDecryptor
 import com.docgraph.backend.document.command.domain.Block
@@ -18,12 +22,14 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import java.time.OffsetDateTime
 import java.util.Optional
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Tag("unit")
 class ProcessDocumentChangeNoticeCommandHandlerTest {
@@ -141,6 +147,37 @@ class ProcessDocumentChangeNoticeCommandHandlerTest {
         assertEquals("page-1", eventSlot.captured.notionPageId)
         assertEquals("갱신된 타이틀", document.title)
         assertEquals("본문 텍스트", document.flatText)
+    }
+
+    @Test
+    fun `applyAndMarkSuccess — 같은 notionPageId가 여러 document에 매칭되면 WARN 로그 (고아·중복 탐지)`() {
+        val notice = pendingNotice()
+        val result = notionFetchResult()
+        val chosen = document()
+        val duplicate = Document(projectId = 99L, notionPageId = "page-1", title = "중복").also { setId(it, 11L) }
+
+        every { documentRepository.findByNotionPageId("page-1") } returns listOf(chosen, duplicate)
+        every { documentRepository.save(chosen) } returns chosen
+        every { blockRepository.findByDocument_IdOrderBySortOrderAsc(10L) } returns emptyList()
+        every { noticeRepository.save(notice) } returns notice
+        every { publisher.publishEvent(any()) } returns Unit
+
+        val logger = LoggerFactory.getLogger(ProcessDocumentChangeNoticeCommandHandler::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            handler.applyAndMarkSuccess(notice, result)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        val warns = appender.list.filter { it.level == Level.WARN }
+        assertTrue(
+            warns.any { it.formattedMessage.contains("page-1") && it.formattedMessage.contains("2") },
+            "다중 매칭 시 page id와 개수를 담은 WARN 로그를 남겨야 한다. actual=${warns.map { it.formattedMessage }}",
+        )
+        // 다중 매칭이어도 처리 자체는 정상 진행 (firstOrNull = chosen)
+        assertEquals(OutboxStatus.SUCCESS, notice.status)
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
