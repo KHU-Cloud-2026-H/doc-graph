@@ -97,12 +97,13 @@ class WorkspaceQueryControllerTest @Autowired constructor(
     fun `GET workspaces id — 멤버 row → members 응답에 user account 결합`() {
         getCurrentUserId.userId = 3001L
         val workspace = seedWorkspace(createdBy = 3001L)
-        memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 3002L))
+        val member3002 = memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 3002L))
         memberRepository.save(WorkspaceMember(workspaceId = workspace.id, userId = 3003L))
 
         mockMvc.get("/workspaces/${workspace.id}").andExpect {
             status { isOk() }
             jsonPath("$.members.length()") { value(2) }
+            jsonPath("$.members[?(@.userId == 3002)].workspaceMemberId") { value(member3002.id.toInt()) }
             jsonPath("$.members[?(@.userId == 3002)].name") { value("User 3002") }
             jsonPath("$.members[?(@.userId == 3002)].email") { value("user-3002@example.com") }
             jsonPath("$.members[?(@.userId == 3003)].name") { value("User 3003") }

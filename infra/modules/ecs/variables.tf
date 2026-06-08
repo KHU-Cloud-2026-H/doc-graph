@@ -57,3 +57,16 @@ variable "ai_openai_model" {
   type    = string
   default = ""
 }
+
+variable "auth_oauth_success_redirect_uri" {
+  type = string
+}
+
+variable "cors_allowed_origin" {
+  type = string
+}
+
+variable "notion_api_base_url" {
+  type    = string
+  default = "https://api.notion.com"
+}

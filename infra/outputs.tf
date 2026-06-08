@@ -5,7 +5,22 @@ output "alb_dns_name" {
 
 output "swagger_ui_url" {
   description = "Swagger UI 접속 주소. context-path(/api) 포함."
-  value       = "http://${module.alb.dns_name}/api/swagger-ui/index.html"
+  value       = "${module.apigateway.api_endpoint}/api/swagger-ui/index.html"
+}
+
+output "api_gateway_endpoint" {
+  description = "API Gateway default HTTPS endpoint. Use this for frontend, Notion OAuth redirect, webhook, and API access."
+  value       = module.apigateway.api_endpoint
+}
+
+output "api_gateway_id" {
+  description = "HTTP API ID."
+  value       = module.apigateway.api_id
+}
+
+output "frontend_bucket_name" {
+  description = "Private S3 bucket for React build artifacts."
+  value       = module.s3_frontend.bucket_name
 }
 
 output "ecr_repository_url" {

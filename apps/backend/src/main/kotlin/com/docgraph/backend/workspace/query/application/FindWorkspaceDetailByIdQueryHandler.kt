@@ -31,6 +31,7 @@ class FindWorkspaceDetailByIdQueryHandler(
             members = members.map { row ->
                 val account = accounts[row.userId]
                 WorkspaceMemberSummary(
+                    workspaceMemberId = row.workspaceMemberId,
                     userId = row.userId,
                     name = account?.name ?: "",
                     email = account?.email ?: "",

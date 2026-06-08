@@ -620,6 +620,32 @@ class ProjectCommandControllerTest @Autowired constructor(
     }
 
     @Test
+    fun `PUT type-assignees — 동일 payload 재호출 idempotent + 204`() {
+        val (workspace, project) = seedWorkspaceAndProject(creatorUserId = 1L)
+        val member = seedWorkspaceMember(workspaceId = workspace.id, userId = 2L)
+        val body = objectMapper.writeValueAsString(
+            UpdateTypeAssigneesRequest(
+                assignees = listOf(
+                    TypeAssigneeItem(DocumentType.PLANNING, assigneeMemberId = member.id),
+                    TypeAssigneeItem(DocumentType.REQUIREMENTS, assigneeMemberId = null),
+                ),
+            ),
+        )
+
+        // 동일 (project_id, document_type) 재제출 시 기존 row가 먼저 삭제되어 unique 충돌 없이 대체돼야 함
+        repeat(2) {
+            mockMvc.put("/projects/${project.id}/type-assignees") {
+                contentType = MediaType.APPLICATION_JSON
+                content = body
+            }.andExpect {
+                status { isNoContent() }
+            }
+        }
+
+        assertEquals(2, typeAssigneeRepository.findAllByProjectId(project.id).size)
+    }
+
+    @Test
     fun `PUT type-assignees — 빈 list, 모든 row 삭제 + 204`() {
         val (_, project) = seedWorkspaceAndProject(creatorUserId = 1L)
         typeAssigneeRepository.save(

@@ -21,26 +21,50 @@ module "ecr" {
 module "alb" {
   source            = "./modules/alb"
   vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnet_ids
+  public_subnet_ids = module.vpc.private_subnet_ids
   sg_id             = module.sg.alb_sg_id
 }
 
 module "ecs" {
-  source             = "./modules/ecs"
-  cluster_name       = "app-cluster"
-  ecr_repository_url = module.ecr.repository_url
-  image_tag          = var.app_image_tag
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  sg_id              = module.sg.fargate_sg_id
-  target_group_arn   = module.alb.target_group_arn
-  rds_endpoint       = module.rds.endpoint
-  ai_openai_base_url = var.ai_openai_base_url
-  ai_openai_model    = var.ai_openai_model
+  source                          = "./modules/ecs"
+  cluster_name                    = "app-cluster"
+  ecr_repository_url              = module.ecr.repository_url
+  image_tag                       = var.app_image_tag
+  public_subnet_ids               = module.vpc.public_subnet_ids
+  sg_id                           = module.sg.fargate_sg_id
+  target_group_arn                = module.alb.target_group_arn
+  rds_endpoint                    = module.rds.endpoint
+  ai_openai_base_url              = var.ai_openai_base_url
+  ai_openai_model                 = var.ai_openai_model
+  auth_oauth_success_redirect_uri = "${module.apigateway.api_endpoint}/workspaces"
+  cors_allowed_origin             = module.apigateway.api_endpoint
 
   rds_password_secret_arn     = module.secrets.rds_password_arn
   notion_client_id_secret_arn = module.secrets.notion_client_id_arn
   notion_client_secret_arn    = module.secrets.notion_client_secret_arn
   openai_api_key_secret_arn   = module.secrets.openai_api_key_arn
+}
+
+module "s3_frontend" {
+  source = "./modules/s3-frontend"
+}
+
+data "aws_caller_identity" "current" {}
+
+locals {
+  lab_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+}
+
+module "apigateway" {
+  source = "./modules/apigateway"
+
+  region                      = var.aws_region
+  vpc_link_subnet_ids         = module.vpc.private_subnet_ids
+  vpc_link_security_group_ids = [module.sg.vpc_link_sg_id]
+  alb_listener_arn            = module.alb.listener_arn
+  frontend_bucket_name        = module.s3_frontend.bucket_name
+  frontend_bucket_arn         = module.s3_frontend.bucket_arn
+  integration_role_arn        = local.lab_role_arn
 }
 
 # ── 4단계: 데이터베이스 ──────────────────────────────────────
