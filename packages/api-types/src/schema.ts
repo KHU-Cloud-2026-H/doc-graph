@@ -1105,6 +1105,12 @@ export interface components {
         WorkspaceMemberSummary: {
             /**
              * Format: int64
+             * @description 워크스페이스 멤버 ID — 프로젝트 멤버 배정·타입별 담당자 지정 호출 시 사용
+             * @example 1
+             */
+            workspaceMemberId?: number;
+            /**
+             * Format: int64
              * @description 사용자 ID
              * @example 1
              */

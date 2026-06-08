@@ -73,6 +73,7 @@ class WorkspaceQueryRepository {
             .select(
                 Projections.constructor(
                     WorkspaceMembershipRow::class.java,
+                    wm.id,
                     wm.userId,
                     wm.joinedAt,
                 ),
