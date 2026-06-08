@@ -12,4 +12,6 @@ interface BlockRepository : JpaRepository<Block, Long> {
     ): Block?
 
     fun deleteByDocument_Id(documentId: Long)
+
+    fun deleteByDocument_ProjectId(projectId: Long)
 }

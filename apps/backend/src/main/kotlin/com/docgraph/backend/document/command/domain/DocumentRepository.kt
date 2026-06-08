@@ -17,4 +17,6 @@ interface DocumentRepository : JpaRepository<Document, Long> {
     ): List<Document>
 
     fun findByNotionPageId(notionPageId: String): List<Document>
+
+    fun deleteByProjectId(projectId: Long)
 }
