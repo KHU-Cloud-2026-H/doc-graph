@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../lib/apiClient'
 
 export interface WorkspaceMemberSummary {
+  workspaceMemberId: number
   userId: number
   name: string
   email: string

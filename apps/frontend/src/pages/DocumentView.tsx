@@ -43,7 +43,7 @@ export const DocumentView = () => {
   const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
   const { document: docDetail } = useDocument(id ? Number(id) : undefined);
   const { workspace } = useWorkspaceDetail(workspaceId ? Number(workspaceId) : undefined);
-  const assignee = workspace?.members?.find(m => m.userId === docDetail?.assigneeMemberId);
+  const assignee = workspace?.members?.find(m => m.workspaceMemberId === docDetail?.assigneeMemberId);
 
   // 실 문서 트리 (API)
   const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);

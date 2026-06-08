@@ -38,7 +38,7 @@ const NewProjectWizard: React.FC = () => {
   const { pages: notionRootPages } = useNotionRootPages(wsId);
   const { workspace } = useWorkspaceDetail(wsId);
   const workspaceMembers: WorkspaceMember[] = (workspace?.members ?? []).map(m => ({
-    id: m.userId ?? 0,
+    id: m.workspaceMemberId ?? 0,
     name: m.name ?? '',
   }));
 
@@ -95,8 +95,23 @@ const NewProjectWizard: React.FC = () => {
       );
     } catch { /* 카테고리 등록 실패는 무시 — 나중에 Project Settings에서 재설정 가능 */ }
 
-    // 담당자 지정은 workspace_member.id 필요 — userId로는 불가하므로 건너뜀
-    // (Project Settings에서 백엔드 API 개선 후 재연결 예정)
+    // 3. 멤버 배정
+    try {
+      await Promise.all(
+        projectMembers.map(({ memberId, role }) =>
+          apiClient.POST(`/api/projects/${projectId}/members`, { workspaceMemberId: memberId, role }),
+        ),
+      );
+    } catch { /* 멤버 배정 실패 무시 — Project Settings에서 재설정 가능 */ }
+
+    // 4. 타입별 담당자 지정
+    try {
+      const assigneePayload = DOCUMENT_TYPES.map(t => ({
+        documentType: t,
+        assigneeMemberId: typeAssignees[t],
+      }));
+      await apiClient.PUT(`/api/projects/${projectId}/type-assignees`, { assignees: assigneePayload });
+    } catch { /* 담당자 설정 실패 무시 */ }
 
     try {
       await apiClient.POST(`/api/projects/${projectId}/sync`);

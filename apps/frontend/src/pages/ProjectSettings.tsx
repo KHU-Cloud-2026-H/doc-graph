@@ -123,9 +123,8 @@ const ProjectSettings: React.FC = () => {
   }, [typeAssignees]);
 
   const handleSaveAssignees = () => {
-    // workspace_member.id 미노출 이슈로 non-null 값은 전송 불가 → null만 전송
     updateTypeAssignees.mutate(
-      DOCUMENT_TYPES.map((t) => ({ documentType: t, assigneeMemberId: null })),
+      DOCUMENT_TYPES.map((t) => ({ documentType: t, assigneeMemberId: assigneeDraft[t] })),
     );
   };
 
@@ -429,7 +428,7 @@ const ProjectSettings: React.FC = () => {
                     >
                       <option value="none">담당자 없음</option>
                       {members.map((m) => (
-                        <option key={m.userId} value={String(m.userId)}>{m.name}</option>
+                        <option key={m.workspaceMemberId} value={String(m.workspaceMemberId)}>{m.name}</option>
                       ))}
                     </select>
                   </td>
