@@ -17,6 +17,7 @@ export interface MyConflictRow {
   targetDocument: InboxDocumentRef
   title: string
   status: 'ACTIVE' | 'IGNORED'
+  latestFindingId: number | null
   firstDetectedAt: string
   ignoredAt: string | null
 }
