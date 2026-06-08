@@ -30,6 +30,10 @@ data class MyConflictRow(
         example = "회의록(결정사항)에서 ND_COUNT를 4로 변경하기로 결정하였으나, 설계서에는 2로 남아 있음.",
     )
     val rationale: String?,
+    @Schema(description = "최신 finding이 교체할 target 블록 (Notion block id). 승인 시 프론트 옵티미스틱 반영용. finding 없으면 null.")
+    val targetBlockId: String?,
+    @Schema(description = "최신 finding의 교체 텍스트. 승인 시 프론트 옵티미스틱 반영용. finding 없으면 null.")
+    val newText: String?,
     @Schema(description = "충돌 상태")
     val status: MyConflictStatus,
     @Schema(description = "최초 감지 시각")

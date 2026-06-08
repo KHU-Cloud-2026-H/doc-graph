@@ -70,6 +70,15 @@ class Block(
     var rawBlock: String? = null,
 ) {
 
+    /**
+     * 승인된 수정 제안이 Notion에 반영된 뒤, 로컬 스냅샷을 동일 텍스트로 맞춘다.
+     * 봇 쓰기는 재검증 대상이 아니므로 previousText(미검증 변경 마커)를 남기지 않는다.
+     */
+    fun applyApprovedText(newText: String) {
+        this.text = newText
+        this.previousText = null
+    }
+
     fun refreshSnapshot(
         parentType: String?,
         parentId: String?,

@@ -1779,6 +1779,11 @@ export interface components {
              * @enum {string|null}
              */
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
+            /**
+             * Format: date-time
+             * @description Notion 최종 수정 시각. 수정 제안 승인 시 stale 가드용으로 client가 그대로 echo. 미동기화 시 null.
+             */
+            notionLastEditedAt?: string | null;
         };
         MyConflictRow: {
             /**
@@ -1830,6 +1835,10 @@ export interface components {
              * @example 회의록(결정사항)에서 ND_COUNT를 4로 변경하기로 결정하였으나, 설계서에는 2로 남아 있음.
              */
             rationale?: string | null;
+            /** @description 최신 finding이 교체할 target 블록 (Notion block id). 승인 시 프론트 옵티미스틱 반영용. finding 없으면 null. */
+            targetBlockId?: string | null;
+            /** @description 최신 finding의 교체 텍스트. 승인 시 프론트 옵티미스틱 반영용. finding 없으면 null. */
+            newText?: string | null;
             /**
              * @description 충돌 상태
              * @enum {string}
