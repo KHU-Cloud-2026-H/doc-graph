@@ -1912,6 +1912,11 @@ export interface components {
              * @description Notion 원본의 마지막 수정 시각 (미동기화 시 null)
              */
             notionLastEditedAt?: string | null;
+            /**
+             * @description 최근 수정자 이름. 수정자가 본 서비스에 로그인한 적 있는 사용자일 때만 채워지며, 외부 Notion 협업자·봇이거나 미동기화면 null. 마지막 로그인 시점의 Notion 표시 이름 스냅샷.
+             * @example 홍길동
+             */
+            lastEditedByName?: string | null;
             /** @description 저장된 block 텍스트를 합친 값 */
             flatText?: string | null;
             /** @description 블록 row 목록 */

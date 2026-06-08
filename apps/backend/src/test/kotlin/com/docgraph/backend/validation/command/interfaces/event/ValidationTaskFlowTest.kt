@@ -111,7 +111,7 @@ class ValidationTaskFlowTest {
             if (id == edgeId) EdgeDetail(edgeId, 1L, sourceDocId, targetDocId, "criterion") else null
         }
         findDocument.behavior = { id ->
-            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, null, emptyList())
+            DocumentDetail(id, "page-$id", "title-$id", DocumentType.MEETING_NOTES, null, null, null, null, null, null, emptyList())
         }
 
         testPublisher.publish(ValidationPairCreatedEvent(pairId, edgeId, OffsetDateTime.now()))

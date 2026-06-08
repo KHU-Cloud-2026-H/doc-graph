@@ -283,7 +283,7 @@ class ValidationCommandControllerTest @Autowired constructor(
         }
         findDocument.behavior = { id ->
             if (id == targetDocumentId) {
-                DocumentDetail(id, "page-$id", "t-$id", DocumentType.REQUIREMENTS, null, null, null, targetEdited, null, emptyList())
+                DocumentDetail(id, "page-$id", "t-$id", DocumentType.REQUIREMENTS, null, null, null, targetEdited, null, null, emptyList())
             } else null
         }
         return ApproveFixture(conflict, finding)

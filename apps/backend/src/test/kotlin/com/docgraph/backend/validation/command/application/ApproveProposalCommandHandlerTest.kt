@@ -165,6 +165,7 @@ class ApproveProposalCommandHandlerTest {
             icon = null,
             assigneeMemberId = null,
             notionLastEditedAt = targetEdited,
+            lastEditedByName = null,
             flatText = null,
             blocks = emptyList(),
         )

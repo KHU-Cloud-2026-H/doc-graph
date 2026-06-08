@@ -139,6 +139,30 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     }
 
     @Test
+    fun `findNotionLastEditedById — 저장된 Notion user id를 그대로 반환`() {
+        val document = documentRepository.save(
+            Document(
+                projectId = 1L,
+                notionPageId = "page-editor",
+                title = "Edited",
+                notionLastEditedBy = "notion-user-1",
+            ),
+        )
+
+        assertEquals("notion-user-1", queryRepository.findNotionLastEditedById(document.id))
+    }
+
+    @Test
+    fun `findNotionLastEditedById — 미세팅이면 null, 없는 document면 null`() {
+        val document = documentRepository.save(
+            Document(projectId = 1L, notionPageId = "page-unset-editor", title = "Unset"),
+        )
+
+        assertNull(queryRepository.findNotionLastEditedById(document.id))
+        assertNull(queryRepository.findNotionLastEditedById(99999L))
+    }
+
+    @Test
     fun `findDetail — type이 null인 document도 정상 반환`() {
         val document = documentRepository.save(
             Document(projectId = 1L, notionPageId = "page-1", title = "Page", type = null),
