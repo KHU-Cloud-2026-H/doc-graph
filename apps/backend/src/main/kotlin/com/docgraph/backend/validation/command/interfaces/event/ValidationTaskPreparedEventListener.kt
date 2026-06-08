@@ -95,6 +95,11 @@ class ValidationTaskPreparedEventListener(
 
     @Recover
     fun recover(ex: Throwable, event: ValidationTaskPreparedEvent) {
-        transition.markFailed(event.validationTaskId, ValidationFailureClassifier.classify(ex), ex.message)
+        val classification = ValidationFailureClassifier.classify(ex)
+        log.error(
+            "검증 태스크 실패 — 재시도 소진, 실패 기록: taskId={} classification={}: {}",
+            event.validationTaskId, classification, ex.message, ex,
+        )
+        transition.markFailed(event.validationTaskId, classification, ex.message)
     }
 }

@@ -2,6 +2,7 @@ package com.docgraph.backend.document.command.interfaces.event
 
 import com.docgraph.backend.document.command.application.ProcessDocumentChangeNoticeCommandHandler
 import com.docgraph.backend.document.command.domain.DocumentChangeNoticeQueuedEvent
+import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Recover
@@ -16,6 +17,8 @@ import org.springframework.web.client.ResourceAccessException
 class DocumentChangeNoticeQueuedEventListener(
     private val handler: ProcessDocumentChangeNoticeCommandHandler,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Async
     @EventListener
     @Retryable(
@@ -43,6 +46,10 @@ class DocumentChangeNoticeQueuedEventListener(
 
     @Recover
     fun recover(ex: Throwable, event: DocumentChangeNoticeQueuedEvent) {
+        log.error(
+            "문서 변경 통지 처리 실패 — 재시도 소진, 실패 기록: noticeId={}: {}",
+            event.noticeId, ex.message, ex,
+        )
         handler.markFailed(event.noticeId, ex.message)
     }
 }

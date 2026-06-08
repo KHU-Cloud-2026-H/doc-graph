@@ -25,6 +25,7 @@ import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.project.query.application.FindProjectDetailByIdQuery
 import com.docgraph.backend.project.query.application.SearchCategoriesByProjectQuery
 import com.docgraph.backend.workspace.command.domain.WorkspaceRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -45,14 +46,30 @@ class SyncProjectDocumentsCommandHandler(
 ) {
     @Transactional
     fun handle(command: SyncProjectDocumentsCommand) {
+        logger.info(
+            "프로젝트 동기화 시작 — projectId={} requestedBy={}",
+            command.projectId, command.requestedBy,
+        )
         val project = findProjectDetailById.find(command.projectId, command.requestedBy)
-            ?: return
+            ?: run {
+                logger.warn(
+                    "프로젝트 동기화 중단 — 프로젝트 조회 실패 또는 접근 권한 없음: projectId={} requestedBy={}",
+                    command.projectId, command.requestedBy,
+                )
+                return
+            }
         val categoryTypes = searchCategoriesByProject.search(command.projectId)
             .associate { notionPageKey(it.notionPageId) to it.documentType }
         val synced = linkedMapOf<String, SyncedDocument>()
         val accessToken = findWorkspaceAccessToken(command.projectId, command.requestedBy)
+        if (accessToken == null) {
+            logger.warn(
+                "Notion access token 미확보 — 모든 페이지 조회가 실패해 동기화 결과가 비어있을 수 있음: projectId={} requestedBy={}",
+                command.projectId, command.requestedBy,
+            )
+        }
 
-        syncReachablePages(
+        val skippedPages = syncReachablePages(
             projectId = command.projectId,
             rootPageId = project.notionRootPageId,
             categoryTypes = categoryTypes,
@@ -61,8 +78,12 @@ class SyncProjectDocumentsCommandHandler(
         )
 
         val syncedDocuments = synced.values.toList()
-        createEdges(command.projectId, syncedDocuments)
-        createProposals(command.projectId, syncedDocuments)
+        val edgeCount = createEdges(command.projectId, syncedDocuments)
+        val proposalCount = createProposals(command.projectId, syncedDocuments)
+        logger.info(
+            "프로젝트 동기화 완료 — projectId={} 문서={}건 페이지skip={}건 엣지={}건 제안={}건",
+            command.projectId, syncedDocuments.size, skippedPages, edgeCount, proposalCount,
+        )
     }
 
     private fun syncReachablePages(
@@ -71,7 +92,9 @@ class SyncProjectDocumentsCommandHandler(
         categoryTypes: Map<String, DocumentType>,
         synced: MutableMap<String, SyncedDocument>,
         accessToken: String?,
-    ) {
+    ): Int {
+        val rootKey = notionPageKey(rootPageId)
+        var skippedPages = 0
         val queue = ArrayDeque<PageSyncJob>()
         val queued = mutableSetOf<String>()
         fun enqueue(job: PageSyncJob) {
@@ -91,7 +114,20 @@ class SyncProjectDocumentsCommandHandler(
             val page = try {
                 notionDocumentClient.fetchPage(job.pageId, accessToken)
             } catch (e: Exception) {
-                // 접근 불가 페이지(404, 권한 없음 등) skip — 나머지 페이지는 계속 처리
+                // 접근 불가 페이지(404, 권한 없음 등) skip — 나머지 페이지는 계속 처리.
+                // 루트 실패는 동기화 결과가 통째로 비므로 warn, 말단(링크/하위) 실패는 정상 범위라 debug.
+                skippedPages++
+                if (pageKey == rootKey) {
+                    logger.warn(
+                        "루트 페이지 조회 실패 — 동기화 결과가 비어있을 수 있음: projectId={} rootPageId={}: {}",
+                        projectId, job.pageId, e.message,
+                    )
+                } else {
+                    logger.debug(
+                        "페이지 조회 실패 skip — projectId={} pageId={}: {}",
+                        projectId, job.pageId, e.message,
+                    )
+                }
                 continue
             }
             val blocks = fetchBlockTree(page.id, accessToken)
@@ -135,6 +171,7 @@ class SyncProjectDocumentsCommandHandler(
                 )
             }
         }
+        return skippedPages
     }
 
     private fun fetchBlockTree(parentBlockId: String, accessToken: String?): List<NotionBlock> {
@@ -247,8 +284,9 @@ class SyncProjectDocumentsCommandHandler(
         )
     }
 
-    private fun createEdges(projectId: Long, documents: List<SyncedDocument>) {
+    private fun createEdges(projectId: Long, documents: List<SyncedDocument>): Int {
         val byNotionPageId = documents.associateBy { notionPageKey(it.document.notionPageId) }
+        var registered = 0
         documents.forEach { source ->
             val sourceType = source.document.type ?: return@forEach
             source.linkedPageIds.forEach { linkedPageId ->
@@ -270,17 +308,20 @@ class SyncProjectDocumentsCommandHandler(
                                 source = DependencyEdgeSource.NOTION_REFERENCE,
                             ),
                         )
+                        registered++
                     }
             }
         }
+        return registered
     }
 
     /**
      * Notion 링크·멘션으로 엣지가 만들어지지 않은 문서 쌍 중 룰 타입 조합에 맞는 후보를
      * 키워드 유사도로 점수화해 source 문서당 상위 N개를 EdgeProposal로 제안한다.
      */
-    private fun createProposals(projectId: Long, documents: List<SyncedDocument>) {
+    private fun createProposals(projectId: Long, documents: List<SyncedDocument>): Int {
         val byNotionPageId = documents.associateBy { notionPageKey(it.document.notionPageId) }
+        var proposed = 0
         documents.forEach { source ->
             val sourceType = source.document.type ?: return@forEach
             val linkedDocumentIds = source.linkedPageIds
@@ -314,8 +355,14 @@ class SyncProjectDocumentsCommandHandler(
                             similarityScore = candidate.score,
                         ),
                     )
+                    proposed++
                 }
         }
+        return proposed
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(SyncProjectDocumentsCommandHandler::class.java)
     }
 }
 
