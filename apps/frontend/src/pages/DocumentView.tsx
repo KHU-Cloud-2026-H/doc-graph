@@ -9,6 +9,7 @@ import { BlockRenderer } from "../features/document/BlockRenderer";
 import { useDocument } from "../hooks/useDocument";
 import { useWorkspaceDetail } from "../hooks/useWorkspaceDetail";
 import { useProjectDocuments } from "../hooks/useProjectDocuments";
+import { useProjectTypeAssignees } from "../hooks/useProjectDetail";
 import { useInbox } from "../hooks/useInbox";
 
 const findParentPage = (docs: any[], targetId: string): any | null => {
@@ -43,7 +44,16 @@ export const DocumentView = () => {
   const projectName = projects.find((p) => p.id === Number(projectId))?.name ?? '';
   const { document: docDetail } = useDocument(id ? Number(id) : undefined);
   const { workspace } = useWorkspaceDetail(workspaceId ? Number(workspaceId) : undefined);
-  const assignee = workspace?.members?.find(m => m.workspaceMemberId === docDetail?.assigneeMemberId);
+  const { typeAssignees } = useProjectTypeAssignees(projectId ? Number(projectId) : undefined);
+
+  const assignedWorkspaceMemberId =
+    docDetail?.assigneeMemberId ??
+    typeAssignees.find((item) => item.documentType === docDetail?.type)?.assigneeMemberId ??
+    null;
+
+  const assignee = workspace?.members?.find(
+    (m) => m.workspaceMemberId === assignedWorkspaceMemberId
+  );
 
   // 실 문서 트리 (API)
   const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);
