@@ -67,9 +67,20 @@ class DocumentQueryRepository {
             icon = toIcon(document.iconType, document.iconValue),
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
+            lastEditedByName = null,
             flatText = document.flatText,
             blocks = blocks,
         )
+    }
+
+    /** 최근 수정자 Notion user id. 이름 해석은 auth Query API를 호출하는 application 핸들러가 담당한다. */
+    fun findNotionLastEditedById(documentId: Long): String? {
+        val doc = QDocument.document
+        return queryFactory
+            .select(doc.notionLastEditedBy)
+            .from(doc)
+            .where(doc.id.eq(documentId))
+            .fetchFirst()
     }
 
     fun findPageInfoByNotionPageIds(notionPageIds: Collection<String>): List<NotionPageRef> {

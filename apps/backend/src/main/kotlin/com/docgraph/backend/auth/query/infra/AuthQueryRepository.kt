@@ -40,6 +40,19 @@ class AuthQueryRepository {
             .fetchFirst()
     }
 
+    fun searchUserNamesByNotionUserIds(notionUserIds: Collection<String>): Map<String, String> {
+        if (notionUserIds.isEmpty()) {
+            return emptyMap()
+        }
+        val user = QUserAccount.userAccount
+        return queryFactory
+            .select(user.notionUserId, user.name)
+            .from(user)
+            .where(user.notionUserId.`in`(notionUserIds))
+            .fetch()
+            .associate { it.get(user.notionUserId)!! to it.get(user.name)!! }
+    }
+
     fun searchUserAccountsByIds(userIds: Collection<Long>): List<UserResponse> {
         if (userIds.isEmpty()) {
             return emptyList()
