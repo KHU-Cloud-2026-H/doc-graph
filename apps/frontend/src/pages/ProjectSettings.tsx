@@ -7,6 +7,7 @@ import type { RuleDetail } from '../hooks/useProjectDetail';
 import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
 import { useNotionPageChildren, useNotionPageMetadata } from '../hooks/useNotionPages';
 import {
+  useAddProjectMember,
   useDeleteProjectMember,
   useUpdateProjectMemberRole,
   useAddProjectCategory,
@@ -67,9 +68,12 @@ const ProjectSettings: React.FC = () => {
   const [newRuleTarget, setNewRuleTarget] = useState<string>('');
   const [newRuleCriterion, setNewRuleCriterion] = useState<string>('');
 
-  // ── 탭 2 mutations ─────────────────────────────────────────────
+  // ── 탭 2 mutations + 로컬 상태 ────────────────────────────────
+  const addMember = useAddProjectMember(numericProjectId);
   const deleteMember = useDeleteProjectMember(numericProjectId);
   const updateRole = useUpdateProjectMemberRole(numericProjectId);
+  const [pendingMemberId, setPendingMemberId] = useState<number | null>(null);
+  const [pendingRole, setPendingRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER');
 
   // ── 탭 5 삭제 mutation ────────────────────────────────────────
   const deleteProject = useDeleteProject(numericProjectId);
@@ -291,10 +295,41 @@ const ProjectSettings: React.FC = () => {
     const members = project?.members ?? [];
     return (
       <>
-        <p className="text-xs text-slate-500 mb-4">
-          멤버 추가는 워크스페이스 멤버 ID가 필요하며 현재 API에서 제공되지 않습니다.
-          삭제 및 역할 변경은 가능합니다.
-        </p>
+        <div className="flex items-end gap-3 mb-6">
+          <select
+            value={pendingMemberId !== null ? String(pendingMemberId) : ''}
+            onChange={(e) => setPendingMemberId(e.target.value === '' ? null : Number(e.target.value))}
+            className={`${selectCls} w-40`}
+          >
+            <option value="" disabled>멤버 선택</option>
+            {(workspace?.members ?? [])
+              .filter((m) => !members.some((pm) => pm.name === m.name))
+              .map((m) => (
+                <option key={m.workspaceMemberId} value={String(m.workspaceMemberId)}>{m.name}</option>
+              ))}
+          </select>
+          <select
+            value={pendingRole}
+            onChange={(e) => setPendingRole(e.target.value as 'ADMIN' | 'MEMBER')}
+            className={`${selectCls} w-28`}
+          >
+            <option value="ADMIN">ADMIN</option>
+            <option value="MEMBER">MEMBER</option>
+          </select>
+          <button
+            className={btnPrimary}
+            disabled={pendingMemberId === null || addMember.isPending}
+            onClick={() => {
+              if (!pendingMemberId) return;
+              addMember.mutate(
+                { workspaceMemberId: pendingMemberId, role: pendingRole },
+                { onSuccess: () => { setPendingMemberId(null); setPendingRole('MEMBER'); } },
+              );
+            }}
+          >
+            {addMember.isPending ? <><Loader2 className="w-4 h-4 mr-1 animate-spin inline" />추가 중...</> : '추가하기'}
+          </button>
+        </div>
         <div className="w-full overflow-x-auto">
           <table className="w-full caption-bottom text-sm">
             <thead>

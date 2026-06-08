@@ -3,6 +3,15 @@ import { apiClient } from '../lib/apiClient'
 
 // ── 프로젝트 멤버 ──────────────────────────────────────────────────
 
+export function useAddProjectMember(projectId: number | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workspaceMemberId, role }: { workspaceMemberId: number; role: 'ADMIN' | 'MEMBER' }) =>
+      apiClient.POST(`/api/projects/${projectId}/members`, { workspaceMemberId, role }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-detail', projectId] }),
+  })
+}
+
 export function useDeleteProjectMember(projectId: number | undefined) {
   const qc = useQueryClient()
   return useMutation({
