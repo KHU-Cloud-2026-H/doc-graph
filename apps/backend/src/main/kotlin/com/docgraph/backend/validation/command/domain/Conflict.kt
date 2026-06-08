@@ -17,6 +17,10 @@ class Conflict(
     @Column(name = "edge_id", nullable = false, updatable = false)
     val edgeId: Long,
 
+    // discard cascade용 비정규화. 생성 시 edge의 projectId를 박는다.
+    @Column(name = "project_id", updatable = false)
+    val projectId: Long? = null,
+
     @Column(name = "first_detected_at", nullable = false, updatable = false)
     val firstDetectedAt: OffsetDateTime,
 

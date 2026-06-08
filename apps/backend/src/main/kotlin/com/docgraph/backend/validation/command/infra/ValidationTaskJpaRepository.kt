@@ -18,4 +18,6 @@ interface ValidationTaskJpaRepository : JpaRepository<ValidationTask, Long> {
     fun findStale(before: OffsetDateTime): List<ValidationTask>
 
     fun findByValidationPairId(validationPairId: UUID): ValidationTask?
+
+    fun deleteByProjectId(projectId: Long)
 }

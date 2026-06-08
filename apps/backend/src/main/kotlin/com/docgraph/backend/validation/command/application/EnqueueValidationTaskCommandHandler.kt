@@ -32,6 +32,7 @@ class EnqueueValidationTaskCommandHandler(
             ValidationTask(
                 validationPairId = command.validationPairId,
                 edgeId = command.edgeId,
+                projectId = edge?.projectId,
             ),
         )
         publisher.publishEvent(ValidationTaskQueuedEvent(task.id))

@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface AiUsageRecordJpaRepository : JpaRepository<AiUsageRecord, Long> {
     fun findByValidationTaskId(validationTaskId: Long): AiUsageRecord?
+
+    fun deleteByProjectId(projectId: Long)
 }

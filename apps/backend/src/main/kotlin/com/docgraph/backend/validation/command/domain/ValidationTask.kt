@@ -42,6 +42,11 @@ class ValidationTask(
     @Column(nullable = false)
     val edgeId: Long,
 
+    // discard cascade용 비정규화. 생성 시 edge의 projectId를 박는다.
+    // edge 미해소(race) 경로에선 null 가능 — 그 task는 어차피 markFailed 대상.
+    @Column(name = "project_id")
+    val projectId: Long? = null,
+
     @Column(nullable = false)
     val createdAt: OffsetDateTime = OffsetDateTime.now(),
 ) : OutboxEntry {

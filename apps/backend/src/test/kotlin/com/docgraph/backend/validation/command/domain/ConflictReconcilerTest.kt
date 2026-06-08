@@ -20,6 +20,7 @@ class ConflictReconcilerTest {
             existing = null,
             findings = emptyList(),
             edgeId = 1L,
+            projectId = null,
             now = OffsetDateTime.now(),
         )
 
@@ -31,10 +32,11 @@ class ConflictReconcilerTest {
         val now = OffsetDateTime.parse("2026-05-15T00:00:00Z")
         val findings = listOf(sampleFinding())
 
-        val outcome = reconciler.reconcile(existing = null, findings = findings, edgeId = 7L, now = now)
+        val outcome = reconciler.reconcile(existing = null, findings = findings, edgeId = 7L, projectId = 70L, now = now)
 
         val detected = assertIs<ReconcileOutcome.Detected>(outcome)
         assertEquals(7L, detected.newConflict.edgeId)
+        assertEquals(70L, detected.newConflict.projectId)
         assertEquals(now, detected.newConflict.firstDetectedAt)
         assertEquals(now, detected.newConflict.lastDetectedAt)
         assertNull(detected.newConflict.resolvedAt)
@@ -48,7 +50,7 @@ class ConflictReconcilerTest {
         val now = OffsetDateTime.parse("2026-05-15T00:00:00Z")
         val existing = Conflict(edgeId = 9L, firstDetectedAt = older, lastDetectedAt = older)
 
-        val outcome = reconciler.reconcile(existing = existing, findings = emptyList(), edgeId = 9L, now = now)
+        val outcome = reconciler.reconcile(existing = existing, findings = emptyList(), edgeId = 9L, projectId = null, now = now)
 
         val resolved = assertIs<ReconcileOutcome.Resolved>(outcome)
         assertSame(existing, resolved.conflict)
@@ -65,7 +67,7 @@ class ConflictReconcilerTest {
         }
         val findings = listOf(sampleFinding())
 
-        val outcome = reconciler.reconcile(existing = existing, findings = findings, edgeId = 11L, now = now)
+        val outcome = reconciler.reconcile(existing = existing, findings = findings, edgeId = 11L, projectId = null, now = now)
 
         val updated = assertIs<ReconcileOutcome.Updated>(outcome)
         assertSame(existing, updated.conflict)
@@ -87,6 +89,7 @@ class ConflictReconcilerTest {
             existing = existing,
             findings = listOf(sampleFinding()),
             edgeId = 13L,
+            projectId = null,
             now = now,
         )
 

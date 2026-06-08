@@ -9,6 +9,7 @@ class ConflictReconciler {
         existing: Conflict?,
         findings: List<DetectedConflict>,
         edgeId: Long,
+        projectId: Long?,
         now: OffsetDateTime,
     ): ReconcileOutcome {
         if (findings.isEmpty()) {
@@ -21,7 +22,12 @@ class ConflictReconciler {
         }
         return if (existing == null) {
             ReconcileOutcome.Detected(
-                newConflict = Conflict(edgeId = edgeId, firstDetectedAt = now, lastDetectedAt = now),
+                newConflict = Conflict(
+                    edgeId = edgeId,
+                    projectId = projectId,
+                    firstDetectedAt = now,
+                    lastDetectedAt = now,
+                ),
                 findings = findings,
             )
         } else {

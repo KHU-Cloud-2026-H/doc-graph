@@ -12,4 +12,5 @@ class ConflictRepositoryImpl(
     override fun findById(id: Long): Conflict? = jpa.findById(id).orElse(null)
     override fun findFirstByEdgeIdAndResolvedAtIsNull(edgeId: Long): Conflict? =
         jpa.findFirstByEdgeIdAndResolvedAtIsNull(edgeId)
+    override fun deleteByProjectId(projectId: Long) = jpa.deleteByProjectId(projectId)
 }
