@@ -1,4 +1,6 @@
 # Acceptance profile — 인수 절차/테스트를 위한 조건부 기능 활성 슬롯.
 # 활성 빈: TestResetController (DB reset), TestLoginController (세션 쿠키 로그인 우회),
-# AcceptanceGetCurrentUserIdQueryHandler (세션 쿠키 → user id, 운영 query 재사용).
+# *FixtureController (검증 대상 외 prerequisite seed).
+# 인증·사용자 조회는 운영 빈을 그대로 사용 — TestLoginController가 실제 user_account·user_session
+# row를 영속하므로 운영 GetCurrentUserIdQuery·SearchUserAccountsByIds 등이 acceptance에서도 동작.
 # 향후 acceptance 전용 설정·fixture endpoint를 여기에 추가.
