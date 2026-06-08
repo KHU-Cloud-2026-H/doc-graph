@@ -1758,30 +1758,82 @@ export interface components {
             size?: number;
         };
         InboxDocumentRef: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 문서 ID
+             * @example 1
+             */
             id?: number;
+            /**
+             * @description 문서 제목
+             * @example PRD
+             */
             title?: string;
-            /** @enum {string|null} */
+            /**
+             * @description 문서 타입 (미분류 시 null)
+             * @enum {string|null}
+             */
             type?: "meeting_notes" | "planning" | "requirements" | "design" | "research" | null;
         };
         MyConflictRow: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 충돌 ID
+             * @example 1
+             */
             id?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 연결된 엣지 ID
+             * @example 1
+             */
             edgeId?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 워크스페이스 ID
+             * @example 1
+             */
             workspaceId?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 프로젝트 ID
+             * @example 1
+             */
             projectId?: number;
+            /**
+             * @description 프로젝트 이름
+             * @example Q2 Planning
+             */
             projectName?: string;
+            /** @description 충돌 근거가 된 상대 문서 (의존 출발 문서) */
             sourceDocument?: components["schemas"]["InboxDocumentRef"];
+            /** @description 담당 대상 문서 (의존 도착 문서) */
             targetDocument?: components["schemas"]["InboxDocumentRef"];
+            /**
+             * @description 최신 finding의 한 줄 요약 제목
+             * @example 결정사항 미반영
+             */
             title?: string;
-            /** @enum {string} */
+            /**
+             * Format: int64
+             * @description 최신 finding ID. conflict에 finding 다건이면 가장 최근 1건이며 title과 같은 finding. finding 없으면 null.
+             * @example 1
+             */
+            latestFindingId?: number | null;
+            /**
+             * @description 충돌 상태
+             * @enum {string}
+             */
             status?: "ACTIVE" | "IGNORED";
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description 최초 감지 시각
+             */
             firstDetectedAt?: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description 무시 처리 시각 (미무시 시 null)
+             */
             ignoredAt?: string | null;
         };
         PageResponseMyConflictRow: {
