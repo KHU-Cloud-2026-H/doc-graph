@@ -41,11 +41,10 @@ test-all *gradleArgs:
 test-class class *gradleArgs:
     cd apps/backend && {{dotenv-run}} sh ./gradlew test --tests {{class}} {{gradleArgs}}
 
-# 인수 stack — postgres + backend(acceptance profile) + 외부 시스템 stub.
-# mode: mock (default, wiremock) | live (실제 Notion·OpenAI + ngrok).
-# 회원가입 UI 실제 흐름 시연은 live + OAuth2 backend 통합 완료가 전제.
-compose-up mode="mock":
-    COMPOSE_PROFILES=backend,{{mode}} {{dotenv-run}} docker compose up --build
+# 로컬 통합 stack — postgres + backend(acceptance profile, /test/* fixture 노출). 외부 API는 .env의 실제 Notion·OpenAI 호출.
+# extra_profile=live → ngrok 동반(공개 콜백·webhook URL 필요 시). 외부 API stub은 test-acceptance recipe 담당.
+compose-up extra_profile="":
+    COMPOSE_PROFILES="backend{{ if extra_profile != "" { "," + extra_profile } else { "" } }}" {{dotenv-run}} docker compose up --build
 
 # 서버 상주 배포 — backend profile만(ngrok·wiremock 제외), detached + restart 정책 overlay.
 compose-deploy:
