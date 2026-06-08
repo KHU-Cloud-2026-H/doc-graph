@@ -131,6 +131,7 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(MyConflictStatus.ACTIVE, row1.status)
         assertEquals(now, row1.firstDetectedAt)
         assertEquals("T500", row1.title)
+        assertEquals(1L, row1.latestFindingId)
 
         val row2 = result.content.first { it.id == 501L }
         assertEquals(8L, row2.workspaceId)
@@ -138,6 +139,46 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals("P2", row2.projectName)
         assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
         assertEquals("T501", row2.title)
+        assertEquals(2L, row2.latestFindingId)
+    }
+
+    @Test
+    fun `finding 다건 — title과 latestFindingId가 최신 finding 한 건으로 일치`() {
+        every { getCurrentUserId.get() } returns 100L
+        every { searchWorkspaceMemberIds.search(100L) } returns listOf(11L)
+        every { searchDocumentIdsByAssignee.search(11L) } returns listOf(20L)
+        every { searchAssignedDocumentTypes.search(100L) } returns emptyList()
+        every { searchDocumentIdsByProjectAndTypes.search(emptyList()) } returns emptyList()
+        every { searchAdminProjectIds.search(100L) } returns emptyList()
+        every { searchDocumentReferences.search(listOf(20L)) } returns listOf(
+            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS),
+        )
+        every { searchEdgeIdsByTargetDocuments.search(1L, listOf(20L)) } returns listOf(30L)
+        every {
+            validationQueryRepository.findInboxConflictsByEdgeIds(listOf(30L), MyConflictStatusFilter.ACTIVE, any())
+        } returns PageImpl(
+            listOf(InboxConflictRow(500L, 30L, now, null)),
+            PageRequest.of(0, 20),
+            1L,
+        )
+        every { searchEdgeDetailsByIds.search(listOf(30L)) } returns listOf(
+            EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
+        )
+        every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
+            DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
+        )
+        every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, 9L, "P"))
+        val older = OffsetDateTime.parse("2026-04-01T00:00:00Z")
+        val newer = OffsetDateTime.parse("2026-04-02T00:00:00Z")
+        every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
+            ConflictFindingRow(1L, 500L, listOf("x"), "y", "r", "n", "OLD", older),
+            ConflictFindingRow(2L, 500L, listOf("x"), "y", "r", "n", "NEW", newer),
+        )
+
+        val result = handler.search(MyConflictStatusFilter.ACTIVE, PageRequest.of(0, 20))
+
+        assertEquals("NEW", result.content[0].title)
+        assertEquals(2L, result.content[0].latestFindingId)
     }
 
     @Test

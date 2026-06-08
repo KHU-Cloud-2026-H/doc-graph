@@ -65,9 +65,9 @@ class SearchMyConflictsQueryHandler(
             )
         }
 
-        val titlesByConflict = validationQueryRepository.findFindingsByConflictIds(conflictPage.content.map { it.id })
+        val latestFindingByConflict = validationQueryRepository.findFindingsByConflictIds(conflictPage.content.map { it.id })
             .groupBy { it.conflictId }
-            .mapValues { (_, findings) -> findings.maxByOrNull { it.detectedAt }?.title.orEmpty() }
+            .mapValues { (_, findings) -> findings.maxWithOrNull(compareBy({ it.detectedAt }, { it.id })) }
         val edgesInPage = searchEdgeDetailsByIds.search(conflictPage.content.map { it.edgeId })
         val edgeById = edgesInPage.associateBy { it.id }
         val sourceRefs = searchDocumentReferences.search(edgesInPage.map { it.sourceDocumentId }.distinct())
@@ -81,6 +81,7 @@ class SearchMyConflictsQueryHandler(
             val target = targetRefById[edge.targetDocumentId] ?: return@mapNotNull null
             val source = sourceRefs[edge.sourceDocumentId] ?: return@mapNotNull null
             val projectRef = projectRefById[target.projectId] ?: return@mapNotNull null
+            val latestFinding = latestFindingByConflict[conflict.id]
             MyConflictRow(
                 id = conflict.id,
                 edgeId = conflict.edgeId,
@@ -89,7 +90,8 @@ class SearchMyConflictsQueryHandler(
                 projectName = projectRef.name,
                 sourceDocument = InboxDocumentRef(source.id, source.title, source.type),
                 targetDocument = InboxDocumentRef(target.id, target.title, target.type),
-                title = titlesByConflict[conflict.id].orEmpty(),
+                title = latestFinding?.title.orEmpty(),
+                latestFindingId = latestFinding?.id,
                 status = if (conflict.ignoredAt != null) MyConflictStatus.IGNORED else MyConflictStatus.ACTIVE,
                 firstDetectedAt = conflict.firstDetectedAt,
                 ignoredAt = conflict.ignoredAt,
