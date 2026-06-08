@@ -57,9 +57,12 @@ enum class NotionIconType {
     EMOJI,
     EXTERNAL,
     FILE,
+    NATIVE,
+    CUSTOM_EMOJI,
 }
 
 data class NotionIcon(
     val type: NotionIconType,
     val value: String,
+    val color: String? = null,
 )

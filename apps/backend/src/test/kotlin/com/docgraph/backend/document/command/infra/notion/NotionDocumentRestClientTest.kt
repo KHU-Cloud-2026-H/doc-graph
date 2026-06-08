@@ -1,5 +1,6 @@
 package com.docgraph.backend.document.command.infra.notion
 
+import com.docgraph.backend.document.command.domain.NotionIconType
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -146,6 +147,63 @@ class NotionDocumentRestClientTest {
 
         assertEquals("링크된 페이지", block.text)
         assertTrue("linked-page-1" in block.linkedPageIds)
+    }
+
+    @Test
+    fun `native icon(type icon)은 name을 value로, color를 함께 NATIVE로 추출한다`() {
+        stubPage("""{"id":"page-1","icon":{"type":"icon","icon":{"name":"barcode","color":"gray"}}}""")
+
+        val icon = client.fetchPage("page-1").icon!!
+
+        assertEquals(NotionIconType.NATIVE, icon.type)
+        assertEquals("barcode", icon.value)
+        assertEquals("gray", icon.color)
+    }
+
+    @Test
+    fun `native icon은 color 생략 시 color가 null`() {
+        stubPage("""{"id":"page-1","icon":{"type":"icon","icon":{"name":"pizza"}}}""")
+
+        val icon = client.fetchPage("page-1").icon!!
+
+        assertEquals(NotionIconType.NATIVE, icon.type)
+        assertEquals("pizza", icon.value)
+        assertNull(icon.color)
+    }
+
+    @Test
+    fun `custom_emoji는 이미지 url을 CUSTOM_EMOJI로 추출한다`() {
+        stubPage(
+            """{"id":"page-1","icon":{"type":"custom_emoji","custom_emoji":{"id":"e1","name":"bufo","url":"https://img.example/bufo.png"}}}""",
+        )
+
+        val icon = client.fetchPage("page-1").icon!!
+
+        assertEquals(NotionIconType.CUSTOM_EMOJI, icon.type)
+        assertEquals("https://img.example/bufo.png", icon.value)
+        assertNull(icon.color)
+    }
+
+    @Test
+    fun `emoji icon은 EMOJI 문자로 추출한다`() {
+        stubPage("""{"id":"page-1","icon":{"type":"emoji","emoji":"📄"}}""")
+
+        val icon = client.fetchPage("page-1").icon!!
+
+        assertEquals(NotionIconType.EMOJI, icon.type)
+        assertEquals("📄", icon.value)
+    }
+
+    @Test
+    fun `icon이 없는 페이지는 icon이 null`() {
+        stubPage("""{"id":"page-1"}""")
+
+        assertNull(client.fetchPage("page-1").icon)
+    }
+
+    private fun stubPage(body: String) {
+        server.expect(requestTo("$BASE_URL/v1/pages/page-1"))
+            .andRespond(withSuccess(body, MediaType.APPLICATION_JSON))
     }
 
     private fun stubChildren(vararg resultJson: String) {

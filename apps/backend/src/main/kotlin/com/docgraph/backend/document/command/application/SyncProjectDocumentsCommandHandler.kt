@@ -217,13 +217,14 @@ class SyncProjectDocumentsCommandHandler(
                 notionPageId = page.id,
                 title = page.title,
             )
-        val (iconType, iconValue) = page.icon.toIconFields()
+        val (iconType, iconValue, iconColor) = page.icon.toIconFields()
         document.refreshSnapshot(
             title = page.title,
             parentNotionPageId = parentNotionPageId,
             type = type,
             iconType = iconType,
             iconValue = iconValue,
+            iconColor = iconColor,
             assigneeMemberId = document.assigneeMemberId,
             rawContent = page.rawJson,
             flatText = flatText,
@@ -386,9 +387,11 @@ private data class PageSyncJob(
 
 private fun notionPageKey(id: String): String = id.replace("-", "").lowercase()
 
-private fun NotionIcon?.toIconFields(): Pair<IconType?, String?> = when (this?.type) {
-    NotionIconType.EMOJI -> IconType.EMOJI to value
-    NotionIconType.EXTERNAL -> IconType.EXTERNAL to value
-    NotionIconType.FILE -> IconType.FILE to value
-    null -> null to null
+private fun NotionIcon?.toIconFields(): Triple<IconType?, String?, String?> = when (this?.type) {
+    NotionIconType.EMOJI -> Triple(IconType.EMOJI, value, null)
+    NotionIconType.EXTERNAL -> Triple(IconType.EXTERNAL, value, null)
+    NotionIconType.FILE -> Triple(IconType.FILE, value, null)
+    NotionIconType.NATIVE -> Triple(IconType.NATIVE, value, color)
+    NotionIconType.CUSTOM_EMOJI -> Triple(IconType.CUSTOM_EMOJI, value, null)
+    null -> Triple(null, null, null)
 }

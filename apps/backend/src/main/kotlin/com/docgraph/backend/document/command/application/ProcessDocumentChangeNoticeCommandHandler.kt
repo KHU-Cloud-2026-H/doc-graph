@@ -77,13 +77,14 @@ class ProcessDocumentChangeNoticeCommandHandler(
             .mapNotNull { it.text ?: it.childPageTitle }
             .joinToString("\n")
             .ifBlank { null }
-        val (iconType, iconValue) = result.icon.toIconFields()
+        val (iconType, iconValue, iconColor) = result.icon.toIconFields()
         document.refreshSnapshot(
             title = result.title,
             parentNotionPageId = document.parentNotionPageId,
             type = document.type,
             iconType = iconType,
             iconValue = iconValue,
+            iconColor = iconColor,
             assigneeMemberId = document.assigneeMemberId,
             rawContent = result.rawJson,
             flatText = flatText,
@@ -183,9 +184,11 @@ data class NotionFetchResult(
     val blocks: List<NotionBlock>,
 )
 
-private fun NotionIcon?.toIconFields(): Pair<IconType?, String?> = when (this?.type) {
-    NotionIconType.EMOJI -> IconType.EMOJI to value
-    NotionIconType.EXTERNAL -> IconType.EXTERNAL to value
-    NotionIconType.FILE -> IconType.FILE to value
-    null -> null to null
+private fun NotionIcon?.toIconFields(): Triple<IconType?, String?, String?> = when (this?.type) {
+    NotionIconType.EMOJI -> Triple(IconType.EMOJI, value, null)
+    NotionIconType.EXTERNAL -> Triple(IconType.EXTERNAL, value, null)
+    NotionIconType.FILE -> Triple(IconType.FILE, value, null)
+    NotionIconType.NATIVE -> Triple(IconType.NATIVE, value, color)
+    NotionIconType.CUSTOM_EMOJI -> Triple(IconType.CUSTOM_EMOJI, value, null)
+    null -> Triple(null, null, null)
 }

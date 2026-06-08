@@ -36,6 +36,7 @@ class DocumentTest {
             type = DocumentType.REQUIREMENTS,
             iconType = IconType.EMOJI,
             iconValue = "📄",
+            iconColor = "blue",
             assigneeMemberId = 20L,
             rawContent = """{"new":true}""",
             flatText = "new text",
@@ -49,6 +50,7 @@ class DocumentTest {
         assertEquals(DocumentType.REQUIREMENTS, document.type)
         assertEquals(IconType.EMOJI, document.iconType)
         assertEquals("📄", document.iconValue)
+        assertEquals("blue", document.iconColor)
         assertEquals(20L, document.assigneeMemberId)
         assertEquals("""{"new":true}""", document.rawContent)
         assertEquals("new text", document.flatText)

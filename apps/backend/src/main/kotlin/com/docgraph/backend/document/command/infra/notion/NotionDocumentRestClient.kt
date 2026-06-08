@@ -240,6 +240,10 @@ class NotionDocumentRestClient(
                 ?.let { NotionIcon(NotionIconType.EXTERNAL, it) }
             "file" -> icon.path("file").path("url").asTextOrNull()
                 ?.let { NotionIcon(NotionIconType.FILE, it) }
+            "icon" -> icon.path("icon").path("name").asTextOrNull()
+                ?.let { NotionIcon(NotionIconType.NATIVE, it, icon.path("icon").path("color").asTextOrNull()) }
+            "custom_emoji" -> icon.path("custom_emoji").path("url").asTextOrNull()
+                ?.let { NotionIcon(NotionIconType.CUSTOM_EMOJI, it) }
             else -> null
         }
     }

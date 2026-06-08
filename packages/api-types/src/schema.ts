@@ -997,15 +997,20 @@ export interface components {
         };
         IconResponse: {
             /**
-             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능)
+             * @description 아이콘 타입 — EMOJI는 이모지 문자, EXTERNAL은 외부 URL, FILE은 Notion signed URL(만료 가능), NATIVE는 Notion 빌트인 아이콘 이름, CUSTOM_EMOJI는 커스텀 이모지 이미지 URL
              * @enum {string}
              */
-            type?: "EMOJI" | "EXTERNAL" | "FILE";
+            type?: "EMOJI" | "EXTERNAL" | "FILE" | "NATIVE" | "CUSTOM_EMOJI";
             /**
-             * @description 타입에 따른 값 — emoji면 이모지 문자, external/file이면 URL
+             * @description 타입에 따른 값 — EMOJI면 이모지 문자, EXTERNAL/FILE/CUSTOM_EMOJI면 URL, NATIVE면 아이콘 이름
              * @example 📄
              */
             value?: string;
+            /**
+             * @description NATIVE 아이콘 색상 (gray/blue 등). 그 외 타입은 null
+             * @example gray
+             */
+            color?: string | null;
         };
         ProjectSummary: {
             /**
