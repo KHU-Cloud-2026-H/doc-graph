@@ -279,6 +279,11 @@ export const DocumentView = () => {
                     ) : (
                       <span className="text-slate-500">—</span>
                     )}
+                    {docDetail?.lastEditedByName && (
+                      <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
+                        <span className="text-sm">{docDetail.lastEditedByName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
