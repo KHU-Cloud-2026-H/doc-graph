@@ -1,27 +1,31 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { FileText, Database, Info, Square } from "lucide-react";
 import type { components } from "@docgraph/api-types";
 import { blocksToTree, type BlockTreeNode } from "../../lib/blocksToTree";
 
 type Block = components["schemas"]["Block"];
 
-/**
- * 평평한 blocks 리스트를 트리로 재구성하여 렌더한다.
- * - 연속된 bulleted_list_item / numbered_list_item 은 하나의 <ul>/<ol> 로 묶는다.
- * - 연속된 child_page / child_database 는 하나의 그룹 <div> 로 묶는다.
- * - 자식이 있는 리스트 항목은 항목 내부에서 재귀 렌더(중첩 리스트).
- * - 리스트가 아닌 노드는 type 별로 렌더하고, 자식이 있으면 아래에 들여쓰기로 재귀 렌더.
- */
-export function BlockRenderer({ blocks }: { blocks: Block[] }) {
+interface BlockRendererProps {
+  blocks: Block[];
+  notionPageIdToDocId?: Map<string, number>;
+  docBasePath?: string;
+}
+
+export function BlockRenderer({ blocks, notionPageIdToDocId, docBasePath }: BlockRendererProps) {
   const tree = blocksToTree(blocks);
   return (
     <div className="pb-32 [&>*:first-child]:mt-0">
-      {renderSiblings(tree)}
+      {renderSiblings(tree, notionPageIdToDocId, docBasePath)}
     </div>
   );
 }
 
-function renderSiblings(nodes: BlockTreeNode[]): ReactNode {
+function renderSiblings(
+  nodes: BlockTreeNode[],
+  notionPageIdToDocId?: Map<string, number>,
+  docBasePath?: string,
+): ReactNode {
   const output: ReactNode[] = [];
   let i = 0;
 
@@ -38,8 +42,8 @@ function renderSiblings(nodes: BlockTreeNode[]): ReactNode {
         <ul key={`ul-${group[0].blockId}`} className="my-3 list-disc pl-6 space-y-1">
           {group.map((n) => (
             <li key={n.blockId}>
-              {n.text}
-              {n.children.length > 0 && renderSiblings(n.children)}
+              <span className="whitespace-pre-wrap">{n.text}</span>
+              {n.children.length > 0 && renderSiblings(n.children, notionPageIdToDocId, docBasePath)}
             </li>
           ))}
         </ul>
@@ -57,8 +61,8 @@ function renderSiblings(nodes: BlockTreeNode[]): ReactNode {
         <ol key={`ol-${group[0].blockId}`} className="my-3 list-decimal pl-6 space-y-1">
           {group.map((n) => (
             <li key={n.blockId}>
-              {n.text}
-              {n.children.length > 0 && renderSiblings(n.children)}
+              <span className="whitespace-pre-wrap">{n.text}</span>
+              {n.children.length > 0 && renderSiblings(n.children, notionPageIdToDocId, docBasePath)}
             </li>
           ))}
         </ol>
@@ -77,20 +81,35 @@ function renderSiblings(nodes: BlockTreeNode[]): ReactNode {
       }
       output.push(
         <div key={`child-group-${group[0].blockId}`} className="my-3 space-y-0.5">
-          {group.map((n) => (
-            <div
-              key={n.blockId}
-              title="하위 페이지 (이동 연결 예정)"
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-slate-100 text-[15px] cursor-default"
-            >
-              {n.type === "child_page" ? (
-                <FileText className="w-4 h-4" />
-              ) : (
-                <Database className="w-4 h-4" />
-              )}
-              {n.text}
-            </div>
-          ))}
+          {group.map((n) => {
+            // blockId == Notion page ID → 내부 문서 ID 매핑
+            const normalizedId = n.blockId.replace(/-/g, '');
+            const internalId = notionPageIdToDocId?.get(n.blockId)
+              ?? notionPageIdToDocId?.get(normalizedId);
+            const Icon = n.type === "child_page" ? FileText : Database;
+
+            if (internalId !== undefined && docBasePath) {
+              return (
+                <Link
+                  key={n.blockId}
+                  to={`${docBasePath}/${internalId}`}
+                  className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-slate-100 text-[15px] text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {n.text}
+                </Link>
+              );
+            }
+            return (
+              <div
+                key={n.blockId}
+                className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-slate-100 text-[15px] cursor-default text-slate-700"
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {n.text}
+              </div>
+            );
+          })}
         </div>
       );
       continue;
@@ -144,18 +163,18 @@ function renderBlock(node: BlockTreeNode): ReactNode {
 
   switch (type) {
     case "paragraph":
-      return <p>{text}</p>;
+      return <p className="whitespace-pre-wrap">{text}</p>;
     case "heading_1":
-      return <h1 className="text-3xl font-bold">{text}</h1>;
+      return <h1 className="text-3xl font-bold whitespace-pre-wrap">{text}</h1>;
     case "heading_2":
-      return <h2 className="text-2xl font-bold">{text}</h2>;
+      return <h2 className="text-2xl font-bold whitespace-pre-wrap">{text}</h2>;
     case "heading_3":
-      return <h3 className="text-xl font-semibold">{text}</h3>;
+      return <h3 className="text-xl font-semibold whitespace-pre-wrap">{text}</h3>;
     case "heading_4":
-      return <h4 className="text-lg font-semibold">{text}</h4>;
+      return <h4 className="text-lg font-semibold whitespace-pre-wrap">{text}</h4>;
     case "quote":
       return (
-        <blockquote className="border-l-4 border-slate-300 pl-4 text-slate-600 italic">
+        <blockquote className="border-l-4 border-slate-300 pl-4 text-slate-600 italic whitespace-pre-wrap">
           {text}
         </blockquote>
       );
@@ -173,7 +192,7 @@ function renderBlock(node: BlockTreeNode): ReactNode {
           <span className="flex items-center h-6 shrink-0">
             <Info className="w-4 h-4 text-slate-500" />
           </span>
-          <div>{text}</div>
+          <div className="whitespace-pre-wrap">{text}</div>
         </div>
       );
     case "to_do":
@@ -182,11 +201,11 @@ function renderBlock(node: BlockTreeNode): ReactNode {
           <span className="flex items-center h-6 shrink-0">
             <Square className="w-4 h-4 text-slate-400" />
           </span>
-          <span>{text}</span>
+          <span className="whitespace-pre-wrap">{text}</span>
         </div>
       );
     default:
-      if (text) return <p>{text}</p>;
+      if (text) return <p className="whitespace-pre-wrap">{text}</p>;
       return (
         <div className="text-sm text-slate-400 border border-dashed border-slate-200 rounded px-2 py-1">
           [{type} 블록 — 지원 예정]

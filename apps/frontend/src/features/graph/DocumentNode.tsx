@@ -1,12 +1,17 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import type { DocumentFlowNode } from './mockData';
 
-export const DocumentNode = ({ data, isConnectable }: NodeProps<DocumentFlowNode>) => {
+export const DocumentNode = ({ id, data, isConnectable }: NodeProps<DocumentFlowNode>) => {
+  const { workspaceId, projectId } = useParams();
   const isError = data.hasError;
+
   return (
-    <Link to={`/w/sample-workspace/docs/${data.id || 'prd'}`} className="flex flex-col items-center gap-2 relative">
+    <Link
+      to={`/w/${workspaceId}/p/${projectId}/docs/${id}`}
+      className="flex flex-col items-center gap-2 relative"
+    >
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white border-2 shadow-sm relative transition-transform hover:scale-105 ${
         isError ? 'border-red-600 bg-red-50' : 'border-slate-800'
       }`}>

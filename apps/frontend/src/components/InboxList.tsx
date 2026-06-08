@@ -29,7 +29,6 @@ export const InboxList = ({ onClose, filter }: InboxListProps) => {
   const navigate = useNavigate();
   const { workspaceId: urlWorkspaceId, projectId: urlProjectId } = useParams();
   const currentProjectId = useAppStore((s) => s.currentProjectId);
-  const projects = useAppStore((s) => s.projects);
   const { conflicts, isLoading } = useInbox();
 
   const projectId = urlProjectId ?? (currentProjectId ? String(currentProjectId) : undefined);
@@ -43,9 +42,7 @@ export const InboxList = ({ onClose, filter }: InboxListProps) => {
 
   const handleClick = (conflict: MyConflictRow) => {
     const targetProjectId = projectId ?? String(conflict.projectId);
-    const targetWorkspaceId =
-      urlWorkspaceId ??
-      String(projects.find((p) => p.id === conflict.projectId)?.workspaceId ?? '');
+    const targetWorkspaceId = urlWorkspaceId ?? String(conflict.workspaceId);
 
     if (targetWorkspaceId && targetProjectId) {
       navigate(`/w/${targetWorkspaceId}/p/${targetProjectId}/docs/${conflict.targetDocument.id}?openIssues=true`);

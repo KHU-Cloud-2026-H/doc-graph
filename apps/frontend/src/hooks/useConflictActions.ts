@@ -5,7 +5,7 @@ export function useIgnoreConflict() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (conflictId: number) =>
-      apiClient.POST(`/api/conflicts/${conflictId}/ignore`),
+      apiClient.POST(`/api/conflicts/${conflictId}/ignore`, { reason: null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inbox'] })
     },
@@ -27,7 +27,7 @@ export function useApproveConflict() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ conflictId, findingId }: { conflictId: number; findingId: number }) =>
-      apiClient.POST(`/api/conflicts/${conflictId}/findings/${findingId}/approve`),
+      apiClient.POST(`/api/conflicts/${conflictId}/findings/${findingId}/approve`, { expectedTargetNotionLastEditedAt: null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inbox'] })
     },

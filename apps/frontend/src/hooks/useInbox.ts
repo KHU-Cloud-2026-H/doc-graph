@@ -10,12 +10,14 @@ export interface InboxDocumentRef {
 export interface MyConflictRow {
   id: number
   edgeId: number
+  workspaceId: number
   projectId: number
   projectName: string
   sourceDocument: InboxDocumentRef
   targetDocument: InboxDocumentRef
   title: string
   status: 'ACTIVE' | 'IGNORED'
+  latestFindingId: number | null
   firstDetectedAt: string
   ignoredAt: string | null
 }

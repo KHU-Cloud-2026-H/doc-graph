@@ -1,21 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import StepIndicator from '../components/wizard/StepIndicator';
-
-// 1단계: Notion 루트 페이지 후보
-const MOCK_NOTION_ROOT_PAGES = [
-  { id: 0, emoji: '🏠', title: '프로젝트' },
-] as const;
-
-// 2단계: 카테고리 등록 대상 페이지 (루트의 직계 자식)
-const MOCK_CATEGORY_PAGES = [
-  { id: 1, emoji: '💡', title: '기획' },
-  { id: 6, emoji: '📅', title: '회의록' },
-  { id: 11, emoji: '🔷', title: '설계' },
-  { id: 16, emoji: '🔍', title: 'QA및테스트' },
-  { id: 21, emoji: '⚙️', title: '프론트엔드' },
-] as const;
+import { useNotionRootPages, useNotionPageChildren } from '../hooks/useNotionPages';
+import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
+import { useCreateProject } from '../hooks/useProjectSettingsMutations';
+import { apiClient } from '../lib/apiClient';
 
 // 문서 타입 5종 (API 스키마 값과 일치)
 const DOCUMENT_TYPES = [
@@ -26,17 +16,6 @@ const DOCUMENT_TYPES = [
   'research',
 ] as const;
 type DocumentType = typeof DOCUMENT_TYPES[number];
-
-// 3·4단계: 워크스페이스 멤버 mock (7명)
-const MOCK_WORKSPACE_MEMBERS = [
-  { id: 1, name: '박관우' },
-  { id: 2, name: '서영채' },
-  { id: 3, name: '신정환' },
-  { id: 4, name: '전현준' },
-  { id: 5, name: '이창민' },
-  { id: 6, name: '김연길' },
-  { id: 7, name: '이주안' },
-] as const;
 type WorkspaceMember = { id: number; name: string };
 
 // ── 스타일 상수 ──────────────────────────────────────
@@ -54,17 +33,31 @@ const tdCls = 'p-2 align-middle text-sm whitespace-nowrap';
 const NewProjectWizard: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
+  const wsId = workspaceId ? Number(workspaceId) : undefined;
+
+  const { pages: notionRootPages } = useNotionRootPages(wsId);
+  const { workspace } = useWorkspaceDetail(wsId);
+  const workspaceMembers: WorkspaceMember[] = (workspace?.members ?? []).map(m => ({
+    id: m.workspaceMemberId ?? 0,
+    name: m.name ?? '',
+  }));
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createProject = useCreateProject(wsId);
 
   // ── 1단계 ──────────────────────────────────────────
   const [projectName, setProjectName] = useState('');
-  const [notionRootPageId, setNotionRootPageId] = useState<number | null>(null);
+  const [notionRootPageId, setNotionRootPageId] = useState<string | null>(null);
 
   // ── 2단계 ──────────────────────────────────────────
-  const [categoryMap, setCategoryMap] = useState<Record<number, DocumentType | null>>(
-    Object.fromEntries(MOCK_CATEGORY_PAGES.map(p => [p.id, null]))
-  );
+  const { children: categoryPages } = useNotionPageChildren(wsId, notionRootPageId);
+  const [categoryMap, setCategoryMap] = useState<Record<string, DocumentType | null>>({});
+
+  useEffect(() => {
+    setCategoryMap(Object.fromEntries(categoryPages.map(p => [p.notionPageId!, null])));
+  }, [categoryPages]);
 
   // ── 3단계 ──────────────────────────────────────────
   const [projectMembers, setProjectMembers] = useState<
@@ -78,12 +71,63 @@ const NewProjectWizard: React.FC = () => {
     Object.fromEntries(DOCUMENT_TYPES.map(t => [t, null])) as Record<DocumentType, number | null>
   );
 
-  const availableMembers = (MOCK_WORKSPACE_MEMBERS as readonly WorkspaceMember[]).filter(
+  // ── 최종 제출 ─────────────────────────────────────────────────
+  const handleFinish = async () => {
+    if (!wsId || !notionRootPageId || !projectName.trim()) return;
+    setIsSubmitting(true);
+    let projectId: number | null = null;
+    try {
+      // 1. 프로젝트 생성 — 실패 시 중단
+      const result = await createProject.mutateAsync({ name: projectName.trim(), notionRootPageId });
+      projectId = result.id;
+    } catch {
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 2~4. 카테고리·담당자·sync — 실패해도 이동은 진행
+    try {
+      const categoryEntries = Object.entries(categoryMap).filter(([, type]) => type !== null);
+      await Promise.all(
+        categoryEntries.map(([notionPageId, documentType]) =>
+          apiClient.POST(`/api/projects/${projectId}/categories`, { notionPageId, documentType }),
+        ),
+      );
+    } catch { /* 카테고리 등록 실패는 무시 — 나중에 Project Settings에서 재설정 가능 */ }
+
+    // 3. 멤버 배정
+    try {
+      await Promise.all(
+        projectMembers.map(({ memberId, role }) =>
+          apiClient.POST(`/api/projects/${projectId}/members`, { workspaceMemberId: memberId, role }),
+        ),
+      );
+    } catch { /* 멤버 배정 실패 무시 — Project Settings에서 재설정 가능 */ }
+
+    // 4. 타입별 담당자 지정
+    try {
+      const assigneePayload = DOCUMENT_TYPES.map(t => ({
+        documentType: t,
+        assigneeMemberId: typeAssignees[t],
+      }));
+      await apiClient.PUT(`/api/projects/${projectId}/type-assignees`, { assignees: assigneePayload });
+    } catch { /* 담당자 설정 실패 무시 */ }
+
+    try {
+      await apiClient.POST(`/api/projects/${projectId}/sync`);
+    } catch { /* sync 실패 무시 — 그래프 화면에서 수동 sync 가능 */ }
+
+    // sync가 백그라운드에서 실행되는 동안 최소 대기 후 이동
+    await new Promise((r) => setTimeout(r, 3000));
+    navigate(`/w/${workspaceId}/p/${projectId}/graph`);
+  };
+
+  const availableMembers = workspaceMembers.filter(
     m => !projectMembers.some(pm => pm.memberId === m.id)
   );
 
   const handleAddMember = () => {
-    const member = MOCK_WORKSPACE_MEMBERS.find(m => m.id === pendingMemberId);
+    const member = workspaceMembers.find(m => m.id === pendingMemberId);
     if (!member) return;
     setProjectMembers(prev => [...prev, {
       memberId: member.id,
@@ -122,13 +166,13 @@ const NewProjectWizard: React.FC = () => {
           </label>
           <select
             value={notionRootPageId !== null ? String(notionRootPageId) : ''}
-            onChange={e => setNotionRootPageId(e.target.value === '' ? null : Number(e.target.value))}
+            onChange={e => setNotionRootPageId(e.target.value === '' ? null : e.target.value)}
             className={`${selectCls} w-full`}
           >
             <option value="" disabled>루트 페이지를 선택하세요</option>
-            {MOCK_NOTION_ROOT_PAGES.map(page => (
-              <option key={page.id} value={String(page.id)}>
-                {page.emoji} {page.title}
+            {notionRootPages.map(page => (
+              <option key={page.notionPageId} value={page.notionPageId ?? ''}>
+                {page.icon?.type === 'EMOJI' ? page.icon.value : ''} {page.title}
               </option>
             ))}
           </select>
@@ -169,18 +213,18 @@ const NewProjectWizard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="[&_tr:last-child]:border-0">
-            {MOCK_CATEGORY_PAGES.map(page => (
-              <tr key={page.id} className="border-b hover:bg-gray-50 transition-colors">
-                <td className={tdCls}>{page.emoji} {page.title}</td>
+            {categoryPages.map(page => (
+              <tr key={page.notionPageId} className="border-b hover:bg-gray-50 transition-colors">
+                <td className={tdCls}>{page.icon?.type === 'EMOJI' ? page.icon.value : ''} {page.title}</td>
                 <td className={tdCls}>
                   <select
-                    value={categoryMap[page.id] === null ? 'none' : categoryMap[page.id]!}
+                    value={categoryMap[page.notionPageId!] === null ? 'none' : (categoryMap[page.notionPageId!] ?? 'none')}
                     onChange={e => {
                       const value = e.target.value;
                       if (value === 'none') {
-                        setCategoryMap(prev => ({ ...prev, [page.id]: null }));
+                        setCategoryMap(prev => ({ ...prev, [page.notionPageId!]: null }));
                       } else {
-                        setCategoryMap(prev => ({ ...prev, [page.id]: value as DocumentType }));
+                        setCategoryMap(prev => ({ ...prev, [page.notionPageId!]: value as DocumentType }));
                       }
                     }}
                     className={`${selectCls} w-48`}
@@ -356,7 +400,7 @@ const NewProjectWizard: React.FC = () => {
                     className={`${selectCls} w-40`}
                   >
                     <option value="none">담당자 없음</option>
-                    {(MOCK_WORKSPACE_MEMBERS as readonly WorkspaceMember[]).map(m => (
+                    {workspaceMembers.map(m => (
                       <option key={m.id} value={String(m.id)}>{m.name}</option>
                     ))}
                   </select>
@@ -370,11 +414,14 @@ const NewProjectWizard: React.FC = () => {
       <div className="flex gap-3 mt-8">
         <button
           className={btnPrimary}
-          onClick={() => navigate(`/w/${workspaceId}`)}
+          disabled={isSubmitting}
+          onClick={handleFinish}
         >
-          배정 완료 및 초기 동기화 실행
+          {isSubmitting ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin inline" />생성 중...</>
+          ) : '배정 완료 및 초기 동기화 실행'}
         </button>
-        <button className={btnGhost} onClick={() => setStep(3)}>
+        <button className={btnGhost} onClick={() => setStep(3)} disabled={isSubmitting}>
           뒤로가기
         </button>
       </div>
