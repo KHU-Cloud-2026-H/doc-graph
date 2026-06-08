@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ExternalLink } from 'lucide-react';
 import { useAppStore } from '../store';
 import { useProjectDetail, useProjectCategories, useProjectTypeAssignees, useProjectValidation, useProjectAiUsage, useProjectRules } from '../hooks/useProjectDetail';
 import type { RuleDetail } from '../hooks/useProjectDetail';
@@ -295,6 +295,16 @@ const ProjectSettings: React.FC = () => {
     const members = project?.members ?? [];
     return (
       <>
+        <p className="text-sm text-slate-500 mb-4 max-w-2xl leading-6">
+          워크스페이스에 속해 있는 멤버만 프로젝트에 추가할 수 있습니다.
+          <br />
+          추가할 멤버가 목록에 표시되지 않는다면 먼저{' '}
+          <Link to={`/w/${workspaceId}`} className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+            워크스페이스 홈
+            <ExternalLink className="w-4 h-4" />
+          </Link>
+          으로 이동하여 멤버를 추가하세요!
+        </p>
         <div className="flex items-end gap-3 mb-6">
           <select
             value={pendingMemberId !== null ? String(pendingMemberId) : ''}
