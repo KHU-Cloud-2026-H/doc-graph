@@ -1,5 +1,5 @@
 import { ExternalLink, CheckCircle, Check } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { RightSidebar } from "../components/RightSidebar";
 import { useAppStore, type DocumentType, type DocumentNode } from '../store';
@@ -52,6 +52,112 @@ function resolveCategoryType(roots: DocumentNode[], docId: number): DocumentType
   }
   return null;
 }
+
+// 브레드크럼 표시 폭: 한글(완성형/자모/호환자모)은 폭 2, 그 외 문자는 폭 1로 계산
+// (영어 40자 ≈ 한글 20자 라는 요구사항을 "폭 40" 하나의 기준으로 통일하기 위함)
+const isHangul = (ch: string): boolean => {
+  const code = ch.codePointAt(0) ?? 0;
+  return (code >= 0xac00 && code <= 0xd7a3)
+    || (code >= 0x1100 && code <= 0x11ff)
+    || (code >= 0x3130 && code <= 0x318f);
+};
+
+const displayWidth = (text: string): number => {
+  let width = 0;
+  for (const ch of text) width += isHangul(ch) ? 2 : 1;
+  return width;
+};
+
+const truncateToWidth = (text: string, maxWidth: number): string => {
+  let width = 0;
+  let result = '';
+  for (const ch of text) {
+    const chWidth = isHangul(ch) ? 2 : 1;
+    if (width + chWidth > maxWidth) break;
+    width += chWidth;
+    result += ch;
+  }
+  return result;
+};
+
+const ellipsisIfOver = (text: string, limit: number, cut: number): string =>
+  displayWidth(text) > limit ? `${truncateToWidth(text, cut)}...` : text;
+
+type BreadcrumbCrumb = {
+  key: string;
+  title: string;
+  emoji?: string;
+  to?: string;
+};
+
+type BreadcrumbRenderItem =
+  | { type: 'crumb'; crumb: BreadcrumbCrumb; title: string }
+  | { type: 'ellipsis'; key: string };
+
+const BREADCRUMB_SEPARATOR_WIDTH = 7;
+const BREADCRUMB_PROTECTED_RULE = { limit: 40, cut: 38 };
+const BREADCRUMB_PROTECTED_RULE_TIGHT = { limit: 20, cut: 18 };
+const BREADCRUMB_MIDDLE_RULE = { limit: 10, cut: 8 };
+// 주의: 아래 두 임계값은 실제 컨테이너 폭을 동적으로 측정하는 게 아니라
+// "이름이 비정상적으로 길어서 창 크기와 무관하게 줄바꿈 위험이 큰 경우"에 대비한 안전장치 성격의 정적 기준값.
+const BREADCRUMB_COLLAPSE_THRESHOLD = 800;
+const BREADCRUMB_TIGHTEN_THRESHOLD = 200;
+
+// 브레드크럼 절단/축약 규칙:
+// 1) 보호 대상 3개(루트=첫 항목, 1단계 상위=끝에서 두 번째, 현재 페이지=마지막)는 폭 40 초과 시 38까지 표시
+// 2) 그 외(2단계 이상 상위)는 폭 10 초과 시 8까지 표시
+// 3) (1)~(2) 적용 후 표시 폭 합(구분자 ' / '는 7로 계산)이 BREADCRUMB_COLLAPSE_THRESHOLD를 넘으면
+//    루트와 1단계 상위 사이의 항목들을 클릭 불가능한 '...' 하나로 축약
+// 4) 그래도 합이 BREADCRUMB_TIGHTEN_THRESHOLD를 넘으면 보호 대상 3개에는 더 엄격한 기준(폭 20 초과 시 18까지)을 적용
+const buildBreadcrumbItems = (crumbs: BreadcrumbCrumb[]): BreadcrumbRenderItem[] => {
+  const titles = crumbs.map((c) => c.title);
+  const lastIndex = titles.length - 1;
+  const parentIndex = lastIndex - 1;
+  const isProtected = (i: number) => i === 0 || i === parentIndex || i === lastIndex;
+
+  const sumWidth = (arr: string[]) =>
+    arr.reduce((sum, t) => sum + displayWidth(t), 0)
+    + BREADCRUMB_SEPARATOR_WIDTH * Math.max(arr.length - 1, 0);
+
+  const truncateAll = (protectedRule: { limit: number; cut: number }) =>
+    titles.map((t, i) => {
+      const rule = isProtected(i) ? protectedRule : BREADCRUMB_MIDDLE_RULE;
+      return ellipsisIfOver(t, rule.limit, rule.cut);
+    });
+
+  // 루트(0)와 1단계 상위(parentIndex) 사이에 항목이 1개 이상 있을 때만 축약 가능
+  const collapseRange: [number, number] | null = parentIndex > 1 ? [1, parentIndex - 1] : null;
+  const withCollapse = (arr: string[]) =>
+    collapseRange
+      ? [...arr.slice(0, collapseRange[0]), '...', ...arr.slice(collapseRange[1] + 1)]
+      : arr;
+
+  const lenientTitles = truncateAll(BREADCRUMB_PROTECTED_RULE);
+  const shouldCollapse = collapseRange !== null
+    && sumWidth(lenientTitles) > BREADCRUMB_COLLAPSE_THRESHOLD;
+
+  const widthAfterCollapseDecision = shouldCollapse
+    ? sumWidth(withCollapse(lenientTitles))
+    : sumWidth(lenientTitles);
+
+  const finalTitles = widthAfterCollapseDecision > BREADCRUMB_TIGHTEN_THRESHOLD
+    ? truncateAll(BREADCRUMB_PROTECTED_RULE_TIGHT)
+    : lenientTitles;
+
+  const items: BreadcrumbRenderItem[] = [];
+  for (let i = 0; i < crumbs.length; i++) {
+    if (shouldCollapse && collapseRange) {
+      const [start, end] = collapseRange;
+      if (i > start && i <= end) continue;
+      if (i === start) {
+        items.push({ type: 'ellipsis', key: `ellipsis-${crumbs[i].key}` });
+        continue;
+      }
+    }
+    items.push({ type: 'crumb', crumb: crumbs[i], title: finalTitles[i] });
+  }
+  return items;
+};
 
 export const DocumentView = () => {
   const { docId: id, workspaceId, projectId } = useParams();
@@ -175,56 +281,67 @@ export const DocumentView = () => {
     lastDocIdRef.current = activeDoc?.id;
   }, [activeDoc?.id]);
 
+  // 브레드크럼 항목 구성: 워크스페이스 / 프로젝트 / [문서트리 루트] / [부모 카테고리] / 현재 문서
+  const breadcrumbCrumbs: BreadcrumbCrumb[] = [
+    { key: 'workspace', title: workspaceName ?? '', to: `/w/${workspaceId}` },
+    { key: 'project', title: projectName, to: `/w/${workspaceId}/p/${projectId}/graph` },
+  ];
+  if (rootDocument && activeDoc?.id !== rootDocument.id) {
+    breadcrumbCrumbs.push({
+      key: `root-${rootDocument.id}`,
+      title: rootDocument.title,
+      emoji: rootDocument.emoji,
+      to: `/w/${workspaceId}/p/${projectId}/docs/${rootDocument.id}`,
+    });
+  }
+  if (parentPage && parentPage.id !== rootDocument?.id) {
+    breadcrumbCrumbs.push({
+      key: `parent-${parentPage.id}`,
+      title: parentPage.title,
+      emoji: parentPage.emoji,
+      to: `/w/${workspaceId}/p/${projectId}/docs/${parentPage.id}`,
+    });
+  }
+  breadcrumbCrumbs.push({
+    key: `current-${activeDoc?.id ?? 'unknown'}`,
+    title: activeDoc?.title ?? '',
+    emoji: activeDoc?.emoji,
+  });
+  const breadcrumbItems = buildBreadcrumbItems(breadcrumbCrumbs);
+
   return (
     <main className="flex-1 flex h-screen overflow-hidden bg-white font-sans relative">
       <div className={`flex-1 flex flex-col h-full relative min-w-0 transition-[margin-right] duration-[225ms] ease-out ${isPanelOpen ? 'mr-[400px]' : 'mr-0'}`}>
         <header className="h-14 flex items-center justify-between px-6 border-b border-slate-200 bg-white shrink-0">
-          <div className="flex items-center text-sm text-slate-500 flex-1">
-            <Link
-              to={`/w/${workspaceId}`}
-              className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900"
-            >
-              {workspaceName}
-            </Link>
-            <span className="mx-1 text-[14px] opacity-40">/</span>
-            <Link
-              to={`/w/${workspaceId}/p/${projectId}/graph`}
-              className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900"
-            >
-              {projectName}
-            </Link>
-            {/* 루트 페이지 — 현재 보는 문서가 루트가 아닐 때만 링크로 표시 */}
-            {activeDoc?.id !== rootDocument?.id && rootDocument && (
-              <>
-                <span className="mx-1 text-[14px] opacity-40">/</span>
-                <Link
-                  to={`/w/${workspaceId}/p/${projectId}/docs/${rootDocument.id}`}
-                  className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
-                >
-                  {rootDocument.emoji && <span>{rootDocument.emoji}</span>}
-                  <span>{rootDocument.title}</span>
-                </Link>
-              </>
-            )}
-            {/* 부모 페이지 — 존재하고 루트가 아닐 때만 표시 */}
-            {parentPage && parentPage.id !== rootDocument?.id && (
-              <>
-                <span className="mx-1 text-[14px] opacity-40">/</span>
-                <Link
-                  to={`/w/${workspaceId}/p/${projectId}/docs/${parentPage.id}`}
-                  className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
-                >
-                  {parentPage.emoji && <span>{parentPage.emoji}</span>}
-                  <span>{parentPage.title}</span>
-                </Link>
-              </>
-            )}
-            <span className="mx-1 text-[14px] opacity-40">/</span>
-            <span className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors text-slate-900 font-medium truncate max-w-[300px] flex items-center gap-1">
-              {activeDoc?.emoji && <span>{activeDoc.emoji}</span>}
-              <span>{activeDoc?.title}</span>
-            </span>
-            <div className="ml-3 flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-500">
+          <div className="flex items-center text-sm text-slate-500 flex-1 min-w-0">
+            <div className="flex items-center overflow-hidden whitespace-nowrap min-w-0">
+              {breadcrumbItems.map((item, idx) => (
+                <Fragment key={item.type === 'ellipsis' ? item.key : item.crumb.key}>
+                  {idx > 0 && <span className="mx-1 text-[14px] opacity-40 shrink-0">/</span>}
+                  {item.type === 'ellipsis' ? (
+                    <span className="px-2 py-1 text-slate-400 select-none shrink-0">...</span>
+                  ) : item.crumb.to ? (
+                    <Link
+                      to={item.crumb.to}
+                      title={item.crumb.title}
+                      className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1 shrink-0"
+                    >
+                      {item.crumb.emoji && <span>{item.crumb.emoji}</span>}
+                      <span>{item.title}</span>
+                    </Link>
+                  ) : (
+                    <span
+                      title={item.crumb.title}
+                      className="px-2 py-1 rounded text-slate-900 font-medium flex items-center gap-1 shrink-0"
+                    >
+                      {item.crumb.emoji && <span>{item.crumb.emoji}</span>}
+                      <span>{item.title}</span>
+                    </span>
+                  )}
+                </Fragment>
+              ))}
+            </div>
+            <div className="ml-3 flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-500 shrink-0">
               <CheckCircle className="w-3.5 h-3.5" />
               Saved
             </div>
