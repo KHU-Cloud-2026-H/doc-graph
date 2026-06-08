@@ -360,8 +360,8 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
         assertEquals(
             setOf(
-                DocumentReference(a.id, 7L, "Alpha", DocumentType.REQUIREMENTS),
-                DocumentReference(b.id, 8L, "Beta", null),
+                DocumentReference(a.id, 7L, "Alpha", DocumentType.REQUIREMENTS, null),
+                DocumentReference(b.id, 8L, "Beta", null, null),
             ),
             refs,
         )
@@ -375,7 +375,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
         val refs = queryRepository.findReferencesByIds(listOf(a.id, 99999L))
 
-        assertEquals(listOf(DocumentReference(a.id, 1L, "Only", DocumentType.PLANNING)), refs)
+        assertEquals(listOf(DocumentReference(a.id, 1L, "Only", DocumentType.PLANNING, null)), refs)
     }
 
     @Test
