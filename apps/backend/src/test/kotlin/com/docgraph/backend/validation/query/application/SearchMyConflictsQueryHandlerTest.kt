@@ -77,9 +77,9 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchUnassignedDocumentIds.search(2L) } returns listOf(22L)
         // target doc refs
         every { searchDocumentReferences.search(match { it.toSet() == setOf(20L, 21L, 22L) }) } returns listOf(
-            DocumentReference(20L, 1L, "T20", DocumentType.REQUIREMENTS),
-            DocumentReference(21L, 1L, "T21", DocumentType.PLANNING),
-            DocumentReference(22L, 2L, "T22", null),
+            DocumentReference(20L, 1L, "T20", DocumentType.REQUIREMENTS, null),
+            DocumentReference(21L, 1L, "T21", DocumentType.PLANNING, null),
+            DocumentReference(22L, 2L, "T22", null, null),
         )
         // edges: project 1 target [20,21] → edge 30; project 2 target [22] → edge 31
         every { searchEdgeIdsByTargetDocuments.search(1L, match { it.toSet() == setOf(20L, 21L) }) } returns listOf(30L)
@@ -106,8 +106,8 @@ class SearchMyConflictsQueryHandlerTest {
         )
         // source doc refs
         every { searchDocumentReferences.search(match { it.toSet() == setOf(40L, 41L) }) } returns listOf(
-            DocumentReference(40L, 1L, "S40", DocumentType.PLANNING),
-            DocumentReference(41L, 2L, "S41", DocumentType.REQUIREMENTS),
+            DocumentReference(40L, 1L, "S40", DocumentType.PLANNING, null),
+            DocumentReference(41L, 2L, "S41", DocumentType.REQUIREMENTS, null),
         )
         every { searchProjectRefs.search(match { it.toSet() == setOf(1L, 2L) }) } returns listOf(
             ProjectRef(1L, 7L, "P1"),
@@ -126,8 +126,8 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(7L, row1.workspaceId)
         assertEquals(1L, row1.projectId)
         assertEquals("P1", row1.projectName)
-        assertEquals(InboxDocumentRef(40L, "S40", DocumentType.PLANNING), row1.sourceDocument)
-        assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS), row1.targetDocument)
+        assertEquals(InboxDocumentRef(40L, "S40", DocumentType.PLANNING, null), row1.sourceDocument)
+        assertEquals(InboxDocumentRef(20L, "T20", DocumentType.REQUIREMENTS, null), row1.targetDocument)
         assertEquals(MyConflictStatus.ACTIVE, row1.status)
         assertEquals(now, row1.firstDetectedAt)
         assertEquals("T500", row1.title)
@@ -137,7 +137,7 @@ class SearchMyConflictsQueryHandlerTest {
         assertEquals(8L, row2.workspaceId)
         assertEquals(2L, row2.projectId)
         assertEquals("P2", row2.projectName)
-        assertEquals(InboxDocumentRef(22L, "T22", null), row2.targetDocument)
+        assertEquals(InboxDocumentRef(22L, "T22", null, null), row2.targetDocument)
         assertEquals("T501", row2.title)
         assertEquals(2L, row2.latestFindingId)
     }
@@ -151,7 +151,7 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentIdsByProjectAndTypes.search(emptyList()) } returns emptyList()
         every { searchAdminProjectIds.search(100L) } returns emptyList()
         every { searchDocumentReferences.search(listOf(20L)) } returns listOf(
-            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS),
+            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS, null),
         )
         every { searchEdgeIdsByTargetDocuments.search(1L, listOf(20L)) } returns listOf(30L)
         every {
@@ -165,7 +165,7 @@ class SearchMyConflictsQueryHandlerTest {
             EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
         )
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
-            DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
+            DocumentReference(40L, 1L, "S", DocumentType.PLANNING, null),
         )
         every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, 9L, "P"))
         val older = OffsetDateTime.parse("2026-04-01T00:00:00Z")
@@ -190,7 +190,7 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentIdsByProjectAndTypes.search(emptyList()) } returns emptyList()
         every { searchAdminProjectIds.search(100L) } returns emptyList()
         every { searchDocumentReferences.search(listOf(20L)) } returns listOf(
-            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS),
+            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS, null),
         )
         every { searchEdgeIdsByTargetDocuments.search(1L, listOf(20L)) } returns listOf(30L)
         val ignoredAt = OffsetDateTime.parse("2026-05-10T00:00:00Z")
@@ -205,7 +205,7 @@ class SearchMyConflictsQueryHandlerTest {
             EdgeDetail(30L, projectId = 1L, sourceDocumentId = 40L, targetDocumentId = 20L, validationCriterion = "c"),
         )
         every { searchDocumentReferences.search(listOf(40L)) } returns listOf(
-            DocumentReference(40L, 1L, "S", DocumentType.PLANNING),
+            DocumentReference(40L, 1L, "S", DocumentType.PLANNING, null),
         )
         every { searchProjectRefs.search(listOf(1L)) } returns listOf(ProjectRef(1L, 9L, "P"))
         every { validationQueryRepository.findFindingsByConflictIds(listOf(500L)) } returns listOf(
@@ -242,7 +242,7 @@ class SearchMyConflictsQueryHandlerTest {
         every { searchDocumentIdsByProjectAndTypes.search(emptyList()) } returns emptyList()
         every { searchAdminProjectIds.search(100L) } returns emptyList()
         every { searchDocumentReferences.search(listOf(20L)) } returns listOf(
-            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS),
+            DocumentReference(20L, 1L, "T", DocumentType.REQUIREMENTS, null),
         )
         every { searchEdgeIdsByTargetDocuments.search(1L, listOf(20L)) } returns emptyList()
 

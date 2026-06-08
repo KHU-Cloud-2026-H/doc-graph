@@ -3,6 +3,7 @@ package com.docgraph.backend.document.command.interfaces.event
 import com.docgraph.backend.auth.command.domain.NotionConnection
 import com.docgraph.backend.auth.command.domain.NotionConnectionRepository
 import com.docgraph.backend.auth.command.infra.NotionAccessTokenDecryptor
+import com.docgraph.backend.document.command.application.ApplyApprovedBlockTextCommandHandler
 import com.docgraph.backend.document.command.domain.Document
 import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.command.domain.NotionDocumentClient
@@ -34,6 +35,7 @@ class ProposalApprovedEventListenerTest {
     private val notionConnectionRepository = mockk<NotionConnectionRepository>()
     private val notionAccessTokenDecryptor = mockk<NotionAccessTokenDecryptor>()
     private val notionDocumentClient = mockk<NotionDocumentClient>()
+    private val applyApprovedBlockText = mockk<ApplyApprovedBlockTextCommandHandler>(relaxed = true)
     private val publisher = mockk<ApplicationEventPublisher>(relaxed = true)
 
     private val listener = ProposalApprovedEventListener(
@@ -44,6 +46,7 @@ class ProposalApprovedEventListenerTest {
         notionConnectionRepository,
         notionAccessTokenDecryptor,
         notionDocumentClient,
+        applyApprovedBlockText,
         publisher,
     )
 
