@@ -46,6 +46,9 @@ class Document(
     @Column(name = "icon_value", columnDefinition = "text")
     var iconValue: String? = null,
 
+    @Column(name = "icon_color", length = 20)
+    var iconColor: String? = null,
+
     @Column(name = "assignee_member_id")
     var assigneeMemberId: Long? = null,
 
@@ -81,6 +84,7 @@ class Document(
         type: DocumentType?,
         iconType: IconType?,
         iconValue: String?,
+        iconColor: String?,
         assigneeMemberId: Long?,
         rawContent: String?,
         flatText: String?,
@@ -93,6 +97,7 @@ class Document(
         this.type = type
         this.iconType = iconType
         this.iconValue = iconValue
+        this.iconColor = iconColor
         this.assigneeMemberId = assigneeMemberId
         this.rawContent = rawContent
         this.flatText = flatText

@@ -64,7 +64,7 @@ class DocumentQueryRepository {
             title = document.title,
             type = document.type,
             parentDocumentId = document.parentDocumentId,
-            icon = toIcon(document.iconType, document.iconValue),
+            icon = toIcon(document.iconType, document.iconValue, document.iconColor),
             assigneeMemberId = document.assigneeMemberId,
             notionLastEditedAt = document.notionLastEditedAt,
             lastEditedByName = null,
@@ -94,13 +94,13 @@ class DocumentQueryRepository {
                 NotionPageRef(
                     notionPageId = d.notionPageId,
                     title = d.title,
-                    icon = toIcon(d.iconType, d.iconValue),
+                    icon = toIcon(d.iconType, d.iconValue, d.iconColor),
                 )
             }
     }
 
-    private fun toIcon(iconType: IconType?, iconValue: String?): IconResponse? =
-        iconType?.let { IconResponse(type = it, value = iconValue ?: "") }
+    private fun toIcon(iconType: IconType?, iconValue: String?, iconColor: String?): IconResponse? =
+        iconType?.let { IconResponse(type = it, value = iconValue ?: "", color = iconColor) }
 
     fun searchSummariesByProject(projectId: Long, pageable: Pageable): Page<DocumentSummary> {
         val doc = QDocument.document
@@ -124,7 +124,7 @@ class DocumentQueryRepository {
                     title = d.title,
                     type = d.type,
                     parentDocumentId = d.parentDocumentId,
-                    icon = toIcon(d.iconType, d.iconValue),
+                    icon = toIcon(d.iconType, d.iconValue, d.iconColor),
                 )
             }
 

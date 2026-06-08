@@ -33,5 +33,7 @@ fun NotionIcon?.toIconResponse(): IconResponse? = when (this?.type) {
     NotionIconType.EMOJI -> IconResponse(IconType.EMOJI, value)
     NotionIconType.EXTERNAL -> IconResponse(IconType.EXTERNAL, value)
     NotionIconType.FILE -> IconResponse(IconType.FILE, value)
+    NotionIconType.NATIVE -> IconResponse(IconType.NATIVE, value, color)
+    NotionIconType.CUSTOM_EMOJI -> IconResponse(IconType.CUSTOM_EMOJI, value)
     null -> null
 }
