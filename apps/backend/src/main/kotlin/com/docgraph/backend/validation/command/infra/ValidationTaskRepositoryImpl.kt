@@ -15,4 +15,5 @@ class ValidationTaskRepositoryImpl(
     override fun findByValidationPairId(validationPairId: UUID): ValidationTask? =
         jpa.findByValidationPairId(validationPairId)
     override fun findStale(before: OffsetDateTime): List<ValidationTask> = jpa.findStale(before)
+    override fun deleteByProjectId(projectId: Long) = jpa.deleteByProjectId(projectId)
 }

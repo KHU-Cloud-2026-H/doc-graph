@@ -31,7 +31,7 @@ class CompleteValidationTaskCommandHandler(
         val now = OffsetDateTime.now()
 
         val existing = conflictRepository.findFirstByEdgeIdAndResolvedAtIsNull(task.edgeId)
-        val outcome = reconciler.reconcile(existing, command.findings, task.edgeId, now)
+        val outcome = reconciler.reconcile(existing, command.findings, task.edgeId, task.projectId, now)
 
         applyOutcome(outcome, taskId = task.id, edgeId = task.edgeId, now = now)
         task.markSuccess()

@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface ConflictJpaRepository : JpaRepository<Conflict, Long> {
     fun findFirstByEdgeIdAndResolvedAtIsNull(edgeId: Long): Conflict?
+
+    fun deleteByProjectId(projectId: Long)
 }

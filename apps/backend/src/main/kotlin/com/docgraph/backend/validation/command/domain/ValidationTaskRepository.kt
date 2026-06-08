@@ -9,4 +9,5 @@ interface ValidationTaskRepository : OutboxRepository<ValidationTask> {
     fun findById(id: Long): ValidationTask?
     fun findByValidationPairId(validationPairId: UUID): ValidationTask?
     override fun findStale(before: OffsetDateTime): List<ValidationTask>
+    fun deleteByProjectId(projectId: Long)
 }

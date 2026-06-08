@@ -11,4 +11,5 @@ class AiUsageRecordRepositoryImpl(
     override fun save(record: AiUsageRecord): AiUsageRecord = jpa.save(record)
     override fun findByValidationTaskId(validationTaskId: Long): AiUsageRecord? =
         jpa.findByValidationTaskId(validationTaskId)
+    override fun deleteByProjectId(projectId: Long) = jpa.deleteByProjectId(projectId)
 }
