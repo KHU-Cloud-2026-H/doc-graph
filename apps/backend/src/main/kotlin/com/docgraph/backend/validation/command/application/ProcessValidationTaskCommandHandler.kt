@@ -6,6 +6,7 @@ import com.docgraph.backend.graph.query.application.FindEdgeByIdQuery
 import com.docgraph.backend.validation.command.domain.FailureCategory
 import com.docgraph.backend.validation.command.domain.ValidationTaskPreparedEvent
 import com.docgraph.backend.validation.command.domain.ValidationTaskRepository
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Recover
@@ -23,6 +24,8 @@ class ProcessValidationTaskCommandHandler(
     private val findDocumentById: FindDocumentByIdQuery,
     private val publisher: ApplicationEventPublisher,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Retryable(
         maxAttemptsExpression = "\${validation.task.process.max-attempts:5}",
         backoff = Backoff(
@@ -38,19 +41,32 @@ class ProcessValidationTaskCommandHandler(
 
         val task = repository.findById(command.taskId)
             ?: error("validation task not found: ${command.taskId}")
-        if (task.status != OutboxStatus.PENDING) return
+        if (task.status != OutboxStatus.PENDING) {
+            log.debug("validation task prep skipped (status={}): taskId={}", task.status, command.taskId)
+            return
+        }
+        log.info("validation task preparing: taskId={} edgeId={}", command.taskId, task.edgeId)
 
         val edge = findEdgeById.find(task.edgeId) ?: run {
+            log.warn("validation task failed (missing reference): taskId={} edge not found: edgeId={}", command.taskId, task.edgeId)
             transition.markFailed(command.taskId, FailureCategory.MISSING_REFERENCE, "edge not found: ${task.edgeId}")
             return
         }
         findDocumentById.find(edge.sourceDocumentId) ?: run {
+            log.warn(
+                "validation task failed (missing reference): taskId={} source document not found: documentId={}",
+                command.taskId, edge.sourceDocumentId,
+            )
             transition.markFailed(
                 command.taskId, FailureCategory.MISSING_REFERENCE, "source document not found: ${edge.sourceDocumentId}",
             )
             return
         }
         findDocumentById.find(edge.targetDocumentId) ?: run {
+            log.warn(
+                "validation task failed (missing reference): taskId={} target document not found: documentId={}",
+                command.taskId, edge.targetDocumentId,
+            )
             transition.markFailed(
                 command.taskId, FailureCategory.MISSING_REFERENCE, "target document not found: ${edge.targetDocumentId}",
             )
@@ -58,12 +74,14 @@ class ProcessValidationTaskCommandHandler(
         }
 
         publisher.publishEvent(ValidationTaskPreparedEvent(command.taskId, OffsetDateTime.now()))
+        log.info("validation task prepared: taskId={} edgeId={}", command.taskId, task.edgeId)
     }
 
     @Recover
     fun recover(ex: Throwable, command: ProcessValidationTaskCommand) {
         // prep 단계는 AI 호출 이전이라 전송/응답 오류가 없다. 재시도 소진 후의 예외는
         // 내부 오류이므로 UNKNOWN으로 기록한다.
+        log.error("validation task prep failed — 재시도 소진, 실패 기록: taskId={}: {}", command.taskId, ex.message, ex)
         transition.markFailed(command.taskId, FailureCategory.UNKNOWN, ex.message)
     }
 }

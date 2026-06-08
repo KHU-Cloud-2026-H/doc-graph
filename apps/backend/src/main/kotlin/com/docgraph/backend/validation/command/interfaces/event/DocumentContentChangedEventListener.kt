@@ -20,11 +20,11 @@ class DocumentContentChangedEventListener(
     @Async
     @EventListener
     fun on(event: DocumentContentChangedEvent) {
-        log.info("DocumentContentChangedEvent received: documentId={} projectId={}", event.documentId, event.projectId)
+        log.debug("DocumentContentChangedEvent received: documentId={} projectId={}", event.documentId, event.projectId)
         val edges = edgeRepository.findAllBySourceDocumentId(event.documentId)
-        log.info("Found {} edges for documentId={}", edges.size, event.documentId)
+        log.debug("Found {} edges for documentId={}", edges.size, event.documentId)
         edges.forEach { edge ->
-            log.info("Enqueuing validation for edgeId={}", edge.id)
+            log.debug("Enqueuing validation for edgeId={}", edge.id)
             enqueueHandler.handle(
                 EnqueueValidationTaskCommand(
                     validationPairId = UUID.randomUUID(),

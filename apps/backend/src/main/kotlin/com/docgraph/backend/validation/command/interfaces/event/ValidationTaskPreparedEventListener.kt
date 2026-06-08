@@ -59,7 +59,10 @@ class ValidationTaskPreparedEventListener(
     fun on(event: ValidationTaskPreparedEvent) {
         val task = taskRepository.findById(event.validationTaskId)
             ?: error("validation task not found: ${event.validationTaskId}")
-        if (task.status != OutboxStatus.PENDING) return
+        if (task.status != OutboxStatus.PENDING) {
+            log.debug("validation task detect skipped (status={}): taskId={}", task.status, event.validationTaskId)
+            return
+        }
 
         val edge = findEdgeById.find(task.edgeId)
             ?: error("edge not found: ${task.edgeId}")
@@ -82,8 +85,10 @@ class ValidationTaskPreparedEventListener(
                 criterion = edge.validationCriterion,
             )
         }
+        log.info("validation task detecting conflicts: taskId={} edgeId={}", task.id, edge.id)
         val result = detector.detect(input)
         completeHandler.handle(CompleteValidationTaskCommand(task.id, result.conflicts))
+        log.info("validation task completed: taskId={} conflicts={}", task.id, result.conflicts.size)
 
         // 사용량 관측은 best-effort: 적재 실패가 이미 완료된 검출 결과를 롤백/실패시키면 안 된다.
         result.usage?.let { usage ->
