@@ -269,9 +269,6 @@ export const DocumentView = () => {
                     ) : (
                       <span className="text-slate-500">—</span>
                     )}
-                    <div className="flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-900">
-                      <span className="text-sm">박관우</span>
-                    </div>
                   </div>
                 </div>
               </div>
