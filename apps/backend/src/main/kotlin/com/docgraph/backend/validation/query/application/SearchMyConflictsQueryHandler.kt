@@ -92,6 +92,7 @@ class SearchMyConflictsQueryHandler(
                 targetDocument = InboxDocumentRef(target.id, target.title, target.type),
                 title = latestFinding?.title.orEmpty(),
                 latestFindingId = latestFinding?.id,
+                rationale = latestFinding?.rationale,
                 status = if (conflict.ignoredAt != null) MyConflictStatus.IGNORED else MyConflictStatus.ACTIVE,
                 firstDetectedAt = conflict.firstDetectedAt,
                 ignoredAt = conflict.ignoredAt,

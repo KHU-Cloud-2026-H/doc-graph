@@ -68,6 +68,7 @@ export const DocumentView = () => {
       conflictId: c.id,
       findingId: c.latestFindingId ?? undefined,
       title: c.title,
+      rationale: c.rationale ?? undefined,
       sourceDocumentId: c.sourceDocument.id,
       sourceDocumentTitle: c.sourceDocument.title,
     }));

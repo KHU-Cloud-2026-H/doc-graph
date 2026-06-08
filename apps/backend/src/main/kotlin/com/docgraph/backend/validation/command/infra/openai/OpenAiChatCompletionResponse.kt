@@ -11,7 +11,11 @@ data class OpenAiChatCompletionResponse(
     val usage: Usage? = null,
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
-    data class Choice(val message: OpenAiChatMessage)
+    data class Choice(
+        val message: OpenAiChatMessage,
+        // content가 비는 원인 진단용: length(토큰 소진)·content_filter·stop 등.
+        @JsonProperty("finish_reason") val finishReason: String? = null,
+    )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class Usage(

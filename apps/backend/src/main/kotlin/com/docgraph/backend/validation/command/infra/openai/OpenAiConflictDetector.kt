@@ -47,8 +47,12 @@ class OpenAiConflictDetector(
             .retrieve()
             .body<OpenAiChatCompletionResponse>()
             ?: throw ConflictDetectionResponseException("OpenAI 응답 본문이 비어 있음")
-        val content = response.choices.firstOrNull()?.message?.content
+        val choice = response.choices.firstOrNull()
             ?: throw ConflictDetectionResponseException("OpenAI 응답에 choices가 없음")
+        val content = choice.message.content
+            ?: throw ConflictDetectionResponseException(
+                "OpenAI 응답 content가 비어 있음 — finish_reason=${choice.finishReason}, refusal=${choice.message.refusal}",
+            )
         val conflicts = try {
             parser.parse(content)
         } catch (e: JacksonException) {

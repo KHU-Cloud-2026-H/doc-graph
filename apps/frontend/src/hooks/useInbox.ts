@@ -18,6 +18,7 @@ export interface MyConflictRow {
   title: string
   status: 'ACTIVE' | 'IGNORED'
   latestFindingId: number | null
+  rationale: string | null
   firstDetectedAt: string
   ignoredAt: string | null
 }

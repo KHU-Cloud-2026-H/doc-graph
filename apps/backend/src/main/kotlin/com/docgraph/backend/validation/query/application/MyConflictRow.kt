@@ -25,6 +25,11 @@ data class MyConflictRow(
         example = "1",
     )
     val latestFindingId: Long?,
+    @Schema(
+        description = "최신 finding의 AI 충돌 근거. title과 같은 finding이며, finding 없으면 null.",
+        example = "회의록(결정사항)에서 ND_COUNT를 4로 변경하기로 결정하였으나, 설계서에는 2로 남아 있음.",
+    )
+    val rationale: String?,
     @Schema(description = "충돌 상태")
     val status: MyConflictStatus,
     @Schema(description = "최초 감지 시각")
