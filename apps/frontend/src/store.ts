@@ -23,6 +23,10 @@ export interface IntegrityIssue {
   status: 'ACTIVE' | 'IGNORED';
   title: string;
   rationale?: string;
+  // 승인 시 stale 가드용 — target(=현재 문서)의 notionLastEditedAt을 그대로 echo. 미동기화 시 null.
+  targetNotionLastEditedAt?: string | null;
+  // 승인 시 옵티미스틱 반영용 — 교체할 target 블록(Notion block id)과 새 텍스트.
+  targetBlockId?: string;
   sourceDocumentId?: number;
   sourceDocumentTitle?: string;
   sourceBlockText?: string;

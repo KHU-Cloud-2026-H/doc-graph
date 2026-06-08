@@ -5,6 +5,7 @@ export interface InboxDocumentRef {
   id: number
   title: string
   type: 'meeting_notes' | 'planning' | 'requirements' | 'design' | 'research' | null
+  notionLastEditedAt: string | null
 }
 
 export interface MyConflictRow {
@@ -19,6 +20,8 @@ export interface MyConflictRow {
   status: 'ACTIVE' | 'IGNORED'
   latestFindingId: number | null
   rationale: string | null
+  targetBlockId: string | null
+  newText: string | null
   firstDetectedAt: string
   ignoredAt: string | null
 }

@@ -32,7 +32,16 @@ class ApproveProposalCommandHandler(
         val target = findDocumentById.find(edge.targetDocumentId)
             ?: error("target document not found: ${edge.targetDocumentId}")
 
-        if (target.notionLastEditedAt != command.expectedTargetNotionLastEditedAt) {
+        // 낙관적 동시성: client가 조회 시점에 본 notionLastEditedAt과 현재 값을 비교.
+        // OffsetDateTime.equals는 offset 표현(Z vs +09:00)·chronology까지 따져 같은 instant도
+        // 다르게 보므로, instant 기준(isEqual)으로 비교한다.
+        val actual = target.notionLastEditedAt
+        val expected = command.expectedTargetNotionLastEditedAt
+        val unchanged = when {
+            actual == null || expected == null -> actual == expected
+            else -> actual.isEqual(expected)
+        }
+        if (!unchanged) {
             throw StaleProposalException(command.findingId)
         }
 
