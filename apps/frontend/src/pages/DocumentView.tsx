@@ -12,6 +12,21 @@ import { useProjectDocuments } from "../hooks/useProjectDocuments";
 import { useProjectTypeAssignees } from "../hooks/useProjectDetail";
 import { useInbox } from "../hooks/useInbox";
 
+const findRootDocument = (docs: DocumentNode[]): DocumentNode | null => {
+  // 트리에서 최상위 루트 문서를 찾음
+  // 가장 먼저 children을 가진 문서를 루트로 간주
+  if (!docs || docs.length === 0) return null;
+
+  for (const doc of docs) {
+    if (doc.children && doc.children.length > 0) {
+      return doc;
+    }
+  }
+
+  // children이 없으면 첫 번째 문서를 반환
+  return docs[0] || null;
+};
+
 const findParentPage = (docs: any[], targetId: string): any | null => {
   const numId = Number(targetId);
   for (const doc of docs) {
@@ -27,7 +42,11 @@ const findParentPage = (docs: any[], targetId: string): any | null => {
 function resolveCategoryType(roots: DocumentNode[], docId: number): DocumentType | null {
   const containsId = (node: DocumentNode, id: number): boolean =>
     node.id === id || (node.children ?? []).some((c) => containsId(c, id));
-  const categories = roots[0]?.children ?? [];
+
+  const rootDoc = findRootDocument(roots);
+  if (!rootDoc) return null;
+
+  const categories = rootDoc.children ?? [];
   for (const cat of categories) {
     if (containsId(cat, docId)) return cat.type ?? null;
   }
@@ -92,6 +111,7 @@ export const DocumentView = () => {
       : undefined;
 
   const parentPage = id ? findParentPage(documents, id) : null;
+  const rootDocument = findRootDocument(documents);
   const categoryType = resolveCategoryType(documents, activeDoc?.id ?? -1);
 
   // child_page 블록 → 내부 문서 ID 매핑 (notionPageId 기준)
@@ -173,21 +193,21 @@ export const DocumentView = () => {
             >
               {projectName}
             </Link>
-            {/* 루트 페이지 — 현재 보는 문서가 루트(id=0)가 아닐 때만 링크로 표시 */}
-            {activeDoc?.id !== 0 && documents[0] && (
+            {/* 루트 페이지 — 현재 보는 문서가 루트가 아닐 때만 링크로 표시 */}
+            {activeDoc?.id !== rootDocument?.id && rootDocument && (
               <>
                 <span className="mx-1 text-[14px] opacity-40">/</span>
                 <Link
-                  to={`/w/${workspaceId}/p/${projectId}/docs/0`}
+                  to={`/w/${workspaceId}/p/${projectId}/docs/${rootDocument.id}`}
                   className="px-2 py-1 rounded hover:bg-slate-100 cursor-pointer transition-colors hover:text-slate-900 flex items-center gap-1"
                 >
-                  {documents[0].emoji && <span>{documents[0].emoji}</span>}
-                  <span>{documents[0].title}</span>
+                  {rootDocument.emoji && <span>{rootDocument.emoji}</span>}
+                  <span>{rootDocument.title}</span>
                 </Link>
               </>
             )}
-            {/* 부모 페이지 — 존재하고 루트(id=0)가 아닐 때만 표시 */}
-            {parentPage && parentPage.id !== 0 && (
+            {/* 부모 페이지 — 존재하고 루트가 아닐 때만 표시 */}
+            {parentPage && parentPage.id !== rootDocument?.id && (
               <>
                 <span className="mx-1 text-[14px] opacity-40">/</span>
                 <Link
