@@ -7,6 +7,7 @@ import { useInboxActiveCount } from "./InboxList";
 import { TopAppBar } from "./TopAppBar";
 import { UserProfilePopup, UserAvatar } from "./UserProfilePopup";
 import { useProjectDocuments } from "../hooks/useProjectDocuments";
+import { useInbox } from "../hooks/useInbox";
 import { useAuth } from "../hooks/useAuth";
 
 
@@ -95,7 +96,15 @@ export const Sidebar = () => {
   const navigate = useNavigate();
   const { workspaceId, projectId } = useParams();
   const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);
+  const { conflicts } = useInbox();
   const { user } = useAuth();
+
+  const attachIssues = (nodes: any[]): any[] =>
+    nodes.map((node) => ({
+      ...node,
+      issues: conflicts.filter((c) => c.targetDocument.id === node.id),
+      children: attachIssues(node.children ?? []),
+    }));
   const isGraphActive = location.pathname === `/w/${workspaceId}/p/${projectId}/graph`;
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -289,7 +298,7 @@ export const Sidebar = () => {
             {projects.find((p) => p.id === Number(projectId))?.name || '팀스페이스'}
           </div>
           <ul className="space-y-0.5">
-            {documents.map((doc) => (
+            {attachIssues(documents).map((doc) => (
               <DocumentTreeItem key={doc.id} node={doc} />
             ))}
           </ul>
