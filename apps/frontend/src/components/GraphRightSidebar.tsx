@@ -1,6 +1,7 @@
 import { X, AlertTriangle, FileText, ShieldCheck, GitBranch, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { AppEdge } from "../features/graph/mockData";
+import type { ConflictResponse } from "../hooks/useProjectConflicts";
 
 const SOURCE_LABEL: Record<string, string> = {
   NOTION_REFERENCE: 'Notion 링크/멘션',
@@ -12,6 +13,7 @@ interface Props {
   edge: AppEdge;
   sourceLabel: string;
   targetLabel: string;
+  conflict?: ConflictResponse;
   isAccepting: boolean;
   isRejecting: boolean;
   onAccept: () => void;
@@ -23,6 +25,7 @@ export const GraphRightSidebar = ({
   edge,
   sourceLabel,
   targetLabel,
+  conflict,
   isAccepting,
   isRejecting,
   onAccept,
@@ -32,6 +35,7 @@ export const GraphRightSidebar = ({
   const { workspaceId, projectId } = useParams();
   const isProposal = edge.id.startsWith('p-');
   const isConflict = edge.data?.conflictStatus === 'CONFLICT';
+  const findings = conflict?.findings ?? [];
 
   return (
     <aside className="w-[420px] h-full bg-white border-l border-slate-200 shadow-2xl flex flex-col shrink-0 z-50 font-sans absolute right-0 top-0">
@@ -56,6 +60,44 @@ export const GraphRightSidebar = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        {/* 충돌 findings — INTEGRITY ISSUE일 때만 */}
+        {isConflict && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <h4 className="text-sm font-semibold text-slate-900">충돌 내용</h4>
+            </div>
+            {findings.length === 0 ? (
+              <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                <p className="text-xs text-red-500">충돌 상세 정보를 불러올 수 없습니다.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {findings.map((f, idx) => (
+                  <div key={f.id ?? idx} className="border border-red-100 rounded-lg overflow-hidden">
+                    {f.title && (
+                      <div className="bg-red-50 px-3 py-2 border-b border-red-100">
+                        <p className="text-xs font-semibold text-red-700">{f.title}</p>
+                      </div>
+                    )}
+                    {f.rationale && (
+                      <div className="px-3 py-2.5">
+                        <p className="text-xs text-slate-700 leading-relaxed">{f.rationale}</p>
+                      </div>
+                    )}
+                    {f.newText && (
+                      <div className="border-t border-red-100 px-3 py-2 bg-green-50">
+                        <p className="text-[10px] font-semibold text-green-700 mb-1">AI 제안 수정</p>
+                        <p className="text-xs text-green-800 leading-relaxed whitespace-pre-wrap">{f.newText}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 관련 문서 */}
         <div>
           <div className="flex items-center gap-2 mb-3">

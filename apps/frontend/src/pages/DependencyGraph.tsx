@@ -14,6 +14,7 @@ import { DocumentNode } from '../features/graph/DocumentNode';
 import { ConflictEdge } from '../features/graph/ConflictEdge';
 import type { AppEdge, DocumentFlowNode } from '../features/graph/mockData';
 import { useProjectGraph } from '../hooks/useProjectGraph';
+import { useProjectConflicts } from '../hooks/useProjectConflicts';
 import { useAddEdge, useDeleteEdge, useAcceptProposal, useRejectProposal } from '../hooks/useEdgeMutations';
 
 import { GraphRightSidebar } from '../components/GraphRightSidebar';
@@ -45,6 +46,7 @@ export const DependencyGraph = () => {
 
   // 노드가 없으면 sync 대기 중 — 최대 2초 간격으로 재조회
   const { nodes: apiNodes, edges: apiEdges } = useProjectGraph(numericProjectId, { polling: true });
+  const { conflicts } = useProjectConflicts(numericProjectId);
   const { project } = useProjectDetail(numericProjectId);
   const notionRootUrl = project?.notionRootPageId
     ? `https://notion.so/${project.notionRootPageId.replace(/-/g, '')}`
@@ -208,6 +210,7 @@ export const DependencyGraph = () => {
           edge={selectedEdge}
           sourceLabel={selectedSourceLabel}
           targetLabel={selectedTargetLabel}
+          conflict={conflicts.find((c) => `e-${c.edgeId}` === selectedEdge.id)}
           isAccepting={acceptProposal.isPending}
           isRejecting={rejectProposal.isPending}
           onAccept={handleAcceptProposal}
