@@ -205,6 +205,12 @@ export const DocumentView = () => {
       validationCriterion: graphEdges.find((e) => e.id === `e-${c.edgeId}`)?.data?.validationCriterion ?? undefined,
     }));
 
+  const conflictData = new Map(
+    docIssues
+      .filter((i) => !!i.targetBlockId)
+      .map((i) => [i.targetBlockId as string, { newText: i.newText }])
+  );
+
   // Flatten documents tree to find the active one
   const flattenDocs = (docs: any[]): any[] => {
     return docs.reduce((acc, doc) => {
@@ -467,6 +473,9 @@ export const DocumentView = () => {
                 blocks={docDetail?.blocks ?? []}
                 notionPageIdToDocId={notionPageIdToDocId}
                 docBasePath={`/w/${workspaceId}/p/${projectId}/docs`}
+                conflictData={conflictData}
+                onConflictBlockClick={openPanel}
+                isSidebarOpen={isPanelOpen}
               />
             </div>
           </div>
