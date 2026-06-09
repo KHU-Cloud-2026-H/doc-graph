@@ -37,7 +37,7 @@ interface PageResponse<T> {
 export function useInbox() {
   const { data, isLoading, isError } = useQuery<PageResponse<MyConflictRow>>({
     queryKey: ['inbox'],
-    queryFn: () => apiClient.GET<PageResponse<MyConflictRow>>('/api/me/conflicts'),
+    queryFn: () => apiClient.GET<PageResponse<MyConflictRow>>('/api/me/conflicts?status=ALL'),
     staleTime: 60 * 1000,
   })
 
