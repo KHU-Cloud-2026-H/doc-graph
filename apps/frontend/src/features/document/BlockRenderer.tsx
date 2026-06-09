@@ -25,7 +25,7 @@ export function BlockRenderer({ blocks, notionPageIdToDocId, docBasePath, confli
 }
 
 function diffBlock(
-  text: string,
+  text: string | null,
   conflictEntry: { newText?: string },
 ): ReactNode {
   return (
