@@ -137,7 +137,7 @@ export const RightSidebar = ({ document: doc, isOpen, onClose }: RightSidebarPro
                           )}
                         </div>
                         {issue.validationCriterion && (
-                          <p className="text-xs text-slate-500 leading-relaxed px-0.5">💡 {issue.validationCriterion}</p>
+                          <p className="text-xs text-slate-500 leading-relaxed px-0.5">💡검증 기준: {issue.validationCriterion}</p>
                         )}
                         <div className="flex items-center gap-1.5">
                           <button className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors">

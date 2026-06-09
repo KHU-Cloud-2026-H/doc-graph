@@ -11,6 +11,7 @@ import { useWorkspaceDetail } from "../hooks/useWorkspaceDetail";
 import { useProjectDocuments } from "../hooks/useProjectDocuments";
 import { useProjectTypeAssignees } from "../hooks/useProjectDetail";
 import { useInbox } from "../hooks/useInbox";
+import { useProjectGraph } from "../hooks/useProjectGraph";
 
 const findRootDocument = (docs: DocumentNode[]): DocumentNode | null => {
   // 트리에서 최상위 루트 문서를 찾음
@@ -182,6 +183,7 @@ export const DocumentView = () => {
 
   // 실 문서 트리 (API)
   const { documents } = useProjectDocuments(projectId ? Number(projectId) : undefined);
+  const { edges: graphEdges } = useProjectGraph(projectId ? Number(projectId) : undefined);
 
   // 현재 문서의 충돌 — inbox에서 targetDocument 기준 필터링
   const { conflicts } = useInbox();
@@ -199,6 +201,8 @@ export const DocumentView = () => {
       newText: c.newText ?? undefined,
       sourceDocumentId: c.sourceDocument.id,
       sourceDocumentTitle: c.sourceDocument.title,
+      currentText: docDetail?.blocks?.find((b) => b.blockId === c.targetBlockId)?.text ?? undefined,
+      validationCriterion: graphEdges.find((e) => e.id === `e-${c.edgeId}`)?.data?.validationCriterion ?? undefined,
     }));
 
   // Flatten documents tree to find the active one
