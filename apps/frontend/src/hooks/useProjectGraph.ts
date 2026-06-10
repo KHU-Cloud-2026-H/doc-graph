@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { apiClient } from '../lib/apiClient'
 import type { components } from '@docgraph/api-types'
 import type { DocumentFlowNode, AppEdge } from '../features/graph/mockData'
+import { MarkerType } from '@xyflow/react'
 import { FileText } from 'lucide-react'
 import { createElement } from 'react'
 
@@ -28,21 +29,25 @@ function toFlowNodes(nodes: GraphNodeResponse[]): DocumentFlowNode[] {
 }
 
 function toFlowEdges(edges: EdgeResponse[], proposals: EdgeProposalResponse[]): AppEdge[] {
-  const flowEdges: AppEdge[] = edges.map((e) => ({
+  const flowEdges: AppEdge[] = edges.map((e) => {
+    const stroke = e.conflictStatus === 'CONFLICT' ? '#DC2626' : '#1E293B'
+    return {
     id: `e-${e.id}`,
     source: String(e.sourceDocumentId),
     target: String(e.targetDocumentId),
     type: e.conflictStatus === 'CONFLICT' ? ('conflict' as const) : ('straight' as const),
     style: {
-      stroke: e.conflictStatus === 'CONFLICT' ? '#DC2626' : '#1E293B',
+      stroke,
       strokeWidth: 2,
     },
+    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: stroke },
     data: {
       conflictStatus: e.conflictStatus ?? 'NONE',
       source: e.source,
       validationCriterion: e.validationCriterion,
     },
-  }))
+    }
+  })
 
   const proposalEdges: AppEdge[] = proposals.map((p) => ({
     id: `p-${p.id}`,
@@ -50,6 +55,7 @@ function toFlowEdges(edges: EdgeResponse[], proposals: EdgeProposalResponse[]): 
     target: String(p.targetDocumentId),
     type: 'straight' as const,
     style: { stroke: '#94A3B8', strokeWidth: 1.5, strokeDasharray: '5,5' },
+    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#94A3B8' },
     data: {
       conflictStatus: 'NONE' as const,
       source: 'PROPOSAL_ACCEPTED' as const,
