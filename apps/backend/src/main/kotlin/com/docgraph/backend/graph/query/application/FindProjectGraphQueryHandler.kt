@@ -26,4 +26,5 @@ fun DocumentNodeData.toNode(): GraphNodeResponse =
         title = title,
         type = type,
         assigneeMemberId = assigneeMemberId,
+        icon = icon,
     )

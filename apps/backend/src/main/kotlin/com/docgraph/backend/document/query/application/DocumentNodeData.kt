@@ -5,4 +5,5 @@ data class DocumentNodeData(
     val title: String,
     val type: DocumentType?,
     val assigneeMemberId: Long?,
+    val icon: IconResponse?,
 )
