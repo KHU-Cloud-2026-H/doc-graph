@@ -123,6 +123,24 @@ export function useProjectRules(projectId: number | undefined) {
   return { rules: data ?? [], isLoading, addRule, deleteRule }
 }
 
+// ── Webhook 알림 ──────────────────────────────────────────────────
+
+export function useProjectWebhook(projectId: number | undefined) {
+  const qc = useQueryClient()
+  const { data, isLoading, isError } = useQuery<{ url: string | null }>({
+    queryKey: ['project-webhook', projectId],
+    queryFn: () => apiClient.GET<{ url: string | null }>(`/api/projects/${projectId}/webhook`),
+    enabled: projectId !== undefined,
+    retry: false,
+  })
+  const save = useMutation({
+    mutationFn: (url: string) =>
+      apiClient.PUT(`/api/projects/${projectId}/webhook`, { url }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-webhook', projectId] }),
+  })
+  return { url: data?.url ?? null, isLoading, isError, save }
+}
+
 export function useLatestValidationTask(projectId: number | undefined) {
   const { data } = useQuery<{ content?: { createdAt?: string }[] }>({
     queryKey: ['validation-tasks', projectId],

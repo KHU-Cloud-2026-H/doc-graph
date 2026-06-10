@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { X, Loader2, ExternalLink } from 'lucide-react';
 import { useAppStore } from '../store';
-import { useProjectDetail, useProjectCategories, useProjectTypeAssignees, useProjectValidation, useProjectAiUsage, useProjectRules } from '../hooks/useProjectDetail';
+import { useProjectDetail, useProjectCategories, useProjectTypeAssignees, useProjectValidation, useProjectAiUsage, useProjectRules, useProjectWebhook } from '../hooks/useProjectDetail';
 import type { RuleDetail } from '../hooks/useProjectDetail';
 import { useWorkspaceDetail } from '../hooks/useWorkspaceDetail';
 import { useNotionPageChildren, useNotionPageMetadata } from '../hooks/useNotionPages';
@@ -52,7 +52,7 @@ const ProjectSettings: React.FC = () => {
     project?.notionRootPageId ?? null,
   );
 
-  type TabId = 'info' | 'members' | 'categories' | 'assignees' | 'ai-usage' | 'rules' | 'delete';
+  type TabId = 'info' | 'members' | 'categories' | 'assignees' | 'ai-usage' | 'rules' | 'webhook' | 'delete';
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
   // ── 탭 1: 루트 페이지 메타데이터 + validation 토글 ──────────────
@@ -67,6 +67,13 @@ const ProjectSettings: React.FC = () => {
   const [newRuleSource, setNewRuleSource] = useState<string>('');
   const [newRuleTarget, setNewRuleTarget] = useState<string>('');
   const [newRuleCriterion, setNewRuleCriterion] = useState<string>('');
+
+  // ── 탭 7: 알림 Webhook ─────────────────────────────────────────
+  const { url: webhookUrl, save: saveWebhook } = useProjectWebhook(numericProjectId);
+  const [webhookDraft, setWebhookDraft] = useState<string>('');
+  useEffect(() => {
+    setWebhookDraft(webhookUrl ?? '');
+  }, [webhookUrl]);
 
   // ── 탭 2 mutations + 로컬 상태 ────────────────────────────────
   const addMember = useAddProjectMember(numericProjectId);
@@ -289,6 +296,42 @@ const ProjectSettings: React.FC = () => {
       </div>
     </>
   );
+
+  // ── 렌더: 탭 7 알림 Webhook ──────────────────────────────────
+  const renderTabWebhook = () => {
+    const saved = webhookUrl ?? '';
+    const trimmed = webhookDraft.trim();
+    return (
+      <div className="max-w-lg space-y-4">
+        <p className="text-sm text-slate-500 leading-6">
+          정합성 충돌이 감지되면 등록한 Slack 또는 Discord Incoming Webhook URL로 알림을 발송합니다.
+        </p>
+        <div className="space-y-2">
+          <label className="text-sm text-slate-500">Webhook URL</label>
+          <input
+            type="url"
+            value={webhookDraft}
+            onChange={(e) => setWebhookDraft(e.target.value)}
+            placeholder="https://hooks.slack.com/services/..."
+            className="w-full h-9 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {saveWebhook.isError && (
+          <p className="text-sm text-red-600">저장에 실패했습니다. 프로젝트 ADMIN 권한이 필요합니다.</p>
+        )}
+        {saveWebhook.isSuccess && trimmed === saved && (
+          <p className="text-sm text-green-600">저장되었습니다.</p>
+        )}
+        <button
+          className={btnPrimary}
+          disabled={!trimmed || trimmed === saved || saveWebhook.isPending}
+          onClick={() => saveWebhook.mutate(trimmed)}
+        >
+          {saveWebhook.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />저장 중...</> : '저장'}
+        </button>
+      </div>
+    );
+  };
 
   // ── 렌더: 탭 2 프로젝트 멤버 ─────────────────────────────────
   const renderTabMembers = () => {
@@ -560,6 +603,7 @@ const ProjectSettings: React.FC = () => {
                   { id: 'assignees' as const, label: '카테고리별 담당자 지정' },
                   { id: 'ai-usage' as const, label: 'AI 사용량' },
                   { id: 'rules' as const, label: '그래프 룰' },
+                  { id: 'webhook' as const, label: '알림 Webhook' },
                   { id: 'delete' as const, label: '프로젝트 삭제' },
                 ] as const).map((tab) => (
                   <li key={tab.id}>
@@ -585,6 +629,7 @@ const ProjectSettings: React.FC = () => {
                 {activeTab === 'assignees' && '카테고리별 담당자 지정'}
                 {activeTab === 'ai-usage' && 'AI 사용량'}
                 {activeTab === 'rules' && '그래프 룰'}
+                {activeTab === 'webhook' && '알림 Webhook'}
                 {activeTab === 'delete' && '프로젝트 삭제'}
               </h2>
               {activeTab === 'info' && renderTabInfo()}
@@ -593,6 +638,7 @@ const ProjectSettings: React.FC = () => {
               {activeTab === 'assignees' && renderTabAssignees()}
               {activeTab === 'ai-usage' && renderTabAiUsage()}
               {activeTab === 'rules' && renderTabRules()}
+              {activeTab === 'webhook' && renderTabWebhook()}
               {activeTab === 'delete' && renderTabDelete()}
             </div>
           </div>
