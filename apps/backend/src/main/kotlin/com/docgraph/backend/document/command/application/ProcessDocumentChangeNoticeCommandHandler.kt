@@ -69,18 +69,19 @@ class ProcessDocumentChangeNoticeCommandHandler(
     @Transactional
     fun applyAndMarkSuccess(notice: DocumentChangeNotice, result: NotionFetchResult) {
         val matches = documentRepository.findByNotionPageId(notice.notionPageId)
-        if (matches.size > 1) {
-            // 정상 데이터에선 notionPageId → live document 1:1. 2건 이상이면 고아/중복 재발 신호.
-            log.warn(
-                "notionPageId={}에 document가 {}건 매칭됨 — 고아·중복 가능성. 첫 번째(documentId={})로 처리한다.",
-                notice.notionPageId, matches.size, matches.first().id,
-            )
-        }
-        val document = matches.firstOrNull()
-        if (document == null) {
+        if (matches.isEmpty()) {
             notice.markFailed("document not found for notionPageId=${notice.notionPageId}")
             noticeRepository.save(notice)
             return
+        }
+        if (matches.size > 1) {
+            // (project_id, notion_page_id) 유니크 보장으로 프로젝트당 최대 1건.
+            // 2건 이상이면 동일 Notion 페이지가 여러 프로젝트에 등록된 경우이므로 전부 갱신해야
+            // 일부 프로젝트 사본만 stale 되는 일이 없다.
+            log.info(
+                "notionPageId={}가 {}개 프로젝트에 매칭됨 — 전부 갱신한다. projectIds={}",
+                notice.notionPageId, matches.size, matches.map { it.projectId },
+            )
         }
 
         val flatText = result.blocks
@@ -88,33 +89,35 @@ class ProcessDocumentChangeNoticeCommandHandler(
             .joinToString("\n")
             .ifBlank { null }
         val (iconType, iconValue, iconColor) = result.icon.toIconFields()
-        document.refreshSnapshot(
-            title = result.title,
-            parentNotionPageId = document.parentNotionPageId,
-            type = document.type,
-            iconType = iconType,
-            iconValue = iconValue,
-            iconColor = iconColor,
-            assigneeMemberId = document.assigneeMemberId,
-            rawContent = result.rawJson,
-            flatText = flatText,
-            notionCreatedBy = result.createdBy,
-            notionLastEditedBy = result.lastEditedBy,
-            notionLastEditedAt = result.lastEditedTime,
-        )
-        documentRepository.save(document)
-        replaceBlocks(document, result.blocks)
+        matches.forEach { document ->
+            document.refreshSnapshot(
+                title = result.title,
+                parentNotionPageId = document.parentNotionPageId,
+                type = document.type,
+                iconType = iconType,
+                iconValue = iconValue,
+                iconColor = iconColor,
+                assigneeMemberId = document.assigneeMemberId,
+                rawContent = result.rawJson,
+                flatText = flatText,
+                notionCreatedBy = result.createdBy,
+                notionLastEditedBy = result.lastEditedBy,
+                notionLastEditedAt = result.lastEditedTime,
+            )
+            documentRepository.save(document)
+            replaceBlocks(document, result.blocks)
+
+            publisher.publishEvent(
+                DocumentContentChangedEvent(
+                    documentId = document.id,
+                    projectId = document.projectId,
+                    notionPageId = document.notionPageId,
+                ),
+            )
+        }
 
         notice.markSuccess()
         noticeRepository.save(notice)
-
-        publisher.publishEvent(
-            DocumentContentChangedEvent(
-                documentId = document.id,
-                projectId = document.projectId,
-                notionPageId = document.notionPageId,
-            ),
-        )
     }
 
     private fun fetchBlockTree(rootBlockId: String, accessToken: String?): List<NotionBlock> {

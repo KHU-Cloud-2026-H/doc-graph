@@ -8,7 +8,12 @@ import com.docgraph.backend.document.query.application.DocumentReference
 import com.docgraph.backend.document.query.application.DocumentStats
 import com.docgraph.backend.document.query.application.DocumentType
 import com.docgraph.backend.fixtures.SharedPostgresContainer
+import com.docgraph.backend.project.command.domain.Project
+import com.docgraph.backend.project.command.infra.ProjectJpaRepository
 import com.docgraph.backend.project.query.application.AssignedDocumentType
+import com.docgraph.backend.workspace.command.domain.Workspace
+import com.docgraph.backend.workspace.command.infra.WorkspaceJpaRepository
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -30,13 +35,45 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     private val queryRepository: DocumentQueryRepository,
     private val documentRepository: DocumentRepository,
     private val blockRepository: BlockRepository,
+    private val workspaceJpa: WorkspaceJpaRepository,
+    private val projectJpa: ProjectJpaRepository,
 ) {
+
+    // document.project_id → project FK 충족용. 테스트가 쓰던 projectId 리터럴(1·2·7·8)을 실제 시드 id로 대체.
+    private var p1 = 0L
+    private var p2 = 0L
+    private var p7 = 0L
+    private var p8 = 0L
+
+    @BeforeEach
+    fun seedProjects() {
+        val ws = workspaceJpa.save(
+            Workspace(
+                notionWorkspaceId = "ws-${System.nanoTime()}",
+                notionWorkspaceName = "ws",
+                notionBotId = "bot-${System.nanoTime()}",
+                createdBy = 1L,
+            ),
+        )
+        fun project(tag: String) = projectJpa.save(
+            Project(
+                workspaceId = ws.id,
+                name = tag,
+                notionRootPageId = "root-$tag-${System.nanoTime()}",
+                createdBy = 1L,
+            ),
+        ).id
+        p1 = project("p1")
+        p2 = project("p2")
+        p7 = project("p7")
+        p8 = project("p8")
+    }
 
     @Test
     fun `findDetail — 존재하는 document를 sortOrder 순 blocks와 함께 반환`() {
         val document = documentRepository.save(
             Document(
-                projectId = 1L,
+                projectId = p1,
                 notionPageId = "page-1",
                 title = "Page",
                 type = DocumentType.PLANNING,
@@ -81,7 +118,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findDetail — Block parentType이 block_id일 때만 parentBlockId 채움, page_id면 null`() {
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-1", title = "Page"),
+            Document(projectId = p1, notionPageId = "page-1", title = "Page"),
         )
         blockRepository.save(
             Block(
@@ -117,7 +154,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     fun `findDetail — notionLastEditedAt이 그대로 매핑 (non-null)`() {
         val edited = OffsetDateTime.parse("2026-05-15T10:30:00Z")
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-edited", title = "Edited", notionLastEditedAt = edited),
+            Document(projectId = p1, notionPageId = "page-edited", title = "Edited", notionLastEditedAt = edited),
         )
 
         val detail = queryRepository.findDetail(document.id)
@@ -129,7 +166,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findDetail — notionLastEditedAt 미세팅이면 null`() {
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-unset", title = "Unset"),
+            Document(projectId = p1, notionPageId = "page-unset", title = "Unset"),
         )
 
         val detail = queryRepository.findDetail(document.id)
@@ -142,7 +179,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     fun `findNotionLastEditedById — 저장된 Notion user id를 그대로 반환`() {
         val document = documentRepository.save(
             Document(
-                projectId = 1L,
+                projectId = p1,
                 notionPageId = "page-editor",
                 title = "Edited",
                 notionLastEditedBy = "notion-user-1",
@@ -155,7 +192,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findNotionLastEditedById — 미세팅이면 null, 없는 document면 null`() {
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-unset-editor", title = "Unset"),
+            Document(projectId = p1, notionPageId = "page-unset-editor", title = "Unset"),
         )
 
         assertNull(queryRepository.findNotionLastEditedById(document.id))
@@ -165,7 +202,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findDetail — type이 null인 document도 정상 반환`() {
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-1", title = "Page", type = null),
+            Document(projectId = p1, notionPageId = "page-1", title = "Page", type = null),
         )
 
         val detail = queryRepository.findDetail(document.id)
@@ -179,7 +216,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         repeat(3) { i ->
             documentRepository.save(
                 Document(
-                    projectId = 1L,
+                    projectId = p1,
                     notionPageId = "page-$i",
                     title = "Page $i",
                     type = DocumentType.PLANNING,
@@ -187,8 +224,8 @@ class DocumentQueryRepositoryTest @Autowired constructor(
             )
         }
 
-        val page0 = queryRepository.searchSummariesByProject(1L, PageRequest.of(0, 2))
-        val page1 = queryRepository.searchSummariesByProject(1L, PageRequest.of(1, 2))
+        val page0 = queryRepository.searchSummariesByProject(p1, PageRequest.of(0, 2))
+        val page1 = queryRepository.searchSummariesByProject(p1, PageRequest.of(1, 2))
 
         assertEquals(3L, page0.totalElements)
         assertEquals(2, page0.totalPages)
@@ -198,11 +235,11 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
     @Test
     fun `searchSummariesByProject — 다른 프로젝트의 document는 제외`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "p1-a", title = "A"))
-        documentRepository.save(Document(projectId = 1L, notionPageId = "p1-b", title = "B"))
-        documentRepository.save(Document(projectId = 2L, notionPageId = "p2-a", title = "Other"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "p1-a", title = "A"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "p1-b", title = "B"))
+        documentRepository.save(Document(projectId = p2, notionPageId = "p2-a", title = "Other"))
 
-        val result = queryRepository.searchSummariesByProject(1L, PageRequest.of(0, 10))
+        val result = queryRepository.searchSummariesByProject(p1, PageRequest.of(0, 10))
 
         assertEquals(2L, result.totalElements)
         assertTrue(result.content.all { it.notionPageId.startsWith("p1-") })
@@ -219,11 +256,11 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findDetail — parentDocumentId가 그대로 매핑 (non-null)`() {
         val parent = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "parent-page", title = "Parent"),
+            Document(projectId = p1, notionPageId = "parent-page", title = "Parent"),
         )
         val child = documentRepository.save(
             Document(
-                projectId = 1L,
+                projectId = p1,
                 notionPageId = "child-page",
                 title = "Child",
                 parentDocumentId = parent.id,
@@ -239,7 +276,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findDetail — parentDocumentId 미세팅이면 null (루트 또는 프로젝트 경계 밖)`() {
         val document = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "root-page", title = "Root"),
+            Document(projectId = p1, notionPageId = "root-page", title = "Root"),
         )
 
         val detail = queryRepository.findDetail(document.id)
@@ -251,18 +288,18 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchSummariesByProject — parentDocumentId가 summary에 매핑`() {
         val parent = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "parent-page", title = "Parent"),
+            Document(projectId = p1, notionPageId = "parent-page", title = "Parent"),
         )
         val child = documentRepository.save(
             Document(
-                projectId = 1L,
+                projectId = p1,
                 notionPageId = "child-page",
                 title = "Child",
                 parentDocumentId = parent.id,
             ),
         )
 
-        val result = queryRepository.searchSummariesByProject(1L, PageRequest.of(0, 10))
+        val result = queryRepository.searchSummariesByProject(p1, PageRequest.of(0, 10))
 
         val parentSummary = result.content.first { it.id == parent.id }
         val childSummary = result.content.first { it.id == child.id }
@@ -274,7 +311,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     fun `searchNodesByProject — 프로젝트 내 document를 DocumentNodeData로 매핑`() {
         val doc = documentRepository.save(
             Document(
-                projectId = 1L,
+                projectId = p1,
                 notionPageId = "page-1",
                 title = "Node",
                 type = DocumentType.PLANNING,
@@ -282,7 +319,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
             ),
         )
 
-        val result = queryRepository.searchNodesByProject(1L)
+        val result = queryRepository.searchNodesByProject(p1)
 
         assertEquals(1, result.size)
         val node = result.first()
@@ -295,10 +332,10 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchNodesByProject — type과 assigneeMemberId가 null인 document도 그대로 매핑`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "page-null", title = "Null"),
+            Document(projectId = p1, notionPageId = "page-null", title = "Null"),
         )
 
-        val result = queryRepository.searchNodesByProject(1L)
+        val result = queryRepository.searchNodesByProject(p1)
 
         assertEquals(1, result.size)
         assertNull(result.first().type)
@@ -307,29 +344,29 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
     @Test
     fun `searchNodesByProject — 다른 프로젝트 document는 제외, 빈 프로젝트는 빈 리스트`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "p1-a", title = "A"))
-        documentRepository.save(Document(projectId = 2L, notionPageId = "p2-a", title = "Other"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "p1-a", title = "A"))
+        documentRepository.save(Document(projectId = p2, notionPageId = "p2-a", title = "Other"))
 
-        val p1 = queryRepository.searchNodesByProject(1L)
+        val nodes = queryRepository.searchNodesByProject(p1)
         val empty = queryRepository.searchNodesByProject(999L)
 
-        assertEquals(1, p1.size)
-        assertEquals("A", p1.first().title)
+        assertEquals(1, nodes.size)
+        assertEquals("A", nodes.first().title)
         assertTrue(empty.isEmpty())
     }
 
     @Test
     fun `searchIdsByAssignee — 담당자가 일치하는 document id 목록 반환`() {
         val a = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+            Document(projectId = p1, notionPageId = "a", title = "A", assigneeMemberId = 7L),
         )
         val b = documentRepository.save(
-            Document(projectId = 2L, notionPageId = "b", title = "B", assigneeMemberId = 7L),
+            Document(projectId = p2, notionPageId = "b", title = "B", assigneeMemberId = 7L),
         )
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "c", title = "C", assigneeMemberId = 99L),
+            Document(projectId = p1, notionPageId = "c", title = "C", assigneeMemberId = 99L),
         )
-        documentRepository.save(Document(projectId = 1L, notionPageId = "d", title = "D"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "d", title = "D"))
 
         val ids = queryRepository.searchIdsByAssignee(7L).toSet()
 
@@ -339,7 +376,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByAssignee — 매칭 없으면 빈 리스트`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+            Document(projectId = p1, notionPageId = "a", title = "A", assigneeMemberId = 7L),
         )
 
         val ids = queryRepository.searchIdsByAssignee(999L)
@@ -350,18 +387,18 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findReferencesByIds — 매칭되는 document를 id projectId title type으로 반환`() {
         val a = documentRepository.save(
-            Document(projectId = 7L, notionPageId = "a", title = "Alpha", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p7, notionPageId = "a", title = "Alpha", type = DocumentType.REQUIREMENTS),
         )
         val b = documentRepository.save(
-            Document(projectId = 8L, notionPageId = "b", title = "Beta", type = null),
+            Document(projectId = p8, notionPageId = "b", title = "Beta", type = null),
         )
 
         val refs = queryRepository.findReferencesByIds(listOf(a.id, b.id)).toSet()
 
         assertEquals(
             setOf(
-                DocumentReference(a.id, 7L, "Alpha", DocumentType.REQUIREMENTS, null),
-                DocumentReference(b.id, 8L, "Beta", null, null),
+                DocumentReference(a.id, p7, "Alpha", DocumentType.REQUIREMENTS, null),
+                DocumentReference(b.id, p8, "Beta", null, null),
             ),
             refs,
         )
@@ -370,12 +407,12 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `findReferencesByIds — 일부 id만 매칭되면 매칭된 것만 반환`() {
         val a = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "a", title = "Only", type = DocumentType.PLANNING),
+            Document(projectId = p1, notionPageId = "a", title = "Only", type = DocumentType.PLANNING),
         )
 
         val refs = queryRepository.findReferencesByIds(listOf(a.id, 99999L))
 
-        assertEquals(listOf(DocumentReference(a.id, 1L, "Only", DocumentType.PLANNING, null)), refs)
+        assertEquals(listOf(DocumentReference(a.id, p1, "Only", DocumentType.PLANNING, null)), refs)
     }
 
     @Test
@@ -393,14 +430,14 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — 단일 매핑에 해당하는 document id 반환`() {
         val match = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "m", title = "M", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p1, notionPageId = "m", title = "M", type = DocumentType.REQUIREMENTS),
         )
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "other", title = "O", type = DocumentType.PLANNING),
+            Document(projectId = p1, notionPageId = "other", title = "O", type = DocumentType.PLANNING),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(
-            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+            listOf(AssignedDocumentType(p1, DocumentType.REQUIREMENTS)),
         )
 
         assertEquals(listOf(match.id), ids)
@@ -409,22 +446,22 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — 여러 (projectId,type) 묶음 매칭을 union으로 반환`() {
         val p1Req = documentRepository.save(
-            Document(projectId = 1L, notionPageId = "p1-req", title = "A", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p1, notionPageId = "p1-req", title = "A", type = DocumentType.REQUIREMENTS),
         )
         val p2Plan = documentRepository.save(
-            Document(projectId = 2L, notionPageId = "p2-plan", title = "B", type = DocumentType.PLANNING),
+            Document(projectId = p2, notionPageId = "p2-plan", title = "B", type = DocumentType.PLANNING),
         )
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "p1-plan", title = "C", type = DocumentType.PLANNING),
+            Document(projectId = p1, notionPageId = "p1-plan", title = "C", type = DocumentType.PLANNING),
         )
         documentRepository.save(
-            Document(projectId = 2L, notionPageId = "p2-req", title = "D", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p2, notionPageId = "p2-req", title = "D", type = DocumentType.REQUIREMENTS),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(
             listOf(
-                AssignedDocumentType(1L, DocumentType.REQUIREMENTS),
-                AssignedDocumentType(2L, DocumentType.PLANNING),
+                AssignedDocumentType(p1, DocumentType.REQUIREMENTS),
+                AssignedDocumentType(p2, DocumentType.PLANNING),
             ),
         ).toSet()
 
@@ -434,11 +471,11 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — type이 일치 안 하면 제외`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "x", title = "X", type = DocumentType.PLANNING),
+            Document(projectId = p1, notionPageId = "x", title = "X", type = DocumentType.PLANNING),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(
-            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+            listOf(AssignedDocumentType(p1, DocumentType.REQUIREMENTS)),
         )
 
         assertTrue(ids.isEmpty())
@@ -447,11 +484,11 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — projectId가 일치 안 하면 제외`() {
         documentRepository.save(
-            Document(projectId = 2L, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p2, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(
-            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+            listOf(AssignedDocumentType(p1, DocumentType.REQUIREMENTS)),
         )
 
         assertTrue(ids.isEmpty())
@@ -460,11 +497,11 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — type이 null인 document는 매핑 매칭 안 됨`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "untyped", title = "U", type = null),
+            Document(projectId = p1, notionPageId = "untyped", title = "U", type = null),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(
-            listOf(AssignedDocumentType(1L, DocumentType.REQUIREMENTS)),
+            listOf(AssignedDocumentType(p1, DocumentType.REQUIREMENTS)),
         )
 
         assertTrue(ids.isEmpty())
@@ -473,7 +510,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchIdsByProjectAndTypes — 입력이 빈 리스트면 빈 리스트 반환`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
+            Document(projectId = p1, notionPageId = "x", title = "X", type = DocumentType.REQUIREMENTS),
         )
 
         val ids = queryRepository.searchIdsByProjectAndTypes(emptyList())
@@ -483,14 +520,14 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
     @Test
     fun `searchUnassignedIdsByProject — 프로젝트 내 담당자가 null인 document id 목록 반환`() {
-        val a = documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
-        val b = documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B"))
+        val a = documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
+        val b = documentRepository.save(Document(projectId = p1, notionPageId = "b", title = "B"))
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "c", title = "C", assigneeMemberId = 7L),
+            Document(projectId = p1, notionPageId = "c", title = "C", assigneeMemberId = 7L),
         )
-        documentRepository.save(Document(projectId = 2L, notionPageId = "d", title = "D"))
+        documentRepository.save(Document(projectId = p2, notionPageId = "d", title = "D"))
 
-        val ids = queryRepository.searchUnassignedIdsByProject(1L).toSet()
+        val ids = queryRepository.searchUnassignedIdsByProject(p1).toSet()
 
         assertEquals(setOf(a.id, b.id), ids)
     }
@@ -498,10 +535,10 @@ class DocumentQueryRepositoryTest @Autowired constructor(
     @Test
     fun `searchUnassignedIdsByProject — 매칭 없으면 빈 리스트`() {
         documentRepository.save(
-            Document(projectId = 1L, notionPageId = "a", title = "A", assigneeMemberId = 7L),
+            Document(projectId = p1, notionPageId = "a", title = "A", assigneeMemberId = 7L),
         )
 
-        val ids = queryRepository.searchUnassignedIdsByProject(1L)
+        val ids = queryRepository.searchUnassignedIdsByProject(p1)
 
         assertTrue(ids.isEmpty())
     }
@@ -511,19 +548,19 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         val t1 = OffsetDateTime.parse("2026-05-01T10:00:00Z")
         val t2 = OffsetDateTime.parse("2026-05-20T10:00:00Z")
         val t3 = OffsetDateTime.parse("2026-05-15T10:00:00Z")
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A", notionLastEditedAt = t1))
-        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B", notionLastEditedAt = t2))
-        documentRepository.save(Document(projectId = 2L, notionPageId = "c", title = "C", notionLastEditedAt = t3))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A", notionLastEditedAt = t1))
+        documentRepository.save(Document(projectId = p1, notionPageId = "b", title = "B", notionLastEditedAt = t2))
+        documentRepository.save(Document(projectId = p2, notionPageId = "c", title = "C", notionLastEditedAt = t3))
 
-        val stats = queryRepository.searchStatsByProjectIds(listOf(1L, 2L))
+        val stats = queryRepository.searchStatsByProjectIds(listOf(p1, p2))
 
-        assertEquals(DocumentStats(2L, t2), stats[1L])
-        assertEquals(DocumentStats(1L, t3), stats[2L])
+        assertEquals(DocumentStats(2L, t2), stats[p1])
+        assertEquals(DocumentStats(1L, t3), stats[p2])
     }
 
     @Test
     fun `searchStatsByProjectIds — 입력 빈 리스트면 빈 Map`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
 
         val stats = queryRepository.searchStatsByProjectIds(emptyList())
 
@@ -532,44 +569,44 @@ class DocumentQueryRepositoryTest @Autowired constructor(
 
     @Test
     fun `searchStatsByProjectIds — document 없는 projectId는 Map에 미포함`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
 
-        val stats = queryRepository.searchStatsByProjectIds(listOf(1L, 999L))
+        val stats = queryRepository.searchStatsByProjectIds(listOf(p1, 999L))
 
         assertEquals(1, stats.size)
-        assertEquals(DocumentStats(1L, null), stats[1L])
+        assertEquals(DocumentStats(1L, null), stats[p1])
         assertNull(stats[999L])
     }
 
     @Test
     fun `searchStatsByProjectIds — notionLastEditedAt이 모두 null인 projectId는 lastChangedAt null`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
-        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "b", title = "B"))
 
-        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+        val stats = queryRepository.searchStatsByProjectIds(listOf(p1))
 
-        assertEquals(DocumentStats(2L, null), stats[1L])
+        assertEquals(DocumentStats(2L, null), stats[p1])
     }
 
     @Test
     fun `searchStatsByProjectIds — 다른 projectId의 document는 제외`() {
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
-        documentRepository.save(Document(projectId = 2L, notionPageId = "b", title = "B"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = p2, notionPageId = "b", title = "B"))
 
-        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+        val stats = queryRepository.searchStatsByProjectIds(listOf(p1))
 
-        assertEquals(DocumentStats(1L, null), stats[1L])
-        assertNull(stats[2L])
+        assertEquals(DocumentStats(1L, null), stats[p1])
+        assertNull(stats[p2])
     }
 
     @Test
     fun `searchStatsByProjectIds — notionLastEditedAt 일부만 null이면 non-null 중 MAX`() {
         val t = OffsetDateTime.parse("2026-05-10T10:00:00Z")
-        documentRepository.save(Document(projectId = 1L, notionPageId = "a", title = "A"))
-        documentRepository.save(Document(projectId = 1L, notionPageId = "b", title = "B", notionLastEditedAt = t))
+        documentRepository.save(Document(projectId = p1, notionPageId = "a", title = "A"))
+        documentRepository.save(Document(projectId = p1, notionPageId = "b", title = "B", notionLastEditedAt = t))
 
-        val stats = queryRepository.searchStatsByProjectIds(listOf(1L))
+        val stats = queryRepository.searchStatsByProjectIds(listOf(p1))
 
-        assertEquals(DocumentStats(2L, t), stats[1L])
+        assertEquals(DocumentStats(2L, t), stats[p1])
     }
 }
