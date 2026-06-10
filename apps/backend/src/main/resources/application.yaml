@@ -51,7 +51,8 @@ management:
 ai:
   openai:
     base-url: ${AI_OPENAI_BASE_URL}
-    timeout-ms: 30000
+    connect-timeout-ms: 5000
+    read-timeout-ms: 60000
     api-key: ${AI_OPENAI_API_KEY}
     model: ${AI_OPENAI_MODEL}
 
