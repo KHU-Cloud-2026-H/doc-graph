@@ -42,6 +42,7 @@ dependencies {
 	implementation("org.springframework:spring-aspects")
 	implementation("io.github.openfeign.querydsl:querydsl-kotlin:7.1")
 	implementation("io.github.openfeign.querydsl:querydsl-jpa:7.1")
+	implementation("org.apache.lucene:lucene-analysis-nori:10.4.0")
 	kapt("io.github.openfeign.querydsl:querydsl-apt:7.1:jpa")
 	kapt("jakarta.annotation:jakarta.annotation-api")
 	kapt("jakarta.persistence:jakarta.persistence-api")
