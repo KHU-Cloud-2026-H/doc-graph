@@ -323,29 +323,69 @@ class SyncProjectDocumentsCommandHandler(
      */
     private fun createProposals(projectId: Long, documents: List<SyncedDocument>): Int {
         val byNotionPageId = documents.associateBy { notionPageKey(it.document.notionPageId) }
+        val diagnostics = ProposalDiagnostics()
         var proposed = 0
         documents.forEach { source ->
-            val sourceType = source.document.type ?: return@forEach
+            val sourceType = source.document.type ?: run {
+                diagnostics.sourceNoType++
+                return@forEach
+            }
+            diagnostics.sourcesEvaluated++
             val linkedDocumentIds = source.linkedPageIds
                 .mapNotNull { byNotionPageId[notionPageKey(it)]?.document?.id }
                 .toSet()
 
-            documents.asSequence()
+            // 임계 필터를 적용하기 전 모든 후보의 점수를 산출해 둔다.
+            // 임계 미만 후보도 최고 점수를 남겨야 "임계가 빡센지(점수 분포 문제)" vs
+            // "룰·타입이 없는지(데이터 문제)"를 진단 로그로 가를 수 있다.
+            val scored = documents.asSequence()
                 .filter { it.document.id != source.document.id }
                 .filter { it.document.id !in linkedDocumentIds }
                 .mapNotNull { target ->
-                    val targetType = target.document.type ?: return@mapNotNull null
-                    val rule = graphRuleRepository
-                        .findAllByProjectIdAndTypePair(projectId, sourceType, targetType)
-                        .firstOrNull() ?: return@mapNotNull null
-                    val score = keywordSimilarity.score(source.document.flatText, target.document.flatText)
-                    if (score < KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD) {
+                    val targetType = target.document.type ?: run {
+                        diagnostics.candidateNoType++
                         return@mapNotNull null
                     }
+                    val rule = graphRuleRepository
+                        .findAllByProjectIdAndTypePair(projectId, sourceType, targetType)
+                        .firstOrNull() ?: run {
+                            diagnostics.candidateNoRule++
+                            return@mapNotNull null
+                        }
+                    val score = keywordSimilarity.score(source.document.flatText, target.document.flatText)
+                    diagnostics.candidateScored++
                     ScoredCandidate(target = target, rule = rule, score = score)
                 }
                 .sortedByDescending { it.score }
-                .take(KeywordSimilarity.MAX_PROPOSALS_PER_SOURCE)
+                .toList()
+
+            val bestScore = scored.firstOrNull()?.score
+            if (bestScore != null) {
+                diagnostics.recordBestScore(bestScore)
+            }
+
+            val eligible = scored.filter { it.score >= KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD }
+            if (scored.isNotEmpty() && eligible.isEmpty()) {
+                diagnostics.sourcesAllBelowThreshold++
+            }
+
+            if (logger.isDebugEnabled) {
+                logger.debug(
+                    "제안 후보 평가 — projectId={} sourceDocumentId={} flatText={} 채점후보={}건 " +
+                        "최고점수={} 임계이상={}건 임계값={} 상위후보={}",
+                    projectId,
+                    source.document.id,
+                    if (source.document.flatText.isNullOrBlank()) "비어있음" else "있음",
+                    scored.size,
+                    bestScore?.let { "%.3f".format(it) } ?: "없음",
+                    eligible.size,
+                    KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD,
+                    scored.take(KeywordSimilarity.MAX_PROPOSALS_PER_SOURCE)
+                        .joinToString { "doc=${it.target.document.id}:%.3f".format(it.score) },
+                )
+            }
+
+            eligible.take(KeywordSimilarity.MAX_PROPOSALS_PER_SOURCE)
                 .forEach { candidate ->
                     proposeEdgeHandler.handle(
                         ProposeEdgeCommand(
@@ -360,6 +400,21 @@ class SyncProjectDocumentsCommandHandler(
                     proposed++
                 }
         }
+        logger.info(
+            "제안 생성 진단 — projectId={} source문서={}건(타입없음skip={}) " +
+                "후보탈락[타입없음={} 룰없음={}] 채점={}건 " +
+                "임계미만으로source전체탈락={}건 최고점수분포{} 임계값={} 제안확정={}건",
+            projectId,
+            diagnostics.sourcesEvaluated,
+            diagnostics.sourceNoType,
+            diagnostics.candidateNoType,
+            diagnostics.candidateNoRule,
+            diagnostics.candidateScored,
+            diagnostics.sourcesAllBelowThreshold,
+            diagnostics.bestScoreHistogram(),
+            KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD,
+            proposed,
+        )
         return proposed
     }
 
@@ -373,6 +428,46 @@ private data class ScoredCandidate(
     val rule: GraphRule,
     val score: Double,
 )
+
+/**
+ * 연결 제안 생성 한 회차의 탈락 사유·점수 분포를 누적한다.
+ *
+ * 연결이 거의 안 될 때 원인이 데이터(룰·타입 미설정)인지 점수(임계가 빡셈)인지 가르기 위한 진단용.
+ * 최고점수 히스토그램에서 source들이 임계(0.1) 바로 아래에 몰려 있으면 임계 하향·fallback이,
+ * 룰없음 탈락이 대부분이면 GraphRule 설정이 우선 처방이다.
+ */
+private class ProposalDiagnostics {
+    var sourcesEvaluated = 0
+    var sourceNoType = 0
+    var candidateNoType = 0
+    var candidateNoRule = 0
+    var candidateScored = 0
+    var sourcesAllBelowThreshold = 0
+
+    // 최고점수 구간별 source 수: [0, (0,0.05), [0.05,0.1), [0.1,0.3), [0.3,1.0]]
+    private val zero = "0"
+    private val below005 = "~0.05"
+    private val below010 = "0.05~0.1"
+    private val below030 = "0.1~0.3"
+    private val atLeast030 = "0.3~"
+    private val histogram = linkedMapOf(
+        zero to 0, below005 to 0, below010 to 0, below030 to 0, atLeast030 to 0,
+    )
+
+    fun recordBestScore(score: Double) {
+        val bucket = when {
+            score <= 0.0 -> zero
+            score < 0.05 -> below005
+            score < 0.1 -> below010
+            score < 0.3 -> below030
+            else -> atLeast030
+        }
+        histogram[bucket] = (histogram[bucket] ?: 0) + 1
+    }
+
+    fun bestScoreHistogram(): String =
+        histogram.entries.joinToString(prefix = "{", postfix = "}") { "${it.key}=${it.value}" }
+}
 
 private data class SyncedDocument(
     val document: Document,
