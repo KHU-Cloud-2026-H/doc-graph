@@ -194,7 +194,7 @@ export const DependencyGraph = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-0.5 border-t border-dashed border-slate-800"></div>
-                <span className="text-[11px] text-slate-600">AI Inference Link</span>
+                <span className="text-[11px] text-slate-600">Suggested Link</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-[3px] border-t-2 border-dashed border-red-600"></div>
