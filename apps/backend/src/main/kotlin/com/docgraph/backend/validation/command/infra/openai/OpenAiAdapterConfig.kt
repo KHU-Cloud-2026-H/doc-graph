@@ -16,13 +16,12 @@ class OpenAiAdapterConfig {
     @Bean
     @ConditionalOnRealHttpAdapter
     fun openAiRestClient(props: OpenAiProperties): RestClient {
-        val timeout = Duration.ofMillis(props.timeoutMs)
         val httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(timeout)
+            .connectTimeout(Duration.ofMillis(props.connectTimeoutMs))
             .build()
         val factory = JdkClientHttpRequestFactory(httpClient).apply {
-            setReadTimeout(timeout)
+            setReadTimeout(Duration.ofMillis(props.readTimeoutMs))
         }
         return RestClient.builder()
             .baseUrl(props.baseUrl)
