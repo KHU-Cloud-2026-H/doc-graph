@@ -37,6 +37,7 @@ class SyncProjectDocumentsCommandHandler(
     private val documentRepository: DocumentRepository,
     private val blockRepository: BlockRepository,
     private val graphRuleRepository: GraphRuleRepository,
+    private val keywordSimilarity: KeywordSimilarity,
     private val registerDependencyEdgeHandler: RegisterDependencyEdgeCommandHandler,
     private val proposeEdgeHandler: ProposeEdgeCommandHandler,
     private val projectRepository: ProjectRepository,
@@ -337,7 +338,7 @@ class SyncProjectDocumentsCommandHandler(
                     val rule = graphRuleRepository
                         .findAllByProjectIdAndTypePair(projectId, sourceType, targetType)
                         .firstOrNull() ?: return@mapNotNull null
-                    val score = KeywordSimilarity.score(source.document.flatText, target.document.flatText)
+                    val score = keywordSimilarity.score(source.document.flatText, target.document.flatText)
                     if (score < KeywordSimilarity.PROPOSAL_SCORE_THRESHOLD) {
                         return@mapNotNull null
                     }

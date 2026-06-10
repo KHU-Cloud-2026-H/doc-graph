@@ -17,6 +17,7 @@ import com.docgraph.backend.graph.command.application.RegisterDependencyEdgeComm
 import com.docgraph.backend.graph.command.domain.DependencyEdgeSource
 import com.docgraph.backend.graph.command.domain.GraphRule
 import com.docgraph.backend.graph.command.domain.GraphRuleRepository
+import com.docgraph.backend.graph.command.domain.KeywordSimilarity
 import com.docgraph.backend.project.command.domain.ProjectRepository
 import com.docgraph.backend.project.query.application.CategoryProjection
 import com.docgraph.backend.project.query.application.FindProjectDetailByIdQuery
@@ -42,6 +43,10 @@ class SyncProjectDocumentsCommandHandlerTest {
     private val documentRepository = mockk<DocumentRepository>()
     private val blockRepository = mockk<BlockRepository>()
     private val graphRuleRepository = mockk<GraphRuleRepository>(relaxed = true)
+    // 추출은 공백 토큰 fake로 고정 — 실제 형태소 추출은 NoriKeywordExtractorTest가 검증한다.
+    private val keywordSimilarity = KeywordSimilarity { text ->
+        text?.split(" ")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+    }
     private val registerDependencyEdgeHandler = mockk<RegisterDependencyEdgeCommandHandler>(relaxed = true)
     private val proposeEdgeHandler = mockk<ProposeEdgeCommandHandler>(relaxed = true)
     private val projectRepository = mockk<ProjectRepository>()
@@ -56,6 +61,7 @@ class SyncProjectDocumentsCommandHandlerTest {
         documentRepository = documentRepository,
         blockRepository = blockRepository,
         graphRuleRepository = graphRuleRepository,
+        keywordSimilarity = keywordSimilarity,
         registerDependencyEdgeHandler = registerDependencyEdgeHandler,
         proposeEdgeHandler = proposeEdgeHandler,
         projectRepository = projectRepository,
