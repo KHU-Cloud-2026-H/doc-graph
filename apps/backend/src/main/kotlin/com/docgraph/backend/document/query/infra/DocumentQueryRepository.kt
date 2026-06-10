@@ -143,6 +143,7 @@ class DocumentQueryRepository {
                     title = d.title,
                     type = d.type,
                     assigneeMemberId = d.assigneeMemberId,
+                    icon = toIcon(d.iconType, d.iconValue, d.iconColor),
                 )
             }
     }

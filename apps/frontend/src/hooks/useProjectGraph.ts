@@ -23,7 +23,9 @@ function toFlowNodes(nodes: GraphNodeResponse[]): DocumentFlowNode[] {
     },
     data: {
       label: n.title ?? '',
-      icon: createElement(FileText, { className: 'text-slate-500 w-6 h-6' }),
+      icon: n.icon?.type === 'EMOJI'
+        ? createElement('span', { className: 'text-2xl leading-none' }, n.icon.value)
+        : createElement(FileText, { className: 'text-slate-500 w-6 h-6' }),
     },
   }))
 }

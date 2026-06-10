@@ -2,6 +2,8 @@ package com.docgraph.backend.graph.query.application
 
 import com.docgraph.backend.document.query.application.DocumentNodeData
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconResponse
+import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.document.query.application.SearchDocumentNodesByProjectQuery
 import com.docgraph.backend.graph.command.domain.DependencyEdge
 import com.docgraph.backend.graph.command.domain.DependencyEdgeRepository
@@ -151,8 +153,14 @@ class GraphQueryHandlerTest {
     @Test
     fun `FindProjectGraphQueryHandler — nodes·edges·proposals 묶음 반환`() {
         every { searchDocumentNodes.search(1L) } returns listOf(
-            DocumentNodeData(id = 10L, title = "기획서", type = DocumentType.PLANNING, assigneeMemberId = 1L),
-            DocumentNodeData(id = 20L, title = "요구사항", type = DocumentType.REQUIREMENTS, assigneeMemberId = null),
+            DocumentNodeData(
+                id = 10L,
+                title = "기획서",
+                type = DocumentType.PLANNING,
+                assigneeMemberId = 1L,
+                icon = IconResponse(type = IconType.EMOJI, value = "📄"),
+            ),
+            DocumentNodeData(id = 20L, title = "요구사항", type = DocumentType.REQUIREMENTS, assigneeMemberId = null, icon = null),
         )
         every { edgeRepository.findAllByProjectId(1L) } returns listOf(edge(id = 100L))
         every { proposalRepository.findAllByProjectId(1L) } returns listOf(proposal(id = 200L))
@@ -163,7 +171,9 @@ class GraphQueryHandlerTest {
         assertEquals("기획서", result.nodes[0].title)
         assertEquals(DocumentType.PLANNING, result.nodes[0].type)
         assertEquals(1L, result.nodes[0].assigneeMemberId)
+        assertEquals(IconResponse(type = IconType.EMOJI, value = "📄"), result.nodes[0].icon)
         assertNull(result.nodes[1].assigneeMemberId)
+        assertNull(result.nodes[1].icon)
         assertEquals(listOf(100L), result.edges.map { it.id })
         assertEquals(listOf(200L), result.proposals.map { it.id })
     }

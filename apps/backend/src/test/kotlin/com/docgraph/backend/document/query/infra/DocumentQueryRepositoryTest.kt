@@ -7,6 +7,8 @@ import com.docgraph.backend.document.command.domain.DocumentRepository
 import com.docgraph.backend.document.query.application.DocumentReference
 import com.docgraph.backend.document.query.application.DocumentStats
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconResponse
+import com.docgraph.backend.document.query.application.IconType
 import com.docgraph.backend.fixtures.SharedPostgresContainer
 import com.docgraph.backend.project.command.domain.Project
 import com.docgraph.backend.project.command.infra.ProjectJpaRepository
@@ -315,6 +317,8 @@ class DocumentQueryRepositoryTest @Autowired constructor(
                 notionPageId = "page-1",
                 title = "Node",
                 type = DocumentType.PLANNING,
+                iconType = IconType.EMOJI,
+                iconValue = "📄",
                 assigneeMemberId = 7L,
             ),
         )
@@ -327,6 +331,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         assertEquals("Node", node.title)
         assertEquals(DocumentType.PLANNING, node.type)
         assertEquals(7L, node.assigneeMemberId)
+        assertEquals(IconResponse(type = IconType.EMOJI, value = "📄"), node.icon)
     }
 
     @Test
@@ -340,6 +345,7 @@ class DocumentQueryRepositoryTest @Autowired constructor(
         assertEquals(1, result.size)
         assertNull(result.first().type)
         assertNull(result.first().assigneeMemberId)
+        assertNull(result.first().icon)
     }
 
     @Test

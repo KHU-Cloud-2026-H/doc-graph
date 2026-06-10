@@ -1462,6 +1462,7 @@ export interface components {
              * @example 1
              */
             assigneeMemberId?: number | null;
+            icon?: components["schemas"]["IconResponse"] | null;
         };
         ProjectGraphResponse: {
             nodes?: components["schemas"]["GraphNodeResponse"][];

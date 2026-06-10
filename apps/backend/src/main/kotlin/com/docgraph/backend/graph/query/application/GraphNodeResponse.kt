@@ -1,6 +1,7 @@
 package com.docgraph.backend.graph.query.application
 
 import com.docgraph.backend.document.query.application.DocumentType
+import com.docgraph.backend.document.query.application.IconResponse
 import io.swagger.v3.oas.annotations.media.Schema
 
 data class GraphNodeResponse(
@@ -12,4 +13,6 @@ data class GraphNodeResponse(
     val type: DocumentType?,
     @Schema(description = "담당자 워크스페이스 멤버 ID (없으면 null)", example = "1")
     val assigneeMemberId: Long?,
+    @Schema(description = "Notion page 아이콘 (없으면 null)")
+    val icon: IconResponse?,
 )
